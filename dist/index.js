@@ -59735,13 +59735,14 @@ async function stackDelete(config) {
     const name = config.name ?? defaultName;
     const scope = config.scope;
     const client = getStacksClient(scope);
+    const deletionOptions = getStackDeletionOptions(config);
     switch (scope.type) {
         case "resourceGroup":
-            return await client.deploymentStacks.beginDeleteAtResourceGroupAndWait(scope.resourceGroup, name);
+            return await client.deploymentStacks.beginDeleteAtResourceGroupAndWait(scope.resourceGroup, name, deletionOptions);
         case "subscription":
-            return await client.deploymentStacks.beginDeleteAtSubscriptionAndWait(name);
+            return await client.deploymentStacks.beginDeleteAtSubscriptionAndWait(name, deletionOptions);
         case "managementGroup":
-            return await client.deploymentStacks.beginDeleteAtManagementGroupAndWait(scope.managementGroup, name);
+            return await client.deploymentStacks.beginDeleteAtManagementGroupAndWait(scope.managementGroup, name, deletionOptions);
     }
 }
 function getStack(config, files) {
@@ -59761,6 +59762,14 @@ function getStack(config, files) {
             bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
         },
         tags: config.tags,
+    };
+}
+function getStackDeletionOptions(config) {
+    return {
+        unmanageActionResources: config.actionOnUnManage.resources,
+        unmanageActionResourceGroups: config.actionOnUnManage.resourceGroups,
+        unmanageActionManagementGroups: config.actionOnUnManage.managementGroups,
+        bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
     };
 }
 function requireLocation(config) {

@@ -420,7 +420,10 @@ describe("stack execution", () => {
       );
       expect(
         mockStacksOps.beginDeleteAtSubscriptionAndWait,
-      ).toHaveBeenCalledWith(config.name);
+      ).toHaveBeenCalledWith(config.name, {
+        bypassStackOutOfSyncError: true,
+        unmanageActionResources: "delete",
+      });
     });
   });
 
@@ -530,7 +533,10 @@ describe("stack execution", () => {
       );
       expect(
         mockStacksOps.beginDeleteAtResourceGroupAndWait,
-      ).toHaveBeenCalledWith(scope.resourceGroup, config.name);
+      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, {
+        bypassStackOutOfSyncError: true,
+        unmanageActionResources: "delete",
+      });
     });
   });
 });
