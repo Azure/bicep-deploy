@@ -28,11 +28,10 @@ function getDeploymentClient(
     | SubscriptionScope
     | ResourceGroupScope,
 ) {
-  if (scope.type == "tenant" || scope.type == "managementGroup") {
-    throw "Subscription ID is required"; // TODO how to handle this properly?
-  }
+  const { tenantId } = scope;
+  const subscriptionId =
+    "subscriptionId" in scope ? scope.subscriptionId : undefined;
 
-  const { tenantId, subscriptionId } = scope;
   return createDeploymentClient(subscriptionId, tenantId);
 }
 
@@ -43,11 +42,10 @@ function getStacksClient(
     | SubscriptionScope
     | ResourceGroupScope,
 ) {
-  if (scope.type == "tenant" || scope.type == "managementGroup") {
-    throw "Subscription ID is required"; // TODO how to handle this properly?
-  }
+  const { tenantId } = scope;
+  const subscriptionId =
+    "subscriptionId" in scope ? scope.subscriptionId : undefined;
 
-  const { tenantId, subscriptionId } = scope;
   return createStacksClient(subscriptionId, tenantId);
 }
 

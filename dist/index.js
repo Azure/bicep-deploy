@@ -59500,17 +59500,13 @@ const logging_1 = __nccwpck_require__(5504);
 const whatif_1 = __nccwpck_require__(5180);
 const defaultName = "azure-bicep-deploy";
 function getDeploymentClient(scope) {
-    if (scope.type == "tenant" || scope.type == "managementGroup") {
-        throw "Subscription ID is required"; // TODO how to handle this properly?
-    }
-    const { tenantId, subscriptionId } = scope;
+    const { tenantId } = scope;
+    const subscriptionId = "subscriptionId" in scope ? scope.subscriptionId : undefined;
     return (0, azure_1.createDeploymentClient)(subscriptionId, tenantId);
 }
 function getStacksClient(scope) {
-    if (scope.type == "tenant" || scope.type == "managementGroup") {
-        throw "Subscription ID is required"; // TODO how to handle this properly?
-    }
-    const { tenantId, subscriptionId } = scope;
+    const { tenantId } = scope;
+    const subscriptionId = "subscriptionId" in scope ? scope.subscriptionId : undefined;
     return (0, azure_1.createStacksClient)(subscriptionId, tenantId);
 }
 async function execute(config, files) {
@@ -59814,11 +59810,15 @@ exports.createStacksClient = createStacksClient;
 const arm_resources_1 = __nccwpck_require__(6271);
 const arm_resourcesdeploymentstacks_1 = __nccwpck_require__(9821);
 const identity_1 = __nccwpck_require__(3983);
+const userAgentPrefix = "gh-azure-bicep-deploy";
+const dummySubscriptionId = "00000000-0000-0000-0000-000000000000";
 function createDeploymentClient(subscriptionId, tenantId) {
     const credentials = new identity_1.DefaultAzureCredential({ tenantId });
-    return new arm_resources_1.ResourceManagementClient(credentials, subscriptionId, {
+    return new arm_resources_1.ResourceManagementClient(credentials, 
+    // Use a dummy subscription ID for above-subscription scope operations
+    subscriptionId ?? dummySubscriptionId, {
         userAgentOptions: {
-            userAgentPrefix: "gh-azure-bicep-deploy",
+            userAgentPrefix: userAgentPrefix,
         },
         // Use a recent API version to take advantage of error improvements
         apiVersion: "2024-03-01",
@@ -59826,9 +59826,11 @@ function createDeploymentClient(subscriptionId, tenantId) {
 }
 function createStacksClient(subscriptionId, tenantId) {
     const credentials = new identity_1.DefaultAzureCredential({ tenantId });
-    return new arm_resourcesdeploymentstacks_1.DeploymentStacksClient(credentials, subscriptionId, {
+    return new arm_resourcesdeploymentstacks_1.DeploymentStacksClient(credentials, 
+    // Use a dummy subscription ID for above-subscription scope operations
+    subscriptionId ?? dummySubscriptionId, {
         userAgentOptions: {
-            userAgentPrefix: "gh-azure-bicep-deploy",
+            userAgentPrefix: userAgentPrefix,
         },
     });
 }
