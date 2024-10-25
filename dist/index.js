@@ -59491,6 +59491,7 @@ function parseDeploymentStackScope() {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.execute = execute;
+exports.validateFileScope = validateFileScope;
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 const core_1 = __nccwpck_require__(7484);
@@ -59511,6 +59512,7 @@ function getStacksClient(scope) {
 }
 async function execute(config, files) {
     try {
+        validateFileScope(config, files);
         switch (config.type) {
             case "deployment": {
                 switch (config.operation) {
@@ -59791,6 +59793,38 @@ async function tryWithErrorHandling(action, onError) {
             }
         }
         throw ex;
+    }
+}
+function validateFileScope(config, files) {
+    const scope = getScope(files);
+    if (!scope) {
+        return;
+    }
+    if (scope !== config.scope.type) {
+        throw new Error(`The target scope ${scope} does not match the deployment scope ${config.scope.type}.`);
+    }
+}
+function getScope(files) {
+    const template = files.templateContents ?? {};
+    const bicepGenerated = template.metadata?._generator?.name;
+    const schema = template["$schema"];
+    if (!bicepGenerated) {
+        // loose validation for non-Bicep generated templates, to match Azure CLI behavior
+        return;
+    }
+    const result = /https:\/\/schema\.management\.azure\.com\/schemas\/[0-9a-zA-Z-]+\/([a-zA-Z]+)Template\.json#?/.exec(schema);
+    const scopeMatch = result ? result[1].toLowerCase() : null;
+    switch (scopeMatch) {
+        case "tenantdeployment":
+            return "tenant";
+        case "managementgroupdeployment":
+            return "managementGroup";
+        case "subscriptiondeployment":
+            return "subscription";
+        case "deployment":
+            return "resourceGroup";
+        default:
+            throw new Error(`Failed to determine deployment scope from Bicep file.`);
     }
 }
 

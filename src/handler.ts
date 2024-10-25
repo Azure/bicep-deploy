@@ -11,6 +11,7 @@ import {
   DeploymentStackConfig,
   ManagementGroupScope,
   ResourceGroupScope,
+  ScopeType,
   SubscriptionScope,
   TenantScope,
 } from "./config";
@@ -51,6 +52,7 @@ function getStacksClient(
 
 export async function execute(config: ActionConfig, files: ParsedFiles) {
   try {
+    validateFileScope(config, files);
     switch (config.type) {
       case "deployment": {
         switch (config.operation) {
@@ -460,5 +462,48 @@ async function tryWithErrorHandling<T>(
     }
 
     throw ex;
+  }
+}
+
+export function validateFileScope(config: ActionConfig, files: ParsedFiles) {
+  const scope = getScope(files);
+  if (!scope) {
+    return;
+  }
+
+  if (scope !== config.scope.type) {
+    throw new Error(
+      `The target scope ${scope} does not match the deployment scope ${config.scope.type}.`,
+    );
+  }
+}
+
+function getScope(files: ParsedFiles): ScopeType | undefined {
+  const template = files.templateContents ?? {};
+  const bicepGenerated = template.metadata?._generator?.name;
+  const schema = template["$schema"];
+
+  if (!bicepGenerated) {
+    // loose validation for non-Bicep generated templates, to match Azure CLI behavior
+    return;
+  }
+
+  const result =
+    /https:\/\/schema\.management\.azure\.com\/schemas\/[0-9a-zA-Z-]+\/([a-zA-Z]+)Template\.json#?/.exec(
+      schema,
+    );
+  const scopeMatch = result ? result[1].toLowerCase() : null;
+
+  switch (scopeMatch) {
+    case "tenantdeployment":
+      return "tenant";
+    case "managementgroupdeployment":
+      return "managementGroup";
+    case "subscriptiondeployment":
+      return "subscription";
+    case "deployment":
+      return "resourceGroup";
+    default:
+      throw new Error(`Failed to determine deployment scope from Bicep file.`);
   }
 }

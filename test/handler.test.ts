@@ -11,10 +11,11 @@ import {
   DeploymentsConfig,
   DeploymentStackConfig,
   ResourceGroupScope,
+  ScopeType,
   SubscriptionScope,
 } from "../src/config";
 import { readTestFile } from "./utils";
-import { execute } from "../src/handler";
+import { execute, validateFileScope } from "../src/handler";
 import { ParsedFiles } from "../src/helpers/file";
 import {
   Deployment,
@@ -50,9 +51,9 @@ describe("deployment execution", () => {
     };
 
     const files: ParsedFiles = {
-      templateContents: JSON.parse(readTestFile("files/basic/main.json")),
+      templateContents: JSON.parse(readTestFile("files/basic-sub/main.json")),
       parametersContents: JSON.parse(
-        readTestFile("files/basic/main.parameters.json"),
+        readTestFile("files/basic-sub/main.parameters.json"),
       ),
     };
 
@@ -339,9 +340,9 @@ describe("stack execution", () => {
     };
 
     const files: ParsedFiles = {
-      templateContents: JSON.parse(readTestFile("files/basic/main.json")),
+      templateContents: JSON.parse(readTestFile("files/basic-sub/main.json")),
       parametersContents: JSON.parse(
-        readTestFile("files/basic/main.parameters.json"),
+        readTestFile("files/basic-sub/main.parameters.json"),
       ),
     };
 
@@ -539,6 +540,50 @@ describe("stack execution", () => {
       });
     });
   });
+});
+
+describe("validateFileScope", () => {
+  it('should ignore empty template', () => {
+    expect(() => validateFileScope({ scope: { type: "subscription" } } as any, {
+      templateContents: {}
+    })).not.toThrow();
+  });
+
+  it('should ignore non-Bicep templates', () => {
+    expect(() => validateFileScope({ scope: { type: "subscription" } } as any, {
+      templateContents: {
+        '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#',
+      }
+    })).not.toThrow();
+  });
+
+  it('should validate Bicep templates', () => {
+    expect(() => validateFileScope({ scope: { type: "subscription" } } as any, {
+      templateContents: {
+        '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#',
+        metadata: { _generator: { name: 'bicep' } }
+      }
+    })).toThrow('The target scope resourceGroup does not match the deployment scope subscription.');
+  });
+
+  const schemaLookup: Record<ScopeType, string> = {
+    'tenant': 'https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#',
+    'managementGroup': 'https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#',
+    'subscription': 'https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#',
+    'resourceGroup': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#',
+  }
+
+  const scopes: ScopeType[] = ['tenant', 'managementGroup', 'subscription', 'resourceGroup'];
+  for (const scope of scopes) {
+    it(`should validate ${scope} scope`, () => {
+      expect(() => validateFileScope({ scope: { type: scope } } as any, {
+        templateContents: {
+          '$schema': schemaLookup[scope as ScopeType],
+          metadata: { _generator: { name: 'bicep' } }
+        }
+      })).not.toThrow();
+    });
+  }
 });
 
 function getMockRestError(errorResponse: ErrorResponse) {

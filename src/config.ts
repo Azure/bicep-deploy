@@ -13,8 +13,14 @@ import {
   getOptionalDictionaryInput,
 } from "./helpers/input";
 
+export type ScopeType =
+  | "tenant"
+  | "managementGroup"
+  | "subscription"
+  | "resourceGroup";
+
 type CommonScope = {
-  type: "tenant" | "managementGroup" | "subscription" | "resourceGroup";
+  type: ScopeType;
   tenantId?: string;
 };
 
