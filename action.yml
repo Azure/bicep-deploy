@@ -2,6 +2,10 @@ name: "Bicep Deploy"
 description: "GitHub Action for deploying to Azure"
 author: "Microsoft"
 
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
+
 inputs:
   type:
     description: "Specifies the execution type, which can be either 'deployment' or 'deploymentStack'."
