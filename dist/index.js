@@ -3195,253 +3195,6 @@ function copyFile(srcFile, destFile, force) {
 
 /***/ }),
 
-/***/ 8110:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
-/// <reference path="../shims-public.d.ts" />
-const listenersMap = new WeakMap();
-const abortedMap = new WeakMap();
-/**
- * An aborter instance implements AbortSignal interface, can abort HTTP requests.
- *
- * - Call AbortSignal.none to create a new AbortSignal instance that cannot be cancelled.
- * Use `AbortSignal.none` when you are required to pass a cancellation token but the operation
- * cannot or will not ever be cancelled.
- *
- * @example
- * Abort without timeout
- * ```ts
- * await doAsyncWork(AbortSignal.none);
- * ```
- */
-class AbortSignal {
-    constructor() {
-        /**
-         * onabort event listener.
-         */
-        this.onabort = null;
-        listenersMap.set(this, []);
-        abortedMap.set(this, false);
-    }
-    /**
-     * Status of whether aborted or not.
-     *
-     * @readonly
-     */
-    get aborted() {
-        if (!abortedMap.has(this)) {
-            throw new TypeError("Expected `this` to be an instance of AbortSignal.");
-        }
-        return abortedMap.get(this);
-    }
-    /**
-     * Creates a new AbortSignal instance that will never be aborted.
-     *
-     * @readonly
-     */
-    static get none() {
-        return new AbortSignal();
-    }
-    /**
-     * Added new "abort" event listener, only support "abort" event.
-     *
-     * @param _type - Only support "abort" event
-     * @param listener - The listener to be added
-     */
-    addEventListener(
-    // tslint:disable-next-line:variable-name
-    _type, listener) {
-        if (!listenersMap.has(this)) {
-            throw new TypeError("Expected `this` to be an instance of AbortSignal.");
-        }
-        const listeners = listenersMap.get(this);
-        listeners.push(listener);
-    }
-    /**
-     * Remove "abort" event listener, only support "abort" event.
-     *
-     * @param _type - Only support "abort" event
-     * @param listener - The listener to be removed
-     */
-    removeEventListener(
-    // tslint:disable-next-line:variable-name
-    _type, listener) {
-        if (!listenersMap.has(this)) {
-            throw new TypeError("Expected `this` to be an instance of AbortSignal.");
-        }
-        const listeners = listenersMap.get(this);
-        const index = listeners.indexOf(listener);
-        if (index > -1) {
-            listeners.splice(index, 1);
-        }
-    }
-    /**
-     * Dispatches a synthetic event to the AbortSignal.
-     */
-    dispatchEvent(_event) {
-        throw new Error("This is a stub dispatchEvent implementation that should not be used.  It only exists for type-checking purposes.");
-    }
-}
-/**
- * Helper to trigger an abort event immediately, the onabort and all abort event listeners will be triggered.
- * Will try to trigger abort event for all linked AbortSignal nodes.
- *
- * - If there is a timeout, the timer will be cancelled.
- * - If aborted is true, nothing will happen.
- *
- * @internal
- */
-// eslint-disable-next-line @azure/azure-sdk/ts-use-interface-parameters
-function abortSignal(signal) {
-    if (signal.aborted) {
-        return;
-    }
-    if (signal.onabort) {
-        signal.onabort.call(signal);
-    }
-    const listeners = listenersMap.get(signal);
-    if (listeners) {
-        // Create a copy of listeners so mutations to the array
-        // (e.g. via removeListener calls) don't affect the listeners
-        // we invoke.
-        listeners.slice().forEach((listener) => {
-            listener.call(signal, { type: "abort" });
-        });
-    }
-    abortedMap.set(signal, true);
-}
-
-// Copyright (c) Microsoft Corporation.
-/**
- * This error is thrown when an asynchronous operation has been aborted.
- * Check for this error by testing the `name` that the name property of the
- * error matches `"AbortError"`.
- *
- * @example
- * ```ts
- * const controller = new AbortController();
- * controller.abort();
- * try {
- *   doAsyncWork(controller.signal)
- * } catch (e) {
- *   if (e.name === 'AbortError') {
- *     // handle abort error here.
- *   }
- * }
- * ```
- */
-class AbortError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "AbortError";
-    }
-}
-/**
- * An AbortController provides an AbortSignal and the associated controls to signal
- * that an asynchronous operation should be aborted.
- *
- * @example
- * Abort an operation when another event fires
- * ```ts
- * const controller = new AbortController();
- * const signal = controller.signal;
- * doAsyncWork(signal);
- * button.addEventListener('click', () => controller.abort());
- * ```
- *
- * @example
- * Share aborter cross multiple operations in 30s
- * ```ts
- * // Upload the same data to 2 different data centers at the same time,
- * // abort another when any of them is finished
- * const controller = AbortController.withTimeout(30 * 1000);
- * doAsyncWork(controller.signal).then(controller.abort);
- * doAsyncWork(controller.signal).then(controller.abort);
- *```
- *
- * @example
- * Cascaded aborting
- * ```ts
- * // All operations can't take more than 30 seconds
- * const aborter = Aborter.timeout(30 * 1000);
- *
- * // Following 2 operations can't take more than 25 seconds
- * await doAsyncWork(aborter.withTimeout(25 * 1000));
- * await doAsyncWork(aborter.withTimeout(25 * 1000));
- * ```
- */
-class AbortController {
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    constructor(parentSignals) {
-        this._signal = new AbortSignal();
-        if (!parentSignals) {
-            return;
-        }
-        // coerce parentSignals into an array
-        if (!Array.isArray(parentSignals)) {
-            // eslint-disable-next-line prefer-rest-params
-            parentSignals = arguments;
-        }
-        for (const parentSignal of parentSignals) {
-            // if the parent signal has already had abort() called,
-            // then call abort on this signal as well.
-            if (parentSignal.aborted) {
-                this.abort();
-            }
-            else {
-                // when the parent signal aborts, this signal should as well.
-                parentSignal.addEventListener("abort", () => {
-                    this.abort();
-                });
-            }
-        }
-    }
-    /**
-     * The AbortSignal associated with this controller that will signal aborted
-     * when the abort method is called on this controller.
-     *
-     * @readonly
-     */
-    get signal() {
-        return this._signal;
-    }
-    /**
-     * Signal that any operations passed this controller's associated abort signal
-     * to cancel any remaining work and throw an `AbortError`.
-     */
-    abort() {
-        abortSignal(this._signal);
-    }
-    /**
-     * Creates a new AbortSignal instance that will abort after the provided ms.
-     * @param ms - Elapsed time in milliseconds to trigger an abort.
-     */
-    static timeout(ms) {
-        const signal = new AbortSignal();
-        const timer = setTimeout(abortSignal, ms, signal);
-        // Prevent the active Timer from keeping the Node.js event loop active.
-        if (typeof timer.unref === "function") {
-            timer.unref();
-        }
-        return signal;
-    }
-}
-
-exports.AbortController = AbortController;
-exports.AbortError = AbortError;
-exports.AbortSignal = AbortSignal;
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
 /***/ 6271:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -15714,18 +15467,18 @@ var logger$m = __nccwpck_require__(6515);
 var coreClient = __nccwpck_require__(160);
 var coreUtil = __nccwpck_require__(7779);
 var coreRestPipeline = __nccwpck_require__(778);
-var abortController = __nccwpck_require__(8110);
 var coreTracing = __nccwpck_require__(623);
 var fs = __nccwpck_require__(9896);
 var os = __nccwpck_require__(857);
 var path = __nccwpck_require__(6928);
-var msalCommon = __nccwpck_require__(6264);
+var abortController = __nccwpck_require__(7934);
+var msalCommon = __nccwpck_require__(7);
 var open = __nccwpck_require__(1964);
 var promises = __nccwpck_require__(1943);
 var child_process = __nccwpck_require__(5317);
 var crypto = __nccwpck_require__(6982);
-var promises$1 = __nccwpck_require__(1455);
 var node_crypto = __nccwpck_require__(7598);
+var promises$1 = __nccwpck_require__(1455);
 
 function _interopNamespaceDefault(e) {
     var n = Object.create(null);
@@ -15748,11 +15501,11 @@ var msalCommon__namespace = /*#__PURE__*/_interopNamespaceDefault(msalCommon);
 var child_process__namespace = /*#__PURE__*/_interopNamespaceDefault(child_process);
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Current version of the `@azure/identity` package.
  */
-const SDK_VERSION = `4.4.1`;
+const SDK_VERSION = `4.5.0`;
 /**
  * The default client ID for authentication
  * @internal
@@ -15815,7 +15568,7 @@ const CACHE_NON_CAE_SUFFIX = "nocae";
 const DEFAULT_TOKEN_CACHE_NAME = "msal.cache";
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * The current persistence provider, undefined by default.
  * @internal
@@ -15898,7 +15651,7 @@ const msalPlugins = {
 };
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * The AzureLogger used for all clients within the identity package
  */
@@ -15981,7 +15734,7 @@ function credentialLogger(title, log = logger$l) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 function isErrorResponse(errorResponse) {
     return (errorResponse &&
         typeof errorResponse.error === "string" &&
@@ -15997,8 +15750,9 @@ const CredentialUnavailableErrorName = "CredentialUnavailableError";
  * an error that should halt the chain, it's caught and the chain continues
  */
 class CredentialUnavailableError extends Error {
-    constructor(message) {
-        super(message);
+    constructor(message, options) {
+        // @ts-expect-error - TypeScript does not recognize this until we use ES2022 as the target; however, all our major runtimes do support the `cause` property
+        super(message, options);
         this.name = CredentialUnavailableErrorName;
     }
 }
@@ -16012,8 +15766,7 @@ const AuthenticationErrorName = "AuthenticationError";
  * the specific failure.
  */
 class AuthenticationError extends Error {
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    constructor(statusCode, errorBody) {
+    constructor(statusCode, errorBody, options) {
         let errorResponse = {
             error: "unknown",
             errorDescription: "An unknown error occurred and no additional details are available.",
@@ -16031,8 +15784,8 @@ class AuthenticationError extends Error {
             catch (e) {
                 if (statusCode === 400) {
                     errorResponse = {
-                        error: "authority_not_found",
-                        errorDescription: "The specified authority URL was not found.",
+                        error: "invalid_request",
+                        errorDescription: `The service indicated that the request was invalid.\n\n${errorBody}`,
                     };
                 }
                 else {
@@ -16049,7 +15802,9 @@ class AuthenticationError extends Error {
                 errorDescription: "An unknown error occurred and no additional details are available.",
             };
         }
-        super(`${errorResponse.error} Status code: ${statusCode}\nMore details:\n${errorResponse.errorDescription}`);
+        super(`${errorResponse.error} Status code: ${statusCode}\nMore details:\n${errorResponse.errorDescription},`, 
+        // @ts-expect-error - TypeScript does not recognize this until we use ES2022 as the target; however, all our major runtimes do support the `cause` property
+        options);
         this.statusCode = statusCode;
         this.errorResponse = errorResponse;
         // Ensure that this type reports the correct name
@@ -16092,7 +15847,9 @@ class AuthenticationRequiredError extends Error {
      * Optional parameters. A message can be specified. The {@link GetTokenOptions} of the request can also be specified to more easily associate the error with the received parameters.
      */
     options) {
-        super(options.message);
+        super(options.message, 
+        // @ts-expect-error - TypeScript does not recognize this until we use ES2022 as the target; however, all our major runtimes do support the `cause` property
+        options.cause ? { cause: options.cause } : undefined);
         this.scopes = options.scopes;
         this.getTokenOptions = options.getTokenOptions;
         this.name = "AuthenticationRequiredError";
@@ -16100,7 +15857,7 @@ class AuthenticationRequiredError extends Error {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 function createConfigurationErrorMessage(tenantId) {
     return `The current credential is not configured to acquire tokens for tenant ${tenantId}. To enable acquiring tokens for this tenant add it to the AdditionallyAllowedTenants on the credential options, or add "*" to AdditionallyAllowedTenants to allow acquiring tokens for any tenant.`;
 }
@@ -16134,7 +15891,7 @@ function processMultiTenantRequest(tenantId, getTokenOptions, additionallyAllowe
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * @internal
  */
@@ -16175,7 +15932,7 @@ function resolveAdditionallyAllowedTenantIds(additionallyAllowedTenants) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 function getIdentityTokenEndpointSuffix(tenantId) {
     if (tenantId === "adfs") {
         return "oauth2/token";
@@ -16186,7 +15943,7 @@ function getIdentityTokenEndpointSuffix(tenantId) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Creates a span using the global tracer.
  * @internal
@@ -16198,14 +15955,14 @@ const tracingClient = coreTracing.createTracingClient({
 });
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const DefaultScopeSuffix = "/.default";
 const imdsHost = "http://169.254.169.254";
 const imdsEndpointPath = "/metadata/identity/oauth2/token";
 const imdsApiVersion = "2018-02-01";
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Most MSIs send requests to the IMDS endpoint, or a similar endpoint.
  * These are GET requests that require sending a `resource` parameter on the query.
@@ -16254,9 +16011,34 @@ function parseExpirationTimestamp(body) {
     }
     throw new Error(`Failed to parse token expiration from body. expires_in="${body.expires_in}", expires_on="${body.expires_on}"`);
 }
+/**
+ * Given a token response, return the expiration timestamp as the number of milliseconds from the Unix epoch.
+ * @param body - A parsed response body from the authentication endpoint.
+ */
+function parseRefreshTimestamp(body) {
+    if (body.refresh_on) {
+        if (typeof body.refresh_on === "number") {
+            return body.refresh_on * 1000;
+        }
+        if (typeof body.refresh_on === "string") {
+            const asNumber = +body.refresh_on;
+            if (!isNaN(asNumber)) {
+                return asNumber * 1000;
+            }
+            const asDate = Date.parse(body.refresh_on);
+            if (!isNaN(asDate)) {
+                return asDate;
+            }
+        }
+        throw new Error(`Failed to parse refresh_on from body. refresh_on="${body.refresh_on}"`);
+    }
+    else {
+        return undefined;
+    }
+}
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const noCorrelationId = "noCorrelationId";
 /**
  * @internal
@@ -16318,6 +16100,8 @@ class IdentityClient extends coreClient.ServiceClient {
                 accessToken: {
                     token: parsedBody.access_token,
                     expiresOnTimestamp: parseExpirationTimestamp(parsedBody),
+                    refreshAfterTimestamp: parseRefreshTimestamp(parsedBody),
+                    tokenType: "Bearer",
                 },
                 refreshToken: parsedBody.refresh_token,
             };
@@ -16382,7 +16166,7 @@ class IdentityClient extends coreClient.ServiceClient {
     // Here is a custom layer that allows us to abort requests that go through MSAL,
     // since MSAL doesn't allow us to pass options all the way through.
     generateAbortSignal(correlationId) {
-        const controller = new abortController.AbortController();
+        const controller = new AbortController();
         const controllers = this.abortControllers.get(correlationId) || [];
         controllers.push(controller);
         this.abortControllers.set(correlationId, controllers);
@@ -16390,7 +16174,7 @@ class IdentityClient extends coreClient.ServiceClient {
         controller.signal.onabort = (...params) => {
             this.abortControllers.set(correlationId, undefined);
             if (existingOnAbort) {
-                existingOnAbort(...params);
+                existingOnAbort.apply(controller.signal, params);
             }
         };
         return controller.signal;
@@ -16493,7 +16277,7 @@ class IdentityClient extends coreClient.ServiceClient {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const CommonTenantId = "common";
 const AzureAccountClientId = "aebc6443-996d-45c2-90f0-388ff96faa56"; // VSC: 'aebc6443-996d-45c2-90f0-388ff96faa56'
 const logger$k = credentialLogger("VisualStudioCodeCredential");
@@ -16674,7 +16458,7 @@ class VisualStudioCodeCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * The context passed to an Identity plugin. This contains objects that
  * plugins can use to set backend implementations.
@@ -16695,18 +16479,16 @@ const pluginContext = {
  *
  * Example:
  *
- * ```javascript
- * import { cachePersistencePlugin } from "@azure/identity-cache-persistence";
+ * ```ts snippet:consumer_example
+ * import { useIdentityPlugin, DeviceCodeCredential } from "@azure/identity";
  *
- * import { useIdentityPlugin, DefaultAzureCredential } from "@azure/identity";
  * useIdentityPlugin(cachePersistencePlugin);
- *
- * // The plugin has the capability to extend `DefaultAzureCredential` and to
+ * // The plugin has the capability to extend `DeviceCodeCredential` and to
  * // add middleware to the underlying credentials, such as persistence.
- * const credential = new DefaultAzureCredential({
+ * const credential = new DeviceCodeCredential({
  *   tokenCachePersistenceOptions: {
- *     enabled: true
- *   }
+ *     enabled: true,
+ *   },
  * });
  * ```
  *
@@ -16717,7 +16499,7 @@ function useIdentityPlugin(plugin) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * @internal
  */
@@ -16749,6 +16531,19 @@ function ensureValidMsalToken(scopes, msalToken, getTokenOptions) {
     if (!msalToken.accessToken) {
         throw error(`Response had no "accessToken" property.`);
     }
+}
+/**
+ * Returns the authority host from either the options bag or the AZURE_AUTHORITY_HOST environment variable.
+ *
+ * Defaults to {@link DefaultAuthorityHost}.
+ * @internal
+ */
+function getAuthorityHost(options) {
+    let authorityHost = options === null || options === void 0 ? void 0 : options.authorityHost;
+    if (!authorityHost && coreUtil.isNodeLike) {
+        authorityHost = process.env.AZURE_AUTHORITY_HOST;
+    }
+    return authorityHost !== null && authorityHost !== void 0 ? authorityHost : DefaultAuthorityHost;
 }
 /**
  * Generates a valid authority by combining a host with a tenantId.
@@ -16849,7 +16644,8 @@ function handleMsalError(scopes, error, getTokenOptions) {
     }
     if (error.name === "ClientConfigurationError" ||
         error.name === "BrowserConfigurationAuthError" ||
-        error.name === "AbortError") {
+        error.name === "AbortError" ||
+        error.name === "AuthenticationError") {
         return error;
     }
     if (error.name === "NativeAuthError") {
@@ -16919,7 +16715,7 @@ function deserializeAuthenticationRecord(serializedRecord) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const msiName$1 = "ManagedIdentityCredential - IMDS";
 const logger$i = credentialLogger(msiName$1);
 /**
@@ -17056,7 +16852,7 @@ const imdsMsi = {
 };
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 // Matches the default retry configuration in expontentialRetryStrategy.ts
 const DEFAULT_CLIENT_MAX_RETRY_INTERVAL = 1000 * 64;
 /**
@@ -17075,14 +16871,10 @@ function imdsRetryPolicy(msiRetryConfig) {
                 if ((response === null || response === void 0 ? void 0 : response.status) !== 404) {
                     return { skipStrategy: true };
                 }
-                // Exponentially increase the delay each time
-                const exponentialDelay = msiRetryConfig.startDelayInMs * Math.pow(2, retryCount);
-                // Don't let the delay exceed the maximum
-                const clampedExponentialDelay = Math.min(DEFAULT_CLIENT_MAX_RETRY_INTERVAL, exponentialDelay);
-                // Allow the final value to have some "jitter" (within 50% of the delay size) so
-                // that retries across multiple clients don't occur simultaneously.
-                const retryAfterInMs = clampedExponentialDelay / 2 + coreUtil.getRandomIntegerInclusive(0, clampedExponentialDelay / 2);
-                return { retryAfterInMs };
+                return coreUtil.calculateRetryDelay(retryCount, {
+                    retryDelayInMs: msiRetryConfig.startDelayInMs,
+                    maxRetryDelayInMs: DEFAULT_CLIENT_MAX_RETRY_INTERVAL,
+                });
             },
         },
     ], {
@@ -17091,7 +16883,7 @@ function imdsRetryPolicy(msiRetryConfig) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Helps specify a regional authority, or "AutoDiscoverRegion" to auto-detect the region.
  */
@@ -17231,7 +17023,11 @@ function calculateRegionalAuthority(regionalAuthority) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
+/**
+ * The default logger used if no logger was passed in by the credential.
+ */
+const msalLogger = credentialLogger("MsalClient");
 /**
  * A call to open(), but mockable
  * @internal
@@ -17239,13 +17035,6 @@ function calculateRegionalAuthority(regionalAuthority) {
 const interactiveBrowserMockable = {
     open,
 };
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
-/**
- * The default logger used if no logger was passed in by the credential.
- */
-const msalLogger = credentialLogger("MsalClient");
 /**
  * Generates the configuration for MSAL (Microsoft Authentication Library).
  *
@@ -17255,10 +17044,10 @@ const msalLogger = credentialLogger("MsalClient");
  * @returns  The MSAL configuration object.
  */
 function generateMsalConfiguration(clientId, tenantId, msalClientOptions = {}) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     const resolvedTenant = resolveTenantId((_a = msalClientOptions.logger) !== null && _a !== void 0 ? _a : msalLogger, tenantId, clientId);
     // TODO: move and reuse getIdentityClientAuthorityHost
-    const authority = getAuthority(resolvedTenant, (_b = msalClientOptions.authorityHost) !== null && _b !== void 0 ? _b : process.env.AZURE_AUTHORITY_HOST);
+    const authority = getAuthority(resolvedTenant, getAuthorityHost(msalClientOptions));
     const httpClient = new IdentityClient(Object.assign(Object.assign({}, msalClientOptions.tokenCredentialOptions), { authorityHost: authority, loggingOptions: msalClientOptions.loggingOptions }));
     const msalConfig = {
         auth: {
@@ -17269,9 +17058,9 @@ function generateMsalConfiguration(clientId, tenantId, msalClientOptions = {}) {
         system: {
             networkClient: httpClient,
             loggerOptions: {
-                loggerCallback: defaultLoggerCallback((_c = msalClientOptions.logger) !== null && _c !== void 0 ? _c : msalLogger),
+                loggerCallback: defaultLoggerCallback((_b = msalClientOptions.logger) !== null && _b !== void 0 ? _b : msalLogger),
                 logLevel: getMSALLogLevel(logger$m.getLogLevel()),
-                piiLoggingEnabled: (_d = msalClientOptions.loggingOptions) === null || _d === void 0 ? void 0 : _d.enableUnsafeSupportLogging,
+                piiLoggingEnabled: (_c = msalClientOptions.loggingOptions) === null || _c === void 0 ? void 0 : _c.enableUnsafeSupportLogging,
             },
         },
     };
@@ -17367,6 +17156,12 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
                 silentRequest.tokenQueryParameters["msal_request_type"] = "consumer_passthrough";
             }
         }
+        if (options.proofOfPossessionOptions) {
+            silentRequest.shrNonce = options.proofOfPossessionOptions.nonce;
+            silentRequest.authenticationScheme = "pop";
+            silentRequest.resourceRequestMethod = options.proofOfPossessionOptions.resourceRequestMethod;
+            silentRequest.resourceRequestUri = options.proofOfPossessionOptions.resourceRequestUrl;
+        }
         state.logger.getToken.info("Attempting to acquire token silently");
         return app.acquireTokenSilent(silentRequest);
     }
@@ -17376,7 +17171,7 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
      */
     function calculateRequestAuthority(options) {
         if (options === null || options === void 0 ? void 0 : options.tenantId) {
-            return getAuthority(options.tenantId, createMsalClientOptions.authorityHost);
+            return getAuthority(options.tenantId, getAuthorityHost(createMsalClientOptions));
         }
         return state.msalConfig.auth.authority;
     }
@@ -17391,7 +17186,7 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
      * @returns A promise that resolves to an AccessToken object containing the access token and its expiration timestamp.
      */
     async function withSilentAuthentication(msalApp, scopes, options, onAuthenticationRequired) {
-        var _a;
+        var _a, _b;
         let response = null;
         try {
             response = await getTokenSilent(msalApp, scopes, options);
@@ -17424,9 +17219,12 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
         return {
             token: response.accessToken,
             expiresOnTimestamp: response.expiresOn.getTime(),
+            refreshAfterTimestamp: (_b = response.refreshOn) === null || _b === void 0 ? void 0 : _b.getTime(),
+            tokenType: response.tokenType,
         };
     }
     async function getTokenByClientSecret(scopes, clientSecret, options = {}) {
+        var _a;
         state.logger.getToken.info(`Attempting to acquire token using client secret`);
         state.msalConfig.auth.clientSecret = clientSecret;
         const msalApp = await getConfidentialApp(options);
@@ -17442,6 +17240,8 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
             return {
                 token: response.accessToken,
                 expiresOnTimestamp: response.expiresOn.getTime(),
+                refreshAfterTimestamp: (_a = response.refreshOn) === null || _a === void 0 ? void 0 : _a.getTime(),
+                tokenType: response.tokenType,
             };
         }
         catch (err) {
@@ -17449,6 +17249,7 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
         }
     }
     async function getTokenByClientAssertion(scopes, clientAssertion, options = {}) {
+        var _a;
         state.logger.getToken.info(`Attempting to acquire token using client assertion`);
         state.msalConfig.auth.clientAssertion = clientAssertion;
         const msalApp = await getConfidentialApp(options);
@@ -17465,6 +17266,8 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
             return {
                 token: response.accessToken,
                 expiresOnTimestamp: response.expiresOn.getTime(),
+                refreshAfterTimestamp: (_a = response.refreshOn) === null || _a === void 0 ? void 0 : _a.getTime(),
+                tokenType: response.tokenType,
             };
         }
         catch (err) {
@@ -17472,6 +17275,7 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
         }
     }
     async function getTokenByClientCertificate(scopes, certificate, options = {}) {
+        var _a;
         state.logger.getToken.info(`Attempting to acquire token using client certificate`);
         state.msalConfig.auth.clientCertificate = certificate;
         const msalApp = await getConfidentialApp(options);
@@ -17487,6 +17291,8 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
             return {
                 token: response.accessToken,
                 expiresOnTimestamp: response.expiresOn.getTime(),
+                refreshAfterTimestamp: (_a = response.refreshOn) === null || _a === void 0 ? void 0 : _a.getTime(),
+                tokenType: response.tokenType,
             };
         }
         catch (err) {
@@ -17557,6 +17363,7 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
         });
     }
     async function getTokenOnBehalfOf(scopes, userAssertionToken, clientCredentials, options = {}) {
+        var _a;
         msalLogger.getToken.info(`Attempting to acquire token on behalf of another user`);
         if (typeof clientCredentials === "string") {
             // Client secret
@@ -17586,6 +17393,8 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
             return {
                 token: response.accessToken,
                 expiresOnTimestamp: response.expiresOn.getTime(),
+                refreshAfterTimestamp: (_a = response.refreshOn) === null || _a === void 0 ? void 0 : _a.getTime(),
+                tokenType: response.tokenType,
             };
         }
         catch (err) {
@@ -17623,6 +17432,13 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
             else {
                 msalLogger.verbose("Attempting broker authentication without the default broker account");
             }
+            if (options.proofOfPossessionOptions) {
+                interactiveRequest.shrNonce = options.proofOfPossessionOptions.nonce;
+                interactiveRequest.authenticationScheme = "pop";
+                interactiveRequest.resourceRequestMethod =
+                    options.proofOfPossessionOptions.resourceRequestMethod;
+                interactiveRequest.resourceRequestUri = options.proofOfPossessionOptions.resourceRequestUrl;
+            }
             try {
                 return await app.acquireTokenInteractive(interactiveRequest);
             }
@@ -17657,6 +17473,13 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
             if (state.pluginConfiguration.broker.isEnabled) {
                 return getBrokeredToken((_a = state.pluginConfiguration.broker.useDefaultBrokerAccount) !== null && _a !== void 0 ? _a : false);
             }
+            if (options.proofOfPossessionOptions) {
+                interactiveRequest.shrNonce = options.proofOfPossessionOptions.nonce;
+                interactiveRequest.authenticationScheme = "pop";
+                interactiveRequest.resourceRequestMethod =
+                    options.proofOfPossessionOptions.resourceRequestMethod;
+                interactiveRequest.resourceRequestUri = options.proofOfPossessionOptions.resourceRequestUrl;
+            }
             return app.acquireTokenInteractive(interactiveRequest);
         });
     }
@@ -17674,7 +17497,7 @@ To work with multiple accounts for the same Client ID and Tenant ID, please prov
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$h = credentialLogger("ClientAssertionCredential");
 /**
  * Authenticates a service principal with a JWT assertion.
@@ -17691,8 +17514,14 @@ class ClientAssertionCredential {
      * @param options - Options for configuring the client which makes the authentication request.
      */
     constructor(tenantId, clientId, getAssertion, options = {}) {
-        if (!tenantId || !clientId || !getAssertion) {
-            throw new Error("ClientAssertionCredential: tenantId, clientId, and clientAssertion are required parameters.");
+        if (!tenantId) {
+            throw new CredentialUnavailableError("ClientAssertionCredential: tenantId is a required parameter.");
+        }
+        if (!clientId) {
+            throw new CredentialUnavailableError("ClientAssertionCredential: clientId is a required parameter.");
+        }
+        if (!getAssertion) {
+            throw new CredentialUnavailableError("ClientAssertionCredential: clientAssertion is a required parameter.");
         }
         this.tenantId = tenantId;
         this.additionallyAllowedTenantIds = resolveAdditionallyAllowedTenantIds(options === null || options === void 0 ? void 0 : options.additionallyAllowedTenants);
@@ -17718,7 +17547,7 @@ class ClientAssertionCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const credentialName$4 = "WorkloadIdentityCredential";
 /**
  * Contains the list of all supported environment variable names so that an
@@ -17767,10 +17596,20 @@ class WorkloadIdentityCredential {
         if (tenantId) {
             checkTenantId(logger$g, tenantId);
         }
-        if (clientId && tenantId && this.federatedTokenFilePath) {
-            logger$g.info(`Invoking ClientAssertionCredential with tenant ID: ${tenantId}, clientId: ${workloadIdentityCredentialOptions.clientId} and federated token path: [REDACTED]`);
-            this.client = new ClientAssertionCredential(tenantId, clientId, this.readFileContents.bind(this), options);
+        if (!clientId) {
+            throw new CredentialUnavailableError(`${credentialName$4}: is unavailable. clientId is a required parameter. In DefaultAzureCredential and ManagedIdentityCredential, this can be provided as an environment variable - "AZURE_CLIENT_ID".
+        See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/workloadidentitycredential/troubleshoot`);
         }
+        if (!tenantId) {
+            throw new CredentialUnavailableError(`${credentialName$4}: is unavailable. tenantId is a required parameter. In DefaultAzureCredential and ManagedIdentityCredential, this can be provided as an environment variable - "AZURE_TENANT_ID".
+        See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/workloadidentitycredential/troubleshoot`);
+        }
+        if (!this.federatedTokenFilePath) {
+            throw new CredentialUnavailableError(`${credentialName$4}: is unavailable. federatedTokenFilePath is a required parameter. In DefaultAzureCredential and ManagedIdentityCredential, this can be provided as an environment variable - "AZURE_FEDERATED_TOKEN_FILE".
+        See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/workloadidentitycredential/troubleshoot`);
+        }
+        logger$g.info(`Invoking ClientAssertionCredential with tenant ID: ${tenantId}, clientId: ${workloadIdentityCredentialOptions.clientId} and federated token path: [REDACTED]`);
+        this.client = new ClientAssertionCredential(tenantId, clientId, this.readFileContents.bind(this), options);
     }
     /**
      * Authenticates with Microsoft Entra ID and returns an access token if successful.
@@ -17786,7 +17625,7 @@ class WorkloadIdentityCredential {
       In DefaultAzureCredential and ManagedIdentityCredential, these can be provided as environment variables - 
       "AZURE_TENANT_ID",
       "AZURE_CLIENT_ID",
-      "AZURE_FEDERATED_TOKEN_FILE". See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/workloadidentitycredential/troubleshoot  `;
+      "AZURE_FEDERATED_TOKEN_FILE". See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/workloadidentitycredential/troubleshoot`;
             logger$g.info(errorMessage);
             throw new CredentialUnavailableError(errorMessage);
         }
@@ -17817,7 +17656,7 @@ class WorkloadIdentityCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const msiName = "ManagedIdentityCredential - Token Exchange";
 const logger$f = credentialLogger(msiName);
 /**
@@ -17844,7 +17683,7 @@ const tokenExchangeMsi = {
 };
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$e = credentialLogger("ManagedIdentityCredential(MSAL)");
 class MsalMsiProvider {
     constructor(clientIdOrOptions, options = {}) {
@@ -17864,9 +17703,11 @@ class MsalMsiProvider {
             _options = clientIdOrOptions !== null && clientIdOrOptions !== void 0 ? clientIdOrOptions : {};
         }
         this.resourceId = _options === null || _options === void 0 ? void 0 : _options.resourceId;
+        this.objectId = _options === null || _options === void 0 ? void 0 : _options.objectId;
         // For JavaScript users.
-        if (this.clientId && this.resourceId) {
-            throw new Error(`ManagedIdentityCredential - Client Id and Resource Id can't be provided at the same time.`);
+        const providedIds = [this.clientId, this.resourceId, this.objectId].filter(Boolean);
+        if (providedIds.length > 1) {
+            throw new Error(`ManagedIdentityCredential: only one of 'clientId', 'resourceId', or 'objectId' can be provided. Received values: ${JSON.stringify({ clientId: this.clientId, resourceId: this.resourceId, objectId: this.objectId })}`);
         }
         // ManagedIdentity uses http for local requests
         _options.allowInsecureConnection = true;
@@ -17878,6 +17719,7 @@ class MsalMsiProvider {
             managedIdentityIdParams: {
                 userAssignedClientId: this.clientId,
                 userAssignedResourceId: this.resourceId,
+                userAssignedObjectId: this.objectId,
             },
             system: {
                 // todo: proxyUrl?
@@ -17893,6 +17735,17 @@ class MsalMsiProvider {
         this.isAvailableIdentityClient = new IdentityClient(Object.assign(Object.assign({}, _options), { retryOptions: {
                 maxRetries: 0,
             } }));
+        // CloudShell MSI will ignore any user-assigned identity passed as parameters. To avoid confusion, we prevent this from happening as early as possible.
+        if (this.managedIdentityApp.getManagedIdentitySource() === "CloudShell") {
+            if (this.clientId || this.resourceId || this.objectId) {
+                logger$e.warning(`CloudShell MSI detected with user-provided IDs - throwing. Received values: ${JSON.stringify({
+                    clientId: this.clientId,
+                    resourceId: this.resourceId,
+                    objectId: this.objectId,
+                })}.`);
+                throw new CredentialUnavailableError("ManagedIdentityCredential: Specifying a user-assigned managed identity is not supported for CloudShell at runtime. When using Managed Identity in CloudShell, omit the clientId, resourceId, and objectId parameters.");
+            }
+        }
     }
     /**
      * Authenticates with Microsoft Entra ID and returns an access token if successful.
@@ -17910,6 +17763,7 @@ class MsalMsiProvider {
             throw new CredentialUnavailableError(`ManagedIdentityCredential: Multiple scopes are not supported. Scopes: ${JSON.stringify(scopes)}`);
         }
         return tracingClient.withSpan("ManagedIdentityCredential.getToken", options, async () => {
+            var _a;
             try {
                 const isTokenExchangeMsi = await tokenExchangeMsi.isAvailable({
                     scopes,
@@ -17925,6 +17779,7 @@ class MsalMsiProvider {
                 // We will continue to implement these features in the Identity library.
                 const identitySource = this.managedIdentityApp.getManagedIdentitySource();
                 const isImdsMsi = identitySource === "DefaultToImds" || identitySource === "Imds"; // Neither actually checks that IMDS endpoint is available, just that it's the source the MSAL _would_ try to use.
+                logger$e.getToken.info(`MSAL Identity source: ${identitySource}`);
                 if (isTokenExchangeMsi) {
                     // In the AKS scenario we will use the existing tokenExchangeMsi indefinitely.
                     logger$e.getToken.info("Using the token exchange managed identity.");
@@ -17936,7 +17791,7 @@ class MsalMsiProvider {
                         resourceId: this.resourceId,
                     });
                     if (result === null) {
-                        throw new CredentialUnavailableError("The managed identity endpoint was reached, yet no tokens were received.");
+                        throw new CredentialUnavailableError("Attempted to use the token exchange managed identity, but received a null response.");
                     }
                     return result;
                 }
@@ -17952,7 +17807,7 @@ class MsalMsiProvider {
                         resourceId: this.resourceId,
                     });
                     if (!isAvailable) {
-                        throw new CredentialUnavailableError(`ManagedIdentityCredential: The managed identity endpoint is not available.`);
+                        throw new CredentialUnavailableError(`Attempted to use the IMDS endpoint, but it is not available.`);
                     }
                 }
                 // If we got this far, it means:
@@ -17968,6 +17823,8 @@ class MsalMsiProvider {
                 return {
                     expiresOnTimestamp: token.expiresOn.getTime(),
                     token: token.accessToken,
+                    refreshAfterTimestamp: (_a = token.refreshOn) === null || _a === void 0 ? void 0 : _a.getTime(),
+                    tokenType: "Bearer",
                 };
             }
             catch (err) {
@@ -17978,9 +17835,9 @@ class MsalMsiProvider {
                     throw err;
                 }
                 if (isNetworkError(err)) {
-                    throw new CredentialUnavailableError(`ManagedIdentityCredential: Network unreachable. Message: ${err.message}`);
+                    throw new CredentialUnavailableError(`ManagedIdentityCredential: Network unreachable. Message: ${err.message}`, { cause: err });
                 }
-                throw new CredentialUnavailableError(`ManagedIdentityCredential: Authentication failed. Message ${err.message}`);
+                throw new CredentialUnavailableError(`ManagedIdentityCredential: Authentication failed. Message ${err.message}`, { cause: err });
             }
         });
     }
@@ -17997,7 +17854,7 @@ class MsalMsiProvider {
             });
         };
         if (!msalToken) {
-            throw createError("No response");
+            throw createError("No response.");
         }
         if (!msalToken.expiresOn) {
             throw createError(`Response had no "expiresOn" property.`);
@@ -18027,7 +17884,7 @@ function isNetworkError(err) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Attempts authentication using a managed identity available at the deployment environment.
  * This authentication type works in Azure VMs, App Service instances, Azure Functions applications,
@@ -18063,7 +17920,7 @@ class ManagedIdentityCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Ensures the scopes value is an array.
  * @internal
@@ -18091,7 +17948,7 @@ function getScopeResource(scope) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Mockable reference to the CLI credential cliCredentialFunctions
  * @internal
@@ -18242,6 +18099,7 @@ class AzureCliCredential {
             return {
                 token,
                 expiresOnTimestamp,
+                tokenType: "Bearer",
             };
         }
         // fallback to the older expiresOn - an RFC3339 date string
@@ -18253,12 +18111,13 @@ class AzureCliCredential {
         return {
             token,
             expiresOnTimestamp,
+            tokenType: "Bearer",
         };
     }
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Mockable reference to the Developer CLI credential cliCredentialFunctions
  * @internal
@@ -18401,6 +18260,7 @@ class AzureDeveloperCliCredential {
                     return {
                         token: resp.token,
                         expiresOnTimestamp: new Date(resp.expiresOn).getTime(),
+                        tokenType: "Bearer",
                     };
                 }
                 catch (e) {
@@ -18422,7 +18282,7 @@ class AzureDeveloperCliCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Easy to mock childProcess utils.
  * @internal
@@ -18453,7 +18313,7 @@ const processUtils = {
 };
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$b = credentialLogger("AzurePowerShellCredential");
 const isWindows = process.platform === "win32";
 /**
@@ -18556,27 +18416,44 @@ class AzurePowerShellCredential {
                 commandStack.shift();
                 continue;
             }
-            let tenantSection = "";
-            if (tenantId) {
-                tenantSection = `-TenantId "${tenantId}"`;
-            }
             const results = await runCommands([
                 [
                     powerShellCommand,
                     "-NoProfile",
                     "-NonInteractive",
                     "-Command",
-                    "Import-Module Az.Accounts -MinimumVersion 2.2.0 -PassThru",
-                ],
-                [
-                    powerShellCommand,
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-Command",
-                    `Get-AzAccessToken ${tenantSection} -ResourceUrl "${resource}" | ConvertTo-Json`,
+                    `
+          $tenantId = "${tenantId !== null && tenantId !== void 0 ? tenantId : ""}"
+          $m = Import-Module Az.Accounts -MinimumVersion 2.2.0 -PassThru
+          $useSecureString = $m.Version -ge [version]'2.17.0'
+
+          $params = @{
+            ResourceUrl = "${resource}"
+          }
+
+          if ($tenantId.Length -gt 0) {
+            $params["TenantId"] = $tenantId
+          }
+
+          if ($useSecureString) {
+            $params["AsSecureString"] = $true
+          }
+
+          $token = Get-AzAccessToken @params
+
+          $result = New-Object -TypeName PSObject
+          $result | Add-Member -MemberType NoteProperty -Name ExpiresOn -Value $token.ExpiresOn
+          if ($useSecureString) {
+            $result | Add-Member -MemberType NoteProperty -Name Token -Value (ConvertFrom-SecureString -AsPlainText $token.Token)
+          } else {
+            $result | Add-Member -MemberType NoteProperty -Name Token -Value $token.Token
+          }
+
+          Write-Output (ConvertTo-Json $result)
+          `,
                 ],
             ]);
-            const result = results[1];
+            const result = results[0];
             return parseJsonToken(result);
         }
         throw new Error(`Unable to execute PowerShell. Ensure that it is installed in your system`);
@@ -18604,6 +18481,7 @@ class AzurePowerShellCredential {
                 return {
                     token: response.Token,
                     expiresOnTimestamp: new Date(response.ExpiresOn).getTime(),
+                    tokenType: "Bearer",
                 };
             }
             catch (err) {
@@ -18658,7 +18536,7 @@ async function parseJsonToken(result) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * @internal
  */
@@ -18674,7 +18552,14 @@ class ChainedTokenCredential {
      * @param sources - `TokenCredential` implementations to be tried in order.
      *
      * Example usage:
-     * ```javascript
+     * ```ts snippet:chained_token_credential_example
+     * import { ClientSecretCredential, ChainedTokenCredential } from "@azure/identity";
+     *
+     * const tenantId = "<tenant-id>";
+     * const clientId = "<client-id>";
+     * const clientSecret = "<client-secret>";
+     * const anotherClientId = "<another-client-id>";
+     * const anotherSecret = "<another-client-secret>";
      * const firstCredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
      * const secondCredential = new ClientSecretCredential(tenantId, anotherClientId, anotherSecret);
      * const credentialChain = new ChainedTokenCredential(firstCredential, secondCredential);
@@ -18737,7 +18622,7 @@ class ChainedTokenCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const credentialName$3 = "ClientCertificateCredential";
 const logger$9 = credentialLogger(credentialName$3);
 /**
@@ -18788,7 +18673,8 @@ class ClientCertificateCredential {
         });
     }
     async buildClientCertificate() {
-        const parts = await this.parseCertificate();
+        var _a;
+        const parts = await parseCertificate(this.certificateConfiguration, (_a = this.sendCertificateChain) !== null && _a !== void 0 ? _a : false);
         let privateKey;
         if (this.certificateConfiguration.certificatePassword !== undefined) {
             privateKey = crypto.createPrivateKey({
@@ -18811,38 +18697,45 @@ class ClientCertificateCredential {
             x5c: parts.x5c,
         };
     }
-    async parseCertificate() {
-        const certificate = this.certificateConfiguration.certificate;
-        const certificatePath = this.certificateConfiguration.certificatePath;
-        const certificateContents = certificate || (await promises.readFile(certificatePath, "utf8"));
-        const x5c = this.sendCertificateChain ? certificateContents : undefined;
-        const certificatePattern = /(-+BEGIN CERTIFICATE-+)(\n\r?|\r\n?)([A-Za-z0-9+/\n\r]+=*)(\n\r?|\r\n?)(-+END CERTIFICATE-+)/g;
-        const publicKeys = [];
-        // Match all possible certificates, in the order they are in the file. These will form the chain that is used for x5c
-        let match;
-        do {
-            match = certificatePattern.exec(certificateContents);
-            if (match) {
-                publicKeys.push(match[3]);
-            }
-        } while (match);
-        if (publicKeys.length === 0) {
-            throw new Error("The file at the specified path does not contain a PEM-encoded certificate.");
+}
+/**
+ * Parses a certificate into its relevant parts
+ *
+ * @param certificateConfiguration - The certificate contents or path to the certificate
+ * @param sendCertificateChain - true if the entire certificate chain should be sent for SNI, false otherwise
+ * @returns The parsed certificate parts and the certificate contents
+ */
+async function parseCertificate(certificateConfiguration, sendCertificateChain) {
+    const certificate = certificateConfiguration.certificate;
+    const certificatePath = certificateConfiguration.certificatePath;
+    const certificateContents = certificate || (await promises.readFile(certificatePath, "utf8"));
+    const x5c = sendCertificateChain ? certificateContents : undefined;
+    const certificatePattern = /(-+BEGIN CERTIFICATE-+)(\n\r?|\r\n?)([A-Za-z0-9+/\n\r]+=*)(\n\r?|\r\n?)(-+END CERTIFICATE-+)/g;
+    const publicKeys = [];
+    // Match all possible certificates, in the order they are in the file. These will form the chain that is used for x5c
+    let match;
+    do {
+        match = certificatePattern.exec(certificateContents);
+        if (match) {
+            publicKeys.push(match[3]);
         }
-        const thumbprint = crypto.createHash("sha1")
-            .update(Buffer.from(publicKeys[0], "base64"))
-            .digest("hex")
-            .toUpperCase();
-        return {
-            certificateContents,
-            thumbprint,
-            x5c,
-        };
+    } while (match);
+    if (publicKeys.length === 0) {
+        throw new Error("The file at the specified path does not contain a PEM-encoded certificate.");
     }
+    const thumbprint = crypto.createHash("sha1")
+        .update(Buffer.from(publicKeys[0], "base64"))
+        .digest("hex")
+        .toUpperCase();
+    return {
+        certificateContents,
+        thumbprint,
+        x5c,
+    };
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$8 = credentialLogger("ClientSecretCredential");
 /**
  * Enables authentication to Microsoft Entra ID using a client secret
@@ -18864,8 +18757,14 @@ class ClientSecretCredential {
      * @param options - Options for configuring the client which makes the authentication request.
      */
     constructor(tenantId, clientId, clientSecret, options = {}) {
-        if (!tenantId || !clientId || !clientSecret) {
-            throw new Error("ClientSecretCredential: tenantId, clientId, and clientSecret are required parameters. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.");
+        if (!tenantId) {
+            throw new CredentialUnavailableError("ClientSecretCredential: tenantId is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.");
+        }
+        if (!clientId) {
+            throw new CredentialUnavailableError("ClientSecretCredential: clientId is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.");
+        }
+        if (!clientSecret) {
+            throw new CredentialUnavailableError("ClientSecretCredential: clientSecret is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.");
         }
         this.clientSecret = clientSecret;
         this.tenantId = tenantId;
@@ -18890,7 +18789,7 @@ class ClientSecretCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$7 = credentialLogger("UsernamePasswordCredential");
 /**
  * Enables authentication to Microsoft Entra ID with a user's
@@ -18911,8 +18810,17 @@ class UsernamePasswordCredential {
      * @param options - Options for configuring the client which makes the authentication request.
      */
     constructor(tenantId, clientId, username, password, options = {}) {
-        if (!tenantId || !clientId || !username || !password) {
-            throw new Error("UsernamePasswordCredential: tenantId, clientId, username and password are required parameters. To troubleshoot, visit https://aka.ms/azsdk/js/identity/usernamepasswordcredential/troubleshoot.");
+        if (!tenantId) {
+            throw new CredentialUnavailableError("UsernamePasswordCredential: tenantId is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/usernamepasswordcredential/troubleshoot.");
+        }
+        if (!clientId) {
+            throw new CredentialUnavailableError("UsernamePasswordCredential: clientId is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/usernamepasswordcredential/troubleshoot.");
+        }
+        if (!username) {
+            throw new CredentialUnavailableError("UsernamePasswordCredential: username is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/usernamepasswordcredential/troubleshoot.");
+        }
+        if (!password) {
+            throw new CredentialUnavailableError("UsernamePasswordCredential: password is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/usernamepasswordcredential/troubleshoot.");
         }
         this.tenantId = tenantId;
         this.additionallyAllowedTenantIds = resolveAdditionallyAllowedTenantIds(options === null || options === void 0 ? void 0 : options.additionallyAllowedTenants);
@@ -18942,7 +18850,7 @@ class UsernamePasswordCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Contains the list of all supported environment variable names so that an
  * appropriate error message can be generated when no credentials can be
@@ -18959,6 +18867,7 @@ const AllSupportedEnvironmentVariables = [
     "AZURE_USERNAME",
     "AZURE_PASSWORD",
     "AZURE_ADDITIONALLY_ALLOWED_TENANTS",
+    "AZURE_CLIENT_SEND_CERTIFICATE_CHAIN",
 ];
 function getAdditionallyAllowedTenants() {
     var _a;
@@ -18967,6 +18876,13 @@ function getAdditionallyAllowedTenants() {
 }
 const credentialName$2 = "EnvironmentCredential";
 const logger$6 = credentialLogger(credentialName$2);
+function getSendCertificateChain() {
+    var _a;
+    const sendCertificateChain = ((_a = process.env.AZURE_CLIENT_SEND_CERTIFICATE_CHAIN) !== null && _a !== void 0 ? _a : "").toLowerCase();
+    const result = sendCertificateChain === "true" || sendCertificateChain === "1";
+    logger$6.verbose(`AZURE_CLIENT_SEND_CERTIFICATE_CHAIN: ${process.env.AZURE_CLIENT_SEND_CERTIFICATE_CHAIN}; sendCertificateChain: ${result}`);
+    return result;
+}
 /**
  * Enables authentication to Microsoft Entra ID using a client secret or certificate, or as a user
  * with a username and password.
@@ -18986,6 +18902,7 @@ class EnvironmentCredential {
      * - `AZURE_CLIENT_SECRET`: A client secret that was generated for the App Registration.
      * - `AZURE_CLIENT_CERTIFICATE_PATH`: The path to a PEM certificate to use during the authentication, instead of the client secret.
      * - `AZURE_CLIENT_CERTIFICATE_PASSWORD`: (optional) password for the certificate file.
+     * - `AZURE_CLIENT_SEND_CERTIFICATE_CHAIN`: (optional) indicates that the certificate chain should be set in x5c header to support subject name / issuer based authentication.
      *
      * Alternatively, users can provide environment variables for username and password authentication:
      * - `AZURE_USERNAME`: Username to authenticate with.
@@ -19003,7 +18920,8 @@ class EnvironmentCredential {
         logger$6.info(`Found the following environment variables: ${assigned}`);
         const tenantId = process.env.AZURE_TENANT_ID, clientId = process.env.AZURE_CLIENT_ID, clientSecret = process.env.AZURE_CLIENT_SECRET;
         const additionallyAllowedTenantIds = getAdditionallyAllowedTenants();
-        const newOptions = Object.assign(Object.assign({}, options), { additionallyAllowedTenantIds });
+        const sendCertificateChain = getSendCertificateChain();
+        const newOptions = Object.assign(Object.assign({}, options), { additionallyAllowedTenantIds, sendCertificateChain });
         if (tenantId) {
             checkTenantId(logger$6, tenantId);
         }
@@ -19055,7 +18973,7 @@ class EnvironmentCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$5 = credentialLogger("DefaultAzureCredential");
 /**
  * Creates a {@link ManagedIdentityCredential} from the provided options.
@@ -19198,7 +19116,7 @@ class DefaultAzureCredential extends ChainedTokenCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$4 = credentialLogger("InteractiveBrowserCredential");
 /**
  * Enables authentication to Microsoft Entra ID inside of the web browser
@@ -19264,7 +19182,7 @@ class InteractiveBrowserCredential {
      * Authenticates with Microsoft Entra ID and returns an access token if successful.
      * If authentication fails, a {@link CredentialUnavailableError} will be thrown with the details of the failure.
      *
-     * If the token can't be retrieved silently, this method will require user interaction to retrieve the token.
+     * If the token can't be retrieved silently, this method will always generate a challenge for the user.
      *
      * On Node.js, this credential has [Proof Key for Code Exchange (PKCE)](https://datatracker.ietf.org/doc/html/rfc7636) enabled by default.
      * PKCE is a security feature that mitigates authentication code interception attacks.
@@ -19283,7 +19201,7 @@ class InteractiveBrowserCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$3 = credentialLogger("DeviceCodeCredential");
 /**
  * Method that logs the user code from the DeviceCodeCredential.
@@ -19305,13 +19223,15 @@ class DeviceCodeCredential {
      *
      * Developers can configure how this message is shown by passing a custom `userPromptCallback`:
      *
-     * ```js
+     * ```ts snippet:device_code_credential_example
+     * import { DeviceCodeCredential } from "@azure/identity";
+     *
      * const credential = new DeviceCodeCredential({
-     *   tenantId: env.AZURE_TENANT_ID,
-     *   clientId: env.AZURE_CLIENT_ID,
+     *   tenantId: process.env.AZURE_TENANT_ID,
+     *   clientId: process.env.AZURE_CLIENT_ID,
      *   userPromptCallback: (info) => {
      *     console.log("CUSTOMIZED PROMPT CALLBACK", info.message);
-     *   }
+     *   },
      * });
      * ```
      *
@@ -19350,7 +19270,7 @@ class DeviceCodeCredential {
      * Authenticates with Microsoft Entra ID and returns an access token if successful.
      * If authentication fails, a {@link CredentialUnavailableError} will be thrown with the details of the failure.
      *
-     * If the token can't be retrieved silently, this method will require user interaction to retrieve the token.
+     * If the token can't be retrieved silently, this method will always generate a challenge for the user.
      *
      * @param scopes - The list of scopes for which the token will have access.
      * @param options - The options used to configure any requests this
@@ -19366,7 +19286,7 @@ class DeviceCodeCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const credentialName$1 = "AzurePipelinesCredential";
 const logger$2 = credentialLogger(credentialName$1);
 const OIDC_API_VERSION = "7.1";
@@ -19383,10 +19303,26 @@ class AzurePipelinesCredential {
      * @param systemAccessToken - The pipeline's <see href="https://learn.microsoft.com/azure/devops/pipelines/build/variables?view=azure-devops%26tabs=yaml#systemaccesstoken">System.AccessToken</see> value.
      * @param options - The identity client options to use for authentication.
      */
-    constructor(tenantId, clientId, serviceConnectionId, systemAccessToken, options) {
-        if (!clientId || !tenantId || !serviceConnectionId || !systemAccessToken) {
-            throw new CredentialUnavailableError(`${credentialName$1}: is unavailable. tenantId, clientId, serviceConnectionId, and systemAccessToken are required parameters.`);
+    constructor(tenantId, clientId, serviceConnectionId, systemAccessToken, options = {}) {
+        var _a, _b;
+        if (!clientId) {
+            throw new CredentialUnavailableError(`${credentialName$1}: is unavailable. clientId is a required parameter.`);
         }
+        if (!tenantId) {
+            throw new CredentialUnavailableError(`${credentialName$1}: is unavailable. tenantId is a required parameter.`);
+        }
+        if (!serviceConnectionId) {
+            throw new CredentialUnavailableError(`${credentialName$1}: is unavailable. serviceConnectionId is a required parameter.`);
+        }
+        if (!systemAccessToken) {
+            throw new CredentialUnavailableError(`${credentialName$1}: is unavailable. systemAccessToken is a required parameter.`);
+        }
+        // Allow these headers to be logged for troubleshooting by AzurePipelines.
+        options.loggingOptions = Object.assign(Object.assign({}, options === null || options === void 0 ? void 0 : options.loggingOptions), { additionalAllowedHeaderNames: [
+                ...((_b = (_a = options.loggingOptions) === null || _a === void 0 ? void 0 : _a.additionalAllowedHeaderNames) !== null && _b !== void 0 ? _b : []),
+                "x-vss-e2eid",
+                "x-msedge-ref",
+            ] });
         this.identityClient = new IdentityClient(options);
         checkTenantId(logger$2, tenantId);
         logger$2.info(`Invoking AzurePipelinesCredential with tenant ID: ${tenantId}, client ID: ${clientId}, and service connection ID: ${serviceConnectionId}`);
@@ -19435,6 +19371,8 @@ class AzurePipelinesCredential {
             headers: coreRestPipeline.createHttpHeaders({
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${systemAccessToken}`,
+                // Prevents the service from responding with a redirect HTTP status code (useful for automation).
+                "X-TFS-FedAuthRedirect": "Suppress",
             }),
         });
         const response = await this.identityClient.sendRequest(request);
@@ -19442,6 +19380,7 @@ class AzurePipelinesCredential {
     }
 }
 function handleOidcResponse(response) {
+    // OIDC token is present in `bodyAsText` field
     const text = response.bodyAsText;
     if (!text) {
         logger$2.error(`${credentialName$1}: Authentication Failed. Received null token from OIDC request. Response status- ${response.status}. Complete response - ${JSON.stringify(response)}`);
@@ -19459,7 +19398,7 @@ function handleOidcResponse(response) {
             const errorMessage = `${credentialName$1}: Authentication Failed. oidcToken field not detected in the response.`;
             let errorDescription = ``;
             if (response.status !== 200) {
-                errorDescription = `Complete response - ${JSON.stringify(result)}. See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/azurepipelinescredential/troubleshoot`;
+                errorDescription = `Response body = ${text}. Response Headers ["x-vss-e2eid"] = ${response.headers.get("x-vss-e2eid")} and ["x-msedge-ref"] = ${response.headers.get("x-msedge-ref")}. See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/azurepipelinescredential/troubleshoot`;
             }
             logger$2.error(errorMessage);
             logger$2.error(errorDescription);
@@ -19471,17 +19410,18 @@ function handleOidcResponse(response) {
     }
     catch (e) {
         const errorDetails = `${credentialName$1}: Authentication Failed. oidcToken field not detected in the response.`;
-        logger$2.error(`Response from service = ${text} and error message = ${e.message}`);
+        logger$2.error(`Response from service = ${text}, Response Headers ["x-vss-e2eid"] = ${response.headers.get("x-vss-e2eid")} 
+      and ["x-msedge-ref"] = ${response.headers.get("x-msedge-ref")}, error message = ${e.message}`);
         logger$2.error(errorDetails);
         throw new AuthenticationError(response.status, {
             error: errorDetails,
-            error_description: `Response = ${text}. See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/azurepipelinescredential/troubleshoot`,
+            error_description: `Response = ${text}. Response headers ["x-vss-e2eid"] = ${response.headers.get("x-vss-e2eid")} and ["x-msedge-ref"] =  ${response.headers.get("x-msedge-ref")}. See the troubleshooting guide for more information: https://aka.ms/azsdk/js/identity/azurepipelinescredential/troubleshoot`,
         });
     }
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const logger$1 = credentialLogger("AuthorizationCodeCredential");
 /**
  * Enables authentication to Microsoft Entra ID using an authorization code
@@ -19535,7 +19475,7 @@ class AuthorizationCodeCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 const credentialName = "OnBehalfOfCredential";
 const logger = credentialLogger(credentialName);
 /**
@@ -19547,11 +19487,17 @@ class OnBehalfOfCredential {
         const { certificatePath, sendCertificateChain } = options;
         const { getAssertion } = options;
         const { tenantId, clientId, userAssertionToken, additionallyAllowedTenants: additionallyAllowedTenantIds, } = options;
-        if (!tenantId ||
-            !clientId ||
-            !(clientSecret || certificatePath || getAssertion) ||
-            !userAssertionToken) {
-            throw new Error(`${credentialName}: tenantId, clientId, clientSecret (or certificatePath or getAssertion) and userAssertionToken are required parameters.`);
+        if (!tenantId) {
+            throw new CredentialUnavailableError(`${credentialName}: tenantId is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.`);
+        }
+        if (!clientId) {
+            throw new CredentialUnavailableError(`${credentialName}: clientId is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.`);
+        }
+        if (!clientSecret && !certificatePath && !getAssertion) {
+            throw new CredentialUnavailableError(`${credentialName}: You must provide one of clientSecret, certificatePath, or a getAssertion callback but none were provided. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.`);
+        }
+        if (!userAssertionToken) {
+            throw new CredentialUnavailableError(`${credentialName}: userAssertionToken is a required parameter. To troubleshoot, visit https://aka.ms/azsdk/js/identity/serviceprincipalauthentication/troubleshoot.`);
         }
         this.certificatePath = certificatePath;
         this.clientSecret = clientSecret;
@@ -19633,18 +19579,18 @@ class OnBehalfOfCredential {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Returns a callback that provides a bearer token.
  * For example, the bearer token can be used to authenticate a request as follows:
- * ```js
- * import { DefaultAzureCredential } from "@azure/identity";
+ * ```ts snippet:token_provider_example
+ * import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+ * import { createPipelineRequest } from "@azure/core-rest-pipeline";
  *
  * const credential = new DefaultAzureCredential();
  * const scope = "https://cognitiveservices.azure.com/.default";
  * const getAccessToken = getBearerTokenProvider(credential, scope);
  * const token = await getAccessToken();
- *
  * // usage
  * const request = createPipelineRequest({ url: "https://example.com" });
  * request.headers.set("Authorization", `Bearer ${token}`);
@@ -19684,7 +19630,7 @@ function getBearerTokenProvider(credential, scopes, options) {
 }
 
 // Copyright (c) Microsoft Corporation.
-// Licensed under the MIT license.
+// Licensed under the MIT License.
 /**
  * Returns a new instance of the {@link DefaultAzureCredential}.
  */
@@ -53314,7 +53260,7 @@ var _v4 = _interopRequireDefault(__nccwpck_require__(9771));
 
 var _nil = _interopRequireDefault(__nccwpck_require__(7723));
 
-var _version = _interopRequireDefault(__nccwpck_require__(3487));
+var _version = _interopRequireDefault(__nccwpck_require__(5868));
 
 var _validate = _interopRequireDefault(__nccwpck_require__(6200));
 
@@ -53858,7 +53804,7 @@ exports["default"] = _default;
 
 /***/ }),
 
-/***/ 3487:
+/***/ 5868:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -69096,6 +69042,59 @@ Object.defineProperty(exports, "AbortError", ({ enumerable: true, get: function 
 
 /***/ }),
 
+/***/ 760:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AbortError = void 0;
+/**
+ * This error is thrown when an asynchronous operation has been aborted.
+ * Check for this error by testing the `name` that the name property of the
+ * error matches `"AbortError"`.
+ *
+ * @example
+ * ```ts
+ * const controller = new AbortController();
+ * controller.abort();
+ * try {
+ *   doAsyncWork(controller.signal)
+ * } catch (e) {
+ *   if (e.name === 'AbortError') {
+ *     // handle abort error here.
+ *   }
+ * }
+ * ```
+ */
+class AbortError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "AbortError";
+    }
+}
+exports.AbortError = AbortError;
+//# sourceMappingURL=AbortError.js.map
+
+/***/ }),
+
+/***/ 7934:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AbortError = void 0;
+var AbortError_js_1 = __nccwpck_require__(760);
+Object.defineProperty(exports, "AbortError", ({ enumerable: true, get: function () { return AbortError_js_1.AbortError; } }));
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
 /***/ 1676:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -70955,19 +70954,166 @@ module.exports = parseParams
 
 /***/ }),
 
-/***/ 5405:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ 7:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
-/*! @azure/msal-common v14.14.2 2024-08-28 */
+/*! @azure/msal-node v2.15.0 2024-10-03 */
 
 'use strict';
+
+var http = __nccwpck_require__(8611);
+var https = __nccwpck_require__(5692);
+var uuid = __nccwpck_require__(2048);
+var crypto = __nccwpck_require__(6982);
+var jwt = __nccwpck_require__(9653);
+var fs = __nccwpck_require__(9896);
+var path = __nccwpck_require__(6928);
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-const Constants = {
+class Serializer {
+    /**
+     * serialize the JSON blob
+     * @param data
+     */
+    static serializeJSONBlob(data) {
+        return JSON.stringify(data);
+    }
+    /**
+     * Serialize Accounts
+     * @param accCache
+     */
+    static serializeAccounts(accCache) {
+        const accounts = {};
+        Object.keys(accCache).map(function (key) {
+            const accountEntity = accCache[key];
+            accounts[key] = {
+                home_account_id: accountEntity.homeAccountId,
+                environment: accountEntity.environment,
+                realm: accountEntity.realm,
+                local_account_id: accountEntity.localAccountId,
+                username: accountEntity.username,
+                authority_type: accountEntity.authorityType,
+                name: accountEntity.name,
+                client_info: accountEntity.clientInfo,
+                last_modification_time: accountEntity.lastModificationTime,
+                last_modification_app: accountEntity.lastModificationApp,
+                tenantProfiles: accountEntity.tenantProfiles?.map((tenantProfile) => {
+                    return JSON.stringify(tenantProfile);
+                }),
+            };
+        });
+        return accounts;
+    }
+    /**
+     * Serialize IdTokens
+     * @param idTCache
+     */
+    static serializeIdTokens(idTCache) {
+        const idTokens = {};
+        Object.keys(idTCache).map(function (key) {
+            const idTEntity = idTCache[key];
+            idTokens[key] = {
+                home_account_id: idTEntity.homeAccountId,
+                environment: idTEntity.environment,
+                credential_type: idTEntity.credentialType,
+                client_id: idTEntity.clientId,
+                secret: idTEntity.secret,
+                realm: idTEntity.realm,
+            };
+        });
+        return idTokens;
+    }
+    /**
+     * Serializes AccessTokens
+     * @param atCache
+     */
+    static serializeAccessTokens(atCache) {
+        const accessTokens = {};
+        Object.keys(atCache).map(function (key) {
+            const atEntity = atCache[key];
+            accessTokens[key] = {
+                home_account_id: atEntity.homeAccountId,
+                environment: atEntity.environment,
+                credential_type: atEntity.credentialType,
+                client_id: atEntity.clientId,
+                secret: atEntity.secret,
+                realm: atEntity.realm,
+                target: atEntity.target,
+                cached_at: atEntity.cachedAt,
+                expires_on: atEntity.expiresOn,
+                extended_expires_on: atEntity.extendedExpiresOn,
+                refresh_on: atEntity.refreshOn,
+                key_id: atEntity.keyId,
+                token_type: atEntity.tokenType,
+                requestedClaims: atEntity.requestedClaims,
+                requestedClaimsHash: atEntity.requestedClaimsHash,
+                userAssertionHash: atEntity.userAssertionHash,
+            };
+        });
+        return accessTokens;
+    }
+    /**
+     * Serialize refreshTokens
+     * @param rtCache
+     */
+    static serializeRefreshTokens(rtCache) {
+        const refreshTokens = {};
+        Object.keys(rtCache).map(function (key) {
+            const rtEntity = rtCache[key];
+            refreshTokens[key] = {
+                home_account_id: rtEntity.homeAccountId,
+                environment: rtEntity.environment,
+                credential_type: rtEntity.credentialType,
+                client_id: rtEntity.clientId,
+                secret: rtEntity.secret,
+                family_id: rtEntity.familyId,
+                target: rtEntity.target,
+                realm: rtEntity.realm,
+            };
+        });
+        return refreshTokens;
+    }
+    /**
+     * Serialize amdtCache
+     * @param amdtCache
+     */
+    static serializeAppMetadata(amdtCache) {
+        const appMetadata = {};
+        Object.keys(amdtCache).map(function (key) {
+            const amdtEntity = amdtCache[key];
+            appMetadata[key] = {
+                client_id: amdtEntity.clientId,
+                environment: amdtEntity.environment,
+                family_id: amdtEntity.familyId,
+            };
+        });
+        return appMetadata;
+    }
+    /**
+     * Serialize the cache
+     * @param jsonContent
+     */
+    static serializeAllCache(inMemCache) {
+        return {
+            Account: this.serializeAccounts(inMemCache.accounts),
+            IdToken: this.serializeIdTokens(inMemCache.idTokens),
+            AccessToken: this.serializeAccessTokens(inMemCache.accessTokens),
+            RefreshToken: this.serializeRefreshTokens(inMemCache.refreshTokens),
+            AppMetadata: this.serializeAppMetadata(inMemCache.appMetadata),
+        };
+    }
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const Constants$1 = {
     LIBRARY_NAME: "MSAL.JS",
     SKU: "msal.js.common",
     // Prefix for all library cache entries
@@ -71047,11 +71193,11 @@ const HttpStatus = {
     MULTI_SIDED_ERROR: 600,
 };
 const OIDC_DEFAULT_SCOPES = [
-    Constants.OPENID_SCOPE,
-    Constants.PROFILE_SCOPE,
-    Constants.OFFLINE_ACCESS_SCOPE,
+    Constants$1.OPENID_SCOPE,
+    Constants$1.PROFILE_SCOPE,
+    Constants$1.OFFLINE_ACCESS_SCOPE,
 ];
-const OIDC_SCOPES = [...OIDC_DEFAULT_SCOPES, Constants.EMAIL_SCOPE];
+const OIDC_SCOPES = [...OIDC_DEFAULT_SCOPES, Constants$1.EMAIL_SCOPE];
 /**
  * Request header names
  */
@@ -71063,18 +71209,6 @@ const HeaderNames = {
     AuthenticationInfo: "Authentication-Info",
     X_MS_REQUEST_ID: "x-ms-request-id",
     X_MS_HTTP_VERSION: "x-ms-httpver",
-};
-/**
- * Persistent cache keys MSAL which stay while user is logged in.
- */
-const PersistentCacheKeys = {
-    ID_TOKEN: "idtoken",
-    CLIENT_INFO: "client.info",
-    ADAL_ID_TOKEN: "adal.idtoken",
-    ERROR: "error",
-    ERROR_DESC: "error.description",
-    ACTIVE_ACCOUNT: "active-account",
-    ACTIVE_ACCOUNT_FILTERS: "active-account-filters", // new cache entry for active_account for a more robust version for browser
 };
 /**
  * String constants related to AAD Authority
@@ -71163,24 +71297,10 @@ const CredentialType = {
     REFRESH_TOKEN: "RefreshToken",
 };
 /**
- * Combine all cache types
- */
-const CacheType = {
-    ADFS: 1001,
-    MSA: 1002,
-    MSSTS: 1003,
-    GENERIC: 1004,
-    ACCESS_TOKEN: 2001,
-    REFRESH_TOKEN: 2002,
-    ID_TOKEN: 2003,
-    APP_METADATA: 3001,
-    UNDEFINED: 9999,
-};
-/**
  * More Cache related constants
  */
 const APP_METADATA = "appmetadata";
-const CLIENT_INFO$1 = "client_info";
+const CLIENT_INFO = "client_info";
 const THE_FAMILY_ID = "1";
 const AUTHORITY_METADATA_CONSTANTS = {
     CACHE_KEY: "authority-metadata",
@@ -71277,15 +71397,10 @@ const CacheOutcome = {
     // When the token request goes to the identity provider because refresh_in was used and the existing token needs to be refreshed
     PROACTIVELY_REFRESHED: "4",
 };
-const JsonWebTokenTypes = {
-    Jwt: "JWT",
-    Jwk: "JWK",
-    Pop: "pop",
-};
-const ONE_DAY_IN_MS = 86400000;
 // Token renewal offset default in seconds
 const DEFAULT_TOKEN_RENEWAL_OFFSET_SEC = 300;
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -71301,6 +71416,8 @@ var AuthErrorCodes = /*#__PURE__*/Object.freeze({
     postRequestFailed: postRequestFailed,
     unexpectedError: unexpectedError
 });
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -71334,9 +71451,9 @@ class AuthError extends Error {
             : errorCode;
         super(errorString);
         Object.setPrototypeOf(this, AuthError.prototype);
-        this.errorCode = errorCode || Constants.EMPTY_STRING;
-        this.errorMessage = errorMessage || Constants.EMPTY_STRING;
-        this.subError = suberror || Constants.EMPTY_STRING;
+        this.errorCode = errorCode || Constants$1.EMPTY_STRING;
+        this.errorMessage = errorMessage || Constants$1.EMPTY_STRING;
+        this.subError = suberror || Constants$1.EMPTY_STRING;
         this.name = "AuthError";
     }
     setCorrelationId(correlationId) {
@@ -71349,6 +71466,7 @@ function createAuthError(code, additionalMessage) {
         : AuthErrorMessages[code]);
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -71445,6 +71563,8 @@ var ClientAuthErrorCodes = /*#__PURE__*/Object.freeze({
     userCanceled: userCanceled,
     userTimeoutReached: userTimeoutReached
 });
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -71696,6 +71816,263 @@ function createClientAuthError(errorCode, additionalMessage) {
     return new ClientAuthError(errorCode, additionalMessage);
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const DEFAULT_CRYPTO_IMPLEMENTATION = {
+    createNewGuid: () => {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    base64Decode: () => {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    base64Encode: () => {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    base64UrlEncode: () => {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    encodeKid: () => {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    async getPublicKeyThumbprint() {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    async removeTokenBindingKey() {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    async clearKeystore() {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    async signJwt() {
+        throw createClientAuthError(methodNotImplemented);
+    },
+    async hashString() {
+        throw createClientAuthError(methodNotImplemented);
+    },
+};
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Log message level.
+ */
+exports.LogLevel = void 0;
+(function (LogLevel) {
+    LogLevel[LogLevel["Error"] = 0] = "Error";
+    LogLevel[LogLevel["Warning"] = 1] = "Warning";
+    LogLevel[LogLevel["Info"] = 2] = "Info";
+    LogLevel[LogLevel["Verbose"] = 3] = "Verbose";
+    LogLevel[LogLevel["Trace"] = 4] = "Trace";
+})(exports.LogLevel || (exports.LogLevel = {}));
+/**
+ * Class which facilitates logging of messages to a specific place.
+ */
+class Logger {
+    constructor(loggerOptions, packageName, packageVersion) {
+        // Current log level, defaults to info.
+        this.level = exports.LogLevel.Info;
+        const defaultLoggerCallback = () => {
+            return;
+        };
+        const setLoggerOptions = loggerOptions || Logger.createDefaultLoggerOptions();
+        this.localCallback =
+            setLoggerOptions.loggerCallback || defaultLoggerCallback;
+        this.piiLoggingEnabled = setLoggerOptions.piiLoggingEnabled || false;
+        this.level =
+            typeof setLoggerOptions.logLevel === "number"
+                ? setLoggerOptions.logLevel
+                : exports.LogLevel.Info;
+        this.correlationId =
+            setLoggerOptions.correlationId || Constants$1.EMPTY_STRING;
+        this.packageName = packageName || Constants$1.EMPTY_STRING;
+        this.packageVersion = packageVersion || Constants$1.EMPTY_STRING;
+    }
+    static createDefaultLoggerOptions() {
+        return {
+            loggerCallback: () => {
+                // allow users to not set loggerCallback
+            },
+            piiLoggingEnabled: false,
+            logLevel: exports.LogLevel.Info,
+        };
+    }
+    /**
+     * Create new Logger with existing configurations.
+     */
+    clone(packageName, packageVersion, correlationId) {
+        return new Logger({
+            loggerCallback: this.localCallback,
+            piiLoggingEnabled: this.piiLoggingEnabled,
+            logLevel: this.level,
+            correlationId: correlationId || this.correlationId,
+        }, packageName, packageVersion);
+    }
+    /**
+     * Log message with required options.
+     */
+    logMessage(logMessage, options) {
+        if (options.logLevel > this.level ||
+            (!this.piiLoggingEnabled && options.containsPii)) {
+            return;
+        }
+        const timestamp = new Date().toUTCString();
+        // Add correlationId to logs if set, correlationId provided on log messages take precedence
+        const logHeader = `[${timestamp}] : [${options.correlationId || this.correlationId || ""}]`;
+        const log = `${logHeader} : ${this.packageName}@${this.packageVersion} : ${exports.LogLevel[options.logLevel]} - ${logMessage}`;
+        // debug(`msal:${LogLevel[options.logLevel]}${options.containsPii ? "-Pii": Constants.EMPTY_STRING}${options.context ? `:${options.context}` : Constants.EMPTY_STRING}`)(logMessage);
+        this.executeCallback(options.logLevel, log, options.containsPii || false);
+    }
+    /**
+     * Execute callback with message.
+     */
+    executeCallback(level, message, containsPii) {
+        if (this.localCallback) {
+            this.localCallback(level, message, containsPii);
+        }
+    }
+    /**
+     * Logs error messages.
+     */
+    error(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Error,
+            containsPii: false,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs error messages with PII.
+     */
+    errorPii(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Error,
+            containsPii: true,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs warning messages.
+     */
+    warning(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Warning,
+            containsPii: false,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs warning messages with PII.
+     */
+    warningPii(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Warning,
+            containsPii: true,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs info messages.
+     */
+    info(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Info,
+            containsPii: false,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs info messages with PII.
+     */
+    infoPii(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Info,
+            containsPii: true,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs verbose messages.
+     */
+    verbose(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Verbose,
+            containsPii: false,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs verbose messages with PII.
+     */
+    verbosePii(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Verbose,
+            containsPii: true,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs trace messages.
+     */
+    trace(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Trace,
+            containsPii: false,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Logs trace messages with PII.
+     */
+    tracePii(message, correlationId) {
+        this.logMessage(message, {
+            logLevel: exports.LogLevel.Trace,
+            containsPii: true,
+            correlationId: correlationId || Constants$1.EMPTY_STRING,
+        });
+    }
+    /**
+     * Returns whether PII Logging is enabled or not.
+     */
+    isPiiLoggingEnabled() {
+        return this.piiLoggingEnabled || false;
+    }
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/* eslint-disable header/header */
+const name$1 = "@azure/msal-common";
+const version$1 = "14.15.0";
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const AzureCloudInstance = {
+    // AzureCloudInstance is not specified.
+    None: "none",
+    // Microsoft Azure public cloud
+    AzurePublic: "https://login.microsoftonline.com",
+    // Microsoft PPE
+    AzurePpe: "https://login.windows-ppe.net",
+    // Microsoft Chinese national/regional cloud
+    AzureChina: "https://login.chinacloudapi.cn",
+    // Microsoft German national/regional cloud ("Black Forest")
+    AzureGermany: "https://login.microsoftonline.de",
+    // US Government cloud
+    AzureUsGovernment: "https://login.microsoftonline.us",
+};
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -71755,1406 +72132,7 @@ function checkMaxAge(authTime, maxAge) {
     }
 }
 
-var AuthToken = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    checkMaxAge: checkMaxAge,
-    extractTokenClaims: extractTokenClaims,
-    getJWSPayload: getJWSPayload
-});
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Authority types supported by MSAL.
- */
-const AuthorityType = {
-    Default: 0,
-    Adfs: 1,
-    Dsts: 2,
-    Ciam: 3,
-};
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-function isOpenIdConfigResponse(response) {
-    return (response.hasOwnProperty("authorization_endpoint") &&
-        response.hasOwnProperty("token_endpoint") &&
-        response.hasOwnProperty("issuer") &&
-        response.hasOwnProperty("jwks_uri"));
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const redirectUriEmpty = "redirect_uri_empty";
-const claimsRequestParsingError = "claims_request_parsing_error";
-const authorityUriInsecure = "authority_uri_insecure";
-const urlParseError = "url_parse_error";
-const urlEmptyError = "empty_url_error";
-const emptyInputScopesError = "empty_input_scopes_error";
-const invalidPromptValue = "invalid_prompt_value";
-const invalidClaims = "invalid_claims";
-const tokenRequestEmpty = "token_request_empty";
-const logoutRequestEmpty = "logout_request_empty";
-const invalidCodeChallengeMethod = "invalid_code_challenge_method";
-const pkceParamsMissing = "pkce_params_missing";
-const invalidCloudDiscoveryMetadata = "invalid_cloud_discovery_metadata";
-const invalidAuthorityMetadata = "invalid_authority_metadata";
-const untrustedAuthority = "untrusted_authority";
-const missingSshJwk = "missing_ssh_jwk";
-const missingSshKid = "missing_ssh_kid";
-const missingNonceAuthenticationHeader = "missing_nonce_authentication_header";
-const invalidAuthenticationHeader = "invalid_authentication_header";
-const cannotSetOIDCOptions = "cannot_set_OIDCOptions";
-const cannotAllowNativeBroker = "cannot_allow_native_broker";
-const authorityMismatch = "authority_mismatch";
-
-var ClientConfigurationErrorCodes = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    authorityMismatch: authorityMismatch,
-    authorityUriInsecure: authorityUriInsecure,
-    cannotAllowNativeBroker: cannotAllowNativeBroker,
-    cannotSetOIDCOptions: cannotSetOIDCOptions,
-    claimsRequestParsingError: claimsRequestParsingError,
-    emptyInputScopesError: emptyInputScopesError,
-    invalidAuthenticationHeader: invalidAuthenticationHeader,
-    invalidAuthorityMetadata: invalidAuthorityMetadata,
-    invalidClaims: invalidClaims,
-    invalidCloudDiscoveryMetadata: invalidCloudDiscoveryMetadata,
-    invalidCodeChallengeMethod: invalidCodeChallengeMethod,
-    invalidPromptValue: invalidPromptValue,
-    logoutRequestEmpty: logoutRequestEmpty,
-    missingNonceAuthenticationHeader: missingNonceAuthenticationHeader,
-    missingSshJwk: missingSshJwk,
-    missingSshKid: missingSshKid,
-    pkceParamsMissing: pkceParamsMissing,
-    redirectUriEmpty: redirectUriEmpty,
-    tokenRequestEmpty: tokenRequestEmpty,
-    untrustedAuthority: untrustedAuthority,
-    urlEmptyError: urlEmptyError,
-    urlParseError: urlParseError
-});
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const ClientConfigurationErrorMessages = {
-    [redirectUriEmpty]: "A redirect URI is required for all calls, and none has been set.",
-    [claimsRequestParsingError]: "Could not parse the given claims request object.",
-    [authorityUriInsecure]: "Authority URIs must use https.  Please see here for valid authority configuration options: https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-js-initializing-client-applications#configuration-options",
-    [urlParseError]: "URL could not be parsed into appropriate segments.",
-    [urlEmptyError]: "URL was empty or null.",
-    [emptyInputScopesError]: "Scopes cannot be passed as null, undefined or empty array because they are required to obtain an access token.",
-    [invalidPromptValue]: "Please see here for valid configuration options: https://azuread.github.io/microsoft-authentication-library-for-js/ref/modules/_azure_msal_common.html#commonauthorizationurlrequest",
-    [invalidClaims]: "Given claims parameter must be a stringified JSON object.",
-    [tokenRequestEmpty]: "Token request was empty and not found in cache.",
-    [logoutRequestEmpty]: "The logout request was null or undefined.",
-    [invalidCodeChallengeMethod]: 'code_challenge_method passed is invalid. Valid values are "plain" and "S256".',
-    [pkceParamsMissing]: "Both params: code_challenge and code_challenge_method are to be passed if to be sent in the request",
-    [invalidCloudDiscoveryMetadata]: "Invalid cloudDiscoveryMetadata provided. Must be a stringified JSON object containing tenant_discovery_endpoint and metadata fields",
-    [invalidAuthorityMetadata]: "Invalid authorityMetadata provided. Must by a stringified JSON object containing authorization_endpoint, token_endpoint, issuer fields.",
-    [untrustedAuthority]: "The provided authority is not a trusted authority. Please include this authority in the knownAuthorities config parameter.",
-    [missingSshJwk]: "Missing sshJwk in SSH certificate request. A stringified JSON Web Key is required when using the SSH authentication scheme.",
-    [missingSshKid]: "Missing sshKid in SSH certificate request. A string that uniquely identifies the public SSH key is required when using the SSH authentication scheme.",
-    [missingNonceAuthenticationHeader]: "Unable to find an authentication header containing server nonce. Either the Authentication-Info or WWW-Authenticate headers must be present in order to obtain a server nonce.",
-    [invalidAuthenticationHeader]: "Invalid authentication header provided",
-    [cannotSetOIDCOptions]: "Cannot set OIDCOptions parameter. Please change the protocol mode to OIDC or use a non-Microsoft authority.",
-    [cannotAllowNativeBroker]: "Cannot set allowNativeBroker parameter to true when not in AAD protocol mode.",
-    [authorityMismatch]: "Authority mismatch error. Authority provided in login request or PublicClientApplication config does not match the environment of the provided account. Please use a matching account or make an interactive request to login to this authority.",
-};
-/**
- * ClientConfigurationErrorMessage class containing string constants used by error codes and messages.
- * @deprecated Use ClientConfigurationErrorCodes instead
- */
-const ClientConfigurationErrorMessage = {
-    redirectUriNotSet: {
-        code: redirectUriEmpty,
-        desc: ClientConfigurationErrorMessages[redirectUriEmpty],
-    },
-    claimsRequestParsingError: {
-        code: claimsRequestParsingError,
-        desc: ClientConfigurationErrorMessages[claimsRequestParsingError],
-    },
-    authorityUriInsecure: {
-        code: authorityUriInsecure,
-        desc: ClientConfigurationErrorMessages[authorityUriInsecure],
-    },
-    urlParseError: {
-        code: urlParseError,
-        desc: ClientConfigurationErrorMessages[urlParseError],
-    },
-    urlEmptyError: {
-        code: urlEmptyError,
-        desc: ClientConfigurationErrorMessages[urlEmptyError],
-    },
-    emptyScopesError: {
-        code: emptyInputScopesError,
-        desc: ClientConfigurationErrorMessages[emptyInputScopesError],
-    },
-    invalidPrompt: {
-        code: invalidPromptValue,
-        desc: ClientConfigurationErrorMessages[invalidPromptValue],
-    },
-    invalidClaimsRequest: {
-        code: invalidClaims,
-        desc: ClientConfigurationErrorMessages[invalidClaims],
-    },
-    tokenRequestEmptyError: {
-        code: tokenRequestEmpty,
-        desc: ClientConfigurationErrorMessages[tokenRequestEmpty],
-    },
-    logoutRequestEmptyError: {
-        code: logoutRequestEmpty,
-        desc: ClientConfigurationErrorMessages[logoutRequestEmpty],
-    },
-    invalidCodeChallengeMethod: {
-        code: invalidCodeChallengeMethod,
-        desc: ClientConfigurationErrorMessages[invalidCodeChallengeMethod],
-    },
-    invalidCodeChallengeParams: {
-        code: pkceParamsMissing,
-        desc: ClientConfigurationErrorMessages[pkceParamsMissing],
-    },
-    invalidCloudDiscoveryMetadata: {
-        code: invalidCloudDiscoveryMetadata,
-        desc: ClientConfigurationErrorMessages[invalidCloudDiscoveryMetadata],
-    },
-    invalidAuthorityMetadata: {
-        code: invalidAuthorityMetadata,
-        desc: ClientConfigurationErrorMessages[invalidAuthorityMetadata],
-    },
-    untrustedAuthority: {
-        code: untrustedAuthority,
-        desc: ClientConfigurationErrorMessages[untrustedAuthority],
-    },
-    missingSshJwk: {
-        code: missingSshJwk,
-        desc: ClientConfigurationErrorMessages[missingSshJwk],
-    },
-    missingSshKid: {
-        code: missingSshKid,
-        desc: ClientConfigurationErrorMessages[missingSshKid],
-    },
-    missingNonceAuthenticationHeader: {
-        code: missingNonceAuthenticationHeader,
-        desc: ClientConfigurationErrorMessages[missingNonceAuthenticationHeader],
-    },
-    invalidAuthenticationHeader: {
-        code: invalidAuthenticationHeader,
-        desc: ClientConfigurationErrorMessages[invalidAuthenticationHeader],
-    },
-    cannotSetOIDCOptions: {
-        code: cannotSetOIDCOptions,
-        desc: ClientConfigurationErrorMessages[cannotSetOIDCOptions],
-    },
-    cannotAllowNativeBroker: {
-        code: cannotAllowNativeBroker,
-        desc: ClientConfigurationErrorMessages[cannotAllowNativeBroker],
-    },
-    authorityMismatch: {
-        code: authorityMismatch,
-        desc: ClientConfigurationErrorMessages[authorityMismatch],
-    },
-};
-/**
- * Error thrown when there is an error in configuration of the MSAL.js library.
- */
-class ClientConfigurationError extends AuthError {
-    constructor(errorCode) {
-        super(errorCode, ClientConfigurationErrorMessages[errorCode]);
-        this.name = "ClientConfigurationError";
-        Object.setPrototypeOf(this, ClientConfigurationError.prototype);
-    }
-}
-function createClientConfigurationError(errorCode) {
-    return new ClientConfigurationError(errorCode);
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * @hidden
- */
-class StringUtils {
-    /**
-     * Check if stringified object is empty
-     * @param strObj
-     */
-    static isEmptyObj(strObj) {
-        if (strObj) {
-            try {
-                const obj = JSON.parse(strObj);
-                return Object.keys(obj).length === 0;
-            }
-            catch (e) { }
-        }
-        return true;
-    }
-    static startsWith(str, search) {
-        return str.indexOf(search) === 0;
-    }
-    static endsWith(str, search) {
-        return (str.length >= search.length &&
-            str.lastIndexOf(search) === str.length - search.length);
-    }
-    /**
-     * Parses string into an object.
-     *
-     * @param query
-     */
-    static queryStringToObject(query) {
-        const obj = {};
-        const params = query.split("&");
-        const decode = (s) => decodeURIComponent(s.replace(/\+/g, " "));
-        params.forEach((pair) => {
-            if (pair.trim()) {
-                const [key, value] = pair.split(/=(.+)/g, 2); // Split on the first occurence of the '=' character
-                if (key && value) {
-                    obj[decode(key)] = decode(value);
-                }
-            }
-        });
-        return obj;
-    }
-    /**
-     * Trims entries in an array.
-     *
-     * @param arr
-     */
-    static trimArrayEntries(arr) {
-        return arr.map((entry) => entry.trim());
-    }
-    /**
-     * Removes empty strings from array
-     * @param arr
-     */
-    static removeEmptyStringsFromArray(arr) {
-        return arr.filter((entry) => {
-            return !!entry;
-        });
-    }
-    /**
-     * Attempts to parse a string into JSON
-     * @param str
-     */
-    static jsonParseHelper(str) {
-        try {
-            return JSON.parse(str);
-        }
-        catch (e) {
-            return null;
-        }
-    }
-    /**
-     * Tests if a given string matches a given pattern, with support for wildcards and queries.
-     * @param pattern Wildcard pattern to string match. Supports "*" for wildcards and "?" for queries
-     * @param input String to match against
-     */
-    static matchPattern(pattern, input) {
-        /**
-         * Wildcard support: https://stackoverflow.com/a/3117248/4888559
-         * Queries: replaces "?" in string with escaped "\?" for regex test
-         */
-        // eslint-disable-next-line security/detect-non-literal-regexp
-        const regex = new RegExp(pattern
-            .replace(/\\/g, "\\\\")
-            .replace(/\*/g, "[^ ]*")
-            .replace(/\?/g, "\\?"));
-        return regex.test(input);
-    }
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Parses hash string from given string. Returns empty string if no hash symbol is found.
- * @param hashString
- */
-function stripLeadingHashOrQuery(responseString) {
-    if (responseString.startsWith("#/")) {
-        return responseString.substring(2);
-    }
-    else if (responseString.startsWith("#") ||
-        responseString.startsWith("?")) {
-        return responseString.substring(1);
-    }
-    return responseString;
-}
-/**
- * Returns URL hash as server auth code response object.
- */
-function getDeserializedResponse(responseString) {
-    // Check if given hash is empty
-    if (!responseString || responseString.indexOf("=") < 0) {
-        return null;
-    }
-    try {
-        // Strip the # or ? symbol if present
-        const normalizedResponse = stripLeadingHashOrQuery(responseString);
-        // If # symbol was not present, above will return empty string, so give original hash value
-        const deserializedHash = Object.fromEntries(new URLSearchParams(normalizedResponse));
-        // Check for known response properties
-        if (deserializedHash.code ||
-            deserializedHash.error ||
-            deserializedHash.error_description ||
-            deserializedHash.state) {
-            return deserializedHash;
-        }
-    }
-    catch (e) {
-        throw createClientAuthError(hashNotDeserialized);
-    }
-    return null;
-}
-
-var UrlUtils = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    getDeserializedResponse: getDeserializedResponse,
-    stripLeadingHashOrQuery: stripLeadingHashOrQuery
-});
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Url object class which can perform various transformations on url strings.
- */
-class UrlString {
-    get urlString() {
-        return this._urlString;
-    }
-    constructor(url) {
-        this._urlString = url;
-        if (!this._urlString) {
-            // Throws error if url is empty
-            throw createClientConfigurationError(urlEmptyError);
-        }
-        if (!url.includes("#")) {
-            this._urlString = UrlString.canonicalizeUri(url);
-        }
-    }
-    /**
-     * Ensure urls are lower case and end with a / character.
-     * @param url
-     */
-    static canonicalizeUri(url) {
-        if (url) {
-            let lowerCaseUrl = url.toLowerCase();
-            if (StringUtils.endsWith(lowerCaseUrl, "?")) {
-                lowerCaseUrl = lowerCaseUrl.slice(0, -1);
-            }
-            else if (StringUtils.endsWith(lowerCaseUrl, "?/")) {
-                lowerCaseUrl = lowerCaseUrl.slice(0, -2);
-            }
-            if (!StringUtils.endsWith(lowerCaseUrl, "/")) {
-                lowerCaseUrl += "/";
-            }
-            return lowerCaseUrl;
-        }
-        return url;
-    }
-    /**
-     * Throws if urlString passed is not a valid authority URI string.
-     */
-    validateAsUri() {
-        // Attempts to parse url for uri components
-        let components;
-        try {
-            components = this.getUrlComponents();
-        }
-        catch (e) {
-            throw createClientConfigurationError(urlParseError);
-        }
-        // Throw error if URI or path segments are not parseable.
-        if (!components.HostNameAndPort || !components.PathSegments) {
-            throw createClientConfigurationError(urlParseError);
-        }
-        // Throw error if uri is insecure.
-        if (!components.Protocol ||
-            components.Protocol.toLowerCase() !== "https:") {
-            throw createClientConfigurationError(authorityUriInsecure);
-        }
-    }
-    /**
-     * Given a url and a query string return the url with provided query string appended
-     * @param url
-     * @param queryString
-     */
-    static appendQueryString(url, queryString) {
-        if (!queryString) {
-            return url;
-        }
-        return url.indexOf("?") < 0
-            ? `${url}?${queryString}`
-            : `${url}&${queryString}`;
-    }
-    /**
-     * Returns a url with the hash removed
-     * @param url
-     */
-    static removeHashFromUrl(url) {
-        return UrlString.canonicalizeUri(url.split("#")[0]);
-    }
-    /**
-     * Given a url like https://a:b/common/d?e=f#g, and a tenantId, returns https://a:b/tenantId/d
-     * @param href The url
-     * @param tenantId The tenant id to replace
-     */
-    replaceTenantPath(tenantId) {
-        const urlObject = this.getUrlComponents();
-        const pathArray = urlObject.PathSegments;
-        if (tenantId &&
-            pathArray.length !== 0 &&
-            (pathArray[0] === AADAuthorityConstants.COMMON ||
-                pathArray[0] === AADAuthorityConstants.ORGANIZATIONS)) {
-            pathArray[0] = tenantId;
-        }
-        return UrlString.constructAuthorityUriFromObject(urlObject);
-    }
-    /**
-     * Parses out the components from a url string.
-     * @returns An object with the various components. Please cache this value insted of calling this multiple times on the same url.
-     */
-    getUrlComponents() {
-        // https://gist.github.com/curtisz/11139b2cfcaef4a261e0
-        const regEx = RegExp("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
-        // If url string does not match regEx, we throw an error
-        const match = this.urlString.match(regEx);
-        if (!match) {
-            throw createClientConfigurationError(urlParseError);
-        }
-        // Url component object
-        const urlComponents = {
-            Protocol: match[1],
-            HostNameAndPort: match[4],
-            AbsolutePath: match[5],
-            QueryString: match[7],
-        };
-        let pathSegments = urlComponents.AbsolutePath.split("/");
-        pathSegments = pathSegments.filter((val) => val && val.length > 0); // remove empty elements
-        urlComponents.PathSegments = pathSegments;
-        if (urlComponents.QueryString &&
-            urlComponents.QueryString.endsWith("/")) {
-            urlComponents.QueryString = urlComponents.QueryString.substring(0, urlComponents.QueryString.length - 1);
-        }
-        return urlComponents;
-    }
-    static getDomainFromUrl(url) {
-        const regEx = RegExp("^([^:/?#]+://)?([^/?#]*)");
-        const match = url.match(regEx);
-        if (!match) {
-            throw createClientConfigurationError(urlParseError);
-        }
-        return match[2];
-    }
-    static getAbsoluteUrl(relativeUrl, baseUrl) {
-        if (relativeUrl[0] === Constants.FORWARD_SLASH) {
-            const url = new UrlString(baseUrl);
-            const baseComponents = url.getUrlComponents();
-            return (baseComponents.Protocol +
-                "//" +
-                baseComponents.HostNameAndPort +
-                relativeUrl);
-        }
-        return relativeUrl;
-    }
-    static constructAuthorityUriFromObject(urlObject) {
-        return new UrlString(urlObject.Protocol +
-            "//" +
-            urlObject.HostNameAndPort +
-            "/" +
-            urlObject.PathSegments.join("/"));
-    }
-    /**
-     * Check if the hash of the URL string contains known properties
-     * @deprecated This API will be removed in a future version
-     */
-    static hashContainsKnownProperties(response) {
-        return !!getDeserializedResponse(response);
-    }
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const rawMetdataJSON = {
-    endpointMetadata: {
-        "login.microsoftonline.com": {
-            token_endpoint: "https://login.microsoftonline.com/{tenantid}/oauth2/v2.0/token",
-            jwks_uri: "https://login.microsoftonline.com/{tenantid}/discovery/v2.0/keys",
-            issuer: "https://login.microsoftonline.com/{tenantid}/v2.0",
-            authorization_endpoint: "https://login.microsoftonline.com/{tenantid}/oauth2/v2.0/authorize",
-            end_session_endpoint: "https://login.microsoftonline.com/{tenantid}/oauth2/v2.0/logout",
-        },
-        "login.chinacloudapi.cn": {
-            token_endpoint: "https://login.chinacloudapi.cn/{tenantid}/oauth2/v2.0/token",
-            jwks_uri: "https://login.chinacloudapi.cn/{tenantid}/discovery/v2.0/keys",
-            issuer: "https://login.partner.microsoftonline.cn/{tenantid}/v2.0",
-            authorization_endpoint: "https://login.chinacloudapi.cn/{tenantid}/oauth2/v2.0/authorize",
-            end_session_endpoint: "https://login.chinacloudapi.cn/{tenantid}/oauth2/v2.0/logout",
-        },
-        "login.microsoftonline.us": {
-            token_endpoint: "https://login.microsoftonline.us/{tenantid}/oauth2/v2.0/token",
-            jwks_uri: "https://login.microsoftonline.us/{tenantid}/discovery/v2.0/keys",
-            issuer: "https://login.microsoftonline.us/{tenantid}/v2.0",
-            authorization_endpoint: "https://login.microsoftonline.us/{tenantid}/oauth2/v2.0/authorize",
-            end_session_endpoint: "https://login.microsoftonline.us/{tenantid}/oauth2/v2.0/logout",
-        },
-    },
-    instanceDiscoveryMetadata: {
-        tenant_discovery_endpoint: "https://{canonicalAuthority}/v2.0/.well-known/openid-configuration",
-        metadata: [
-            {
-                preferred_network: "login.microsoftonline.com",
-                preferred_cache: "login.windows.net",
-                aliases: [
-                    "login.microsoftonline.com",
-                    "login.windows.net",
-                    "login.microsoft.com",
-                    "sts.windows.net",
-                ],
-            },
-            {
-                preferred_network: "login.partner.microsoftonline.cn",
-                preferred_cache: "login.partner.microsoftonline.cn",
-                aliases: [
-                    "login.partner.microsoftonline.cn",
-                    "login.chinacloudapi.cn",
-                ],
-            },
-            {
-                preferred_network: "login.microsoftonline.de",
-                preferred_cache: "login.microsoftonline.de",
-                aliases: ["login.microsoftonline.de"],
-            },
-            {
-                preferred_network: "login.microsoftonline.us",
-                preferred_cache: "login.microsoftonline.us",
-                aliases: [
-                    "login.microsoftonline.us",
-                    "login.usgovcloudapi.net",
-                ],
-            },
-            {
-                preferred_network: "login-us.microsoftonline.com",
-                preferred_cache: "login-us.microsoftonline.com",
-                aliases: ["login-us.microsoftonline.com"],
-            },
-        ],
-    },
-};
-const EndpointMetadata = rawMetdataJSON.endpointMetadata;
-const InstanceDiscoveryMetadata = rawMetdataJSON.instanceDiscoveryMetadata;
-const InstanceDiscoveryMetadataAliases = new Set();
-InstanceDiscoveryMetadata.metadata.forEach((metadataEntry) => {
-    metadataEntry.aliases.forEach((alias) => {
-        InstanceDiscoveryMetadataAliases.add(alias);
-    });
-});
-/**
- * Attempts to get an aliases array from the static authority metadata sources based on the canonical authority host
- * @param staticAuthorityOptions
- * @param logger
- * @returns
- */
-function getAliasesFromStaticSources(staticAuthorityOptions, logger) {
-    let staticAliases;
-    const canonicalAuthority = staticAuthorityOptions.canonicalAuthority;
-    if (canonicalAuthority) {
-        const authorityHost = new UrlString(canonicalAuthority).getUrlComponents().HostNameAndPort;
-        staticAliases =
-            getAliasesFromMetadata(authorityHost, staticAuthorityOptions.cloudDiscoveryMetadata?.metadata, AuthorityMetadataSource.CONFIG, logger) ||
-                getAliasesFromMetadata(authorityHost, InstanceDiscoveryMetadata.metadata, AuthorityMetadataSource.HARDCODED_VALUES, logger) ||
-                staticAuthorityOptions.knownAuthorities;
-    }
-    return staticAliases || [];
-}
-/**
- * Returns aliases for from the raw cloud discovery metadata passed in
- * @param authorityHost
- * @param rawCloudDiscoveryMetadata
- * @returns
- */
-function getAliasesFromMetadata(authorityHost, cloudDiscoveryMetadata, source, logger) {
-    logger?.trace(`getAliasesFromMetadata called with source: ${source}`);
-    if (authorityHost && cloudDiscoveryMetadata) {
-        const metadata = getCloudDiscoveryMetadataFromNetworkResponse(cloudDiscoveryMetadata, authorityHost);
-        if (metadata) {
-            logger?.trace(`getAliasesFromMetadata: found cloud discovery metadata in ${source}, returning aliases`);
-            return metadata.aliases;
-        }
-        else {
-            logger?.trace(`getAliasesFromMetadata: did not find cloud discovery metadata in ${source}`);
-        }
-    }
-    return null;
-}
-/**
- * Get cloud discovery metadata for common authorities
- */
-function getCloudDiscoveryMetadataFromHardcodedValues(authorityHost) {
-    const metadata = getCloudDiscoveryMetadataFromNetworkResponse(InstanceDiscoveryMetadata.metadata, authorityHost);
-    return metadata;
-}
-/**
- * Searches instance discovery network response for the entry that contains the host in the aliases list
- * @param response
- * @param authority
- */
-function getCloudDiscoveryMetadataFromNetworkResponse(response, authorityHost) {
-    for (let i = 0; i < response.length; i++) {
-        const metadata = response[i];
-        if (metadata.aliases.includes(authorityHost)) {
-            return metadata;
-        }
-    }
-    return null;
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Protocol modes supported by MSAL.
- */
-const ProtocolMode = {
-    AAD: "AAD",
-    OIDC: "OIDC",
-};
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const AzureCloudInstance = {
-    // AzureCloudInstance is not specified.
-    None: "none",
-    // Microsoft Azure public cloud
-    AzurePublic: "https://login.microsoftonline.com",
-    // Microsoft PPE
-    AzurePpe: "https://login.windows-ppe.net",
-    // Microsoft Chinese national/regional cloud
-    AzureChina: "https://login.chinacloudapi.cn",
-    // Microsoft German national/regional cloud ("Black Forest")
-    AzureGermany: "https://login.microsoftonline.de",
-    // US Government cloud
-    AzureUsGovernment: "https://login.microsoftonline.us",
-};
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-function isCloudInstanceDiscoveryResponse(response) {
-    return (response.hasOwnProperty("tenant_discovery_endpoint") &&
-        response.hasOwnProperty("metadata"));
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-function isCloudInstanceDiscoveryErrorResponse(response) {
-    return (response.hasOwnProperty("error") &&
-        response.hasOwnProperty("error_description"));
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Enumeration of operations that are instrumented by have their performance measured by the PerformanceClient.
- *
- * @export
- * @enum {number}
- */
-const PerformanceEvents = {
-    /**
-     * acquireTokenByCode API (msal-browser and msal-node).
-     * Used to acquire tokens by trading an authorization code against the token endpoint.
-     */
-    AcquireTokenByCode: "acquireTokenByCode",
-    /**
-     * acquireTokenByRefreshToken API (msal-browser and msal-node).
-     * Used to renew an access token using a refresh token against the token endpoint.
-     */
-    AcquireTokenByRefreshToken: "acquireTokenByRefreshToken",
-    /**
-     * acquireTokenSilent API (msal-browser and msal-node).
-     * Used to silently acquire a new access token (from the cache or the network).
-     */
-    AcquireTokenSilent: "acquireTokenSilent",
-    /**
-     * acquireTokenSilentAsync (msal-browser).
-     * Internal API for acquireTokenSilent.
-     */
-    AcquireTokenSilentAsync: "acquireTokenSilentAsync",
-    /**
-     * acquireTokenPopup (msal-browser).
-     * Used to acquire a new access token interactively through pop ups
-     */
-    AcquireTokenPopup: "acquireTokenPopup",
-    /**
-     * acquireTokenPreRedirect (msal-browser).
-     * First part of the redirect flow.
-     * Used to acquire a new access token interactively through redirects.
-     */
-    AcquireTokenPreRedirect: "acquireTokenPreRedirect",
-    /**
-     * acquireTokenRedirect (msal-browser).
-     * Second part of the redirect flow.
-     * Used to acquire a new access token interactively through redirects.
-     */
-    AcquireTokenRedirect: "acquireTokenRedirect",
-    /**
-     * getPublicKeyThumbprint API in CryptoOpts class (msal-browser).
-     * Used to generate a public/private keypair and generate a public key thumbprint for pop requests.
-     */
-    CryptoOptsGetPublicKeyThumbprint: "cryptoOptsGetPublicKeyThumbprint",
-    /**
-     * signJwt API in CryptoOpts class (msal-browser).
-     * Used to signed a pop token.
-     */
-    CryptoOptsSignJwt: "cryptoOptsSignJwt",
-    /**
-     * acquireToken API in the SilentCacheClient class (msal-browser).
-     * Used to read access tokens from the cache.
-     */
-    SilentCacheClientAcquireToken: "silentCacheClientAcquireToken",
-    /**
-     * acquireToken API in the SilentIframeClient class (msal-browser).
-     * Used to acquire a new set of tokens from the authorize endpoint in a hidden iframe.
-     */
-    SilentIframeClientAcquireToken: "silentIframeClientAcquireToken",
-    AwaitConcurrentIframe: "awaitConcurrentIframe",
-    /**
-     * acquireToken API in SilentRereshClient (msal-browser).
-     * Used to acquire a new set of tokens from the token endpoint using a refresh token.
-     */
-    SilentRefreshClientAcquireToken: "silentRefreshClientAcquireToken",
-    /**
-     * ssoSilent API (msal-browser).
-     * Used to silently acquire an authorization code and set of tokens using a hidden iframe.
-     */
-    SsoSilent: "ssoSilent",
-    /**
-     * getDiscoveredAuthority API in StandardInteractionClient class (msal-browser).
-     * Used to load authority metadata for a request.
-     */
-    StandardInteractionClientGetDiscoveredAuthority: "standardInteractionClientGetDiscoveredAuthority",
-    /**
-     * acquireToken APIs in msal-browser.
-     * Used to make an /authorize endpoint call with native brokering enabled.
-     */
-    FetchAccountIdWithNativeBroker: "fetchAccountIdWithNativeBroker",
-    /**
-     * acquireToken API in NativeInteractionClient class (msal-browser).
-     * Used to acquire a token from Native component when native brokering is enabled.
-     */
-    NativeInteractionClientAcquireToken: "nativeInteractionClientAcquireToken",
-    /**
-     * Time spent creating default headers for requests to token endpoint
-     */
-    BaseClientCreateTokenRequestHeaders: "baseClientCreateTokenRequestHeaders",
-    /**
-     * Time spent sending/waiting for the response of a request to the token endpoint
-     */
-    RefreshTokenClientExecutePostToTokenEndpoint: "refreshTokenClientExecutePostToTokenEndpoint",
-    AuthorizationCodeClientExecutePostToTokenEndpoint: "authorizationCodeClientExecutePostToTokenEndpoint",
-    /**
-     * Used to measure the time taken for completing embedded-broker handshake (PW-Broker).
-     */
-    BrokerHandhshake: "brokerHandshake",
-    /**
-     * acquireTokenByRefreshToken API in BrokerClientApplication (PW-Broker) .
-     */
-    AcquireTokenByRefreshTokenInBroker: "acquireTokenByRefreshTokenInBroker",
-    /**
-     * Time taken for token acquisition by broker
-     */
-    AcquireTokenByBroker: "acquireTokenByBroker",
-    /**
-     * Time spent on the network for refresh token acquisition
-     */
-    RefreshTokenClientExecuteTokenRequest: "refreshTokenClientExecuteTokenRequest",
-    /**
-     * Time taken for acquiring refresh token , records RT size
-     */
-    RefreshTokenClientAcquireToken: "refreshTokenClientAcquireToken",
-    /**
-     * Time taken for acquiring cached refresh token
-     */
-    RefreshTokenClientAcquireTokenWithCachedRefreshToken: "refreshTokenClientAcquireTokenWithCachedRefreshToken",
-    /**
-     * acquireTokenByRefreshToken API in RefreshTokenClient (msal-common).
-     */
-    RefreshTokenClientAcquireTokenByRefreshToken: "refreshTokenClientAcquireTokenByRefreshToken",
-    /**
-     * Helper function to create token request body in RefreshTokenClient (msal-common).
-     */
-    RefreshTokenClientCreateTokenRequestBody: "refreshTokenClientCreateTokenRequestBody",
-    /**
-     * acquireTokenFromCache (msal-browser).
-     * Internal API for acquiring token from cache
-     */
-    AcquireTokenFromCache: "acquireTokenFromCache",
-    SilentFlowClientAcquireCachedToken: "silentFlowClientAcquireCachedToken",
-    SilentFlowClientGenerateResultFromCacheRecord: "silentFlowClientGenerateResultFromCacheRecord",
-    /**
-     * acquireTokenBySilentIframe (msal-browser).
-     * Internal API for acquiring token by silent Iframe
-     */
-    AcquireTokenBySilentIframe: "acquireTokenBySilentIframe",
-    /**
-     * Internal API for initializing base request in BaseInteractionClient (msal-browser)
-     */
-    InitializeBaseRequest: "initializeBaseRequest",
-    /**
-     * Internal API for initializing silent request in SilentCacheClient (msal-browser)
-     */
-    InitializeSilentRequest: "initializeSilentRequest",
-    InitializeClientApplication: "initializeClientApplication",
-    /**
-     * Helper function in SilentIframeClient class (msal-browser).
-     */
-    SilentIframeClientTokenHelper: "silentIframeClientTokenHelper",
-    /**
-     * SilentHandler
-     */
-    SilentHandlerInitiateAuthRequest: "silentHandlerInitiateAuthRequest",
-    SilentHandlerMonitorIframeForHash: "silentHandlerMonitorIframeForHash",
-    SilentHandlerLoadFrame: "silentHandlerLoadFrame",
-    SilentHandlerLoadFrameSync: "silentHandlerLoadFrameSync",
-    /**
-     * Helper functions in StandardInteractionClient class (msal-browser)
-     */
-    StandardInteractionClientCreateAuthCodeClient: "standardInteractionClientCreateAuthCodeClient",
-    StandardInteractionClientGetClientConfiguration: "standardInteractionClientGetClientConfiguration",
-    StandardInteractionClientInitializeAuthorizationRequest: "standardInteractionClientInitializeAuthorizationRequest",
-    StandardInteractionClientInitializeAuthorizationCodeRequest: "standardInteractionClientInitializeAuthorizationCodeRequest",
-    /**
-     * getAuthCodeUrl API (msal-browser and msal-node).
-     */
-    GetAuthCodeUrl: "getAuthCodeUrl",
-    /**
-     * Functions from InteractionHandler (msal-browser)
-     */
-    HandleCodeResponseFromServer: "handleCodeResponseFromServer",
-    HandleCodeResponse: "handleCodeResponse",
-    UpdateTokenEndpointAuthority: "updateTokenEndpointAuthority",
-    /**
-     * APIs in Authorization Code Client (msal-common)
-     */
-    AuthClientAcquireToken: "authClientAcquireToken",
-    AuthClientExecuteTokenRequest: "authClientExecuteTokenRequest",
-    AuthClientCreateTokenRequestBody: "authClientCreateTokenRequestBody",
-    AuthClientCreateQueryString: "authClientCreateQueryString",
-    /**
-     * Generate functions in PopTokenGenerator (msal-common)
-     */
-    PopTokenGenerateCnf: "popTokenGenerateCnf",
-    PopTokenGenerateKid: "popTokenGenerateKid",
-    /**
-     * handleServerTokenResponse API in ResponseHandler (msal-common)
-     */
-    HandleServerTokenResponse: "handleServerTokenResponse",
-    DeserializeResponse: "deserializeResponse",
-    /**
-     * Authority functions
-     */
-    AuthorityFactoryCreateDiscoveredInstance: "authorityFactoryCreateDiscoveredInstance",
-    AuthorityResolveEndpointsAsync: "authorityResolveEndpointsAsync",
-    AuthorityResolveEndpointsFromLocalSources: "authorityResolveEndpointsFromLocalSources",
-    AuthorityGetCloudDiscoveryMetadataFromNetwork: "authorityGetCloudDiscoveryMetadataFromNetwork",
-    AuthorityUpdateCloudDiscoveryMetadata: "authorityUpdateCloudDiscoveryMetadata",
-    AuthorityGetEndpointMetadataFromNetwork: "authorityGetEndpointMetadataFromNetwork",
-    AuthorityUpdateEndpointMetadata: "authorityUpdateEndpointMetadata",
-    AuthorityUpdateMetadataWithRegionalInformation: "authorityUpdateMetadataWithRegionalInformation",
-    /**
-     * Region Discovery functions
-     */
-    RegionDiscoveryDetectRegion: "regionDiscoveryDetectRegion",
-    RegionDiscoveryGetRegionFromIMDS: "regionDiscoveryGetRegionFromIMDS",
-    RegionDiscoveryGetCurrentVersion: "regionDiscoveryGetCurrentVersion",
-    AcquireTokenByCodeAsync: "acquireTokenByCodeAsync",
-    GetEndpointMetadataFromNetwork: "getEndpointMetadataFromNetwork",
-    GetCloudDiscoveryMetadataFromNetworkMeasurement: "getCloudDiscoveryMetadataFromNetworkMeasurement",
-    HandleRedirectPromiseMeasurement: "handleRedirectPromise",
-    HandleNativeRedirectPromiseMeasurement: "handleNativeRedirectPromise",
-    UpdateCloudDiscoveryMetadataMeasurement: "updateCloudDiscoveryMetadataMeasurement",
-    UsernamePasswordClientAcquireToken: "usernamePasswordClientAcquireToken",
-    NativeMessageHandlerHandshake: "nativeMessageHandlerHandshake",
-    NativeGenerateAuthResult: "nativeGenerateAuthResult",
-    RemoveHiddenIframe: "removeHiddenIframe",
-    /**
-     * Cache operations
-     */
-    ClearTokensAndKeysWithClaims: "clearTokensAndKeysWithClaims",
-    CacheManagerGetRefreshToken: "cacheManagerGetRefreshToken",
-    /**
-     * Crypto Operations
-     */
-    GeneratePkceCodes: "generatePkceCodes",
-    GenerateCodeVerifier: "generateCodeVerifier",
-    GenerateCodeChallengeFromVerifier: "generateCodeChallengeFromVerifier",
-    Sha256Digest: "sha256Digest",
-    GetRandomValues: "getRandomValues",
-};
-const PerformanceEventAbbreviations = new Map([
-    [PerformanceEvents.AcquireTokenByCode, "ATByCode"],
-    [PerformanceEvents.AcquireTokenByRefreshToken, "ATByRT"],
-    [PerformanceEvents.AcquireTokenSilent, "ATS"],
-    [PerformanceEvents.AcquireTokenSilentAsync, "ATSAsync"],
-    [PerformanceEvents.AcquireTokenPopup, "ATPopup"],
-    [PerformanceEvents.AcquireTokenRedirect, "ATRedirect"],
-    [
-        PerformanceEvents.CryptoOptsGetPublicKeyThumbprint,
-        "CryptoGetPKThumb",
-    ],
-    [PerformanceEvents.CryptoOptsSignJwt, "CryptoSignJwt"],
-    [PerformanceEvents.SilentCacheClientAcquireToken, "SltCacheClientAT"],
-    [PerformanceEvents.SilentIframeClientAcquireToken, "SltIframeClientAT"],
-    [PerformanceEvents.SilentRefreshClientAcquireToken, "SltRClientAT"],
-    [PerformanceEvents.SsoSilent, "SsoSlt"],
-    [
-        PerformanceEvents.StandardInteractionClientGetDiscoveredAuthority,
-        "StdIntClientGetDiscAuth",
-    ],
-    [
-        PerformanceEvents.FetchAccountIdWithNativeBroker,
-        "FetchAccIdWithNtvBroker",
-    ],
-    [
-        PerformanceEvents.NativeInteractionClientAcquireToken,
-        "NtvIntClientAT",
-    ],
-    [
-        PerformanceEvents.BaseClientCreateTokenRequestHeaders,
-        "BaseClientCreateTReqHead",
-    ],
-    [
-        PerformanceEvents.RefreshTokenClientExecutePostToTokenEndpoint,
-        "RTClientExecPost",
-    ],
-    [
-        PerformanceEvents.AuthorizationCodeClientExecutePostToTokenEndpoint,
-        "AuthCodeClientExecPost",
-    ],
-    [PerformanceEvents.BrokerHandhshake, "BrokerHandshake"],
-    [
-        PerformanceEvents.AcquireTokenByRefreshTokenInBroker,
-        "ATByRTInBroker",
-    ],
-    [PerformanceEvents.AcquireTokenByBroker, "ATByBroker"],
-    [
-        PerformanceEvents.RefreshTokenClientExecuteTokenRequest,
-        "RTClientExecTReq",
-    ],
-    [PerformanceEvents.RefreshTokenClientAcquireToken, "RTClientAT"],
-    [
-        PerformanceEvents.RefreshTokenClientAcquireTokenWithCachedRefreshToken,
-        "RTClientATWithCachedRT",
-    ],
-    [
-        PerformanceEvents.RefreshTokenClientAcquireTokenByRefreshToken,
-        "RTClientATByRT",
-    ],
-    [
-        PerformanceEvents.RefreshTokenClientCreateTokenRequestBody,
-        "RTClientCreateTReqBody",
-    ],
-    [PerformanceEvents.AcquireTokenFromCache, "ATFromCache"],
-    [
-        PerformanceEvents.SilentFlowClientAcquireCachedToken,
-        "SltFlowClientATCached",
-    ],
-    [
-        PerformanceEvents.SilentFlowClientGenerateResultFromCacheRecord,
-        "SltFlowClientGenResFromCache",
-    ],
-    [PerformanceEvents.AcquireTokenBySilentIframe, "ATBySltIframe"],
-    [PerformanceEvents.InitializeBaseRequest, "InitBaseReq"],
-    [PerformanceEvents.InitializeSilentRequest, "InitSltReq"],
-    [
-        PerformanceEvents.InitializeClientApplication,
-        "InitClientApplication",
-    ],
-    [PerformanceEvents.SilentIframeClientTokenHelper, "SIClientTHelper"],
-    [
-        PerformanceEvents.SilentHandlerInitiateAuthRequest,
-        "SHandlerInitAuthReq",
-    ],
-    [
-        PerformanceEvents.SilentHandlerMonitorIframeForHash,
-        "SltHandlerMonitorIframeForHash",
-    ],
-    [PerformanceEvents.SilentHandlerLoadFrame, "SHandlerLoadFrame"],
-    [PerformanceEvents.SilentHandlerLoadFrameSync, "SHandlerLoadFrameSync"],
-    [
-        PerformanceEvents.StandardInteractionClientCreateAuthCodeClient,
-        "StdIntClientCreateAuthCodeClient",
-    ],
-    [
-        PerformanceEvents.StandardInteractionClientGetClientConfiguration,
-        "StdIntClientGetClientConf",
-    ],
-    [
-        PerformanceEvents.StandardInteractionClientInitializeAuthorizationRequest,
-        "StdIntClientInitAuthReq",
-    ],
-    [
-        PerformanceEvents.StandardInteractionClientInitializeAuthorizationCodeRequest,
-        "StdIntClientInitAuthCodeReq",
-    ],
-    [PerformanceEvents.GetAuthCodeUrl, "GetAuthCodeUrl"],
-    [
-        PerformanceEvents.HandleCodeResponseFromServer,
-        "HandleCodeResFromServer",
-    ],
-    [PerformanceEvents.HandleCodeResponse, "HandleCodeResp"],
-    [PerformanceEvents.UpdateTokenEndpointAuthority, "UpdTEndpointAuth"],
-    [PerformanceEvents.AuthClientAcquireToken, "AuthClientAT"],
-    [PerformanceEvents.AuthClientExecuteTokenRequest, "AuthClientExecTReq"],
-    [
-        PerformanceEvents.AuthClientCreateTokenRequestBody,
-        "AuthClientCreateTReqBody",
-    ],
-    [
-        PerformanceEvents.AuthClientCreateQueryString,
-        "AuthClientCreateQueryStr",
-    ],
-    [PerformanceEvents.PopTokenGenerateCnf, "PopTGenCnf"],
-    [PerformanceEvents.PopTokenGenerateKid, "PopTGenKid"],
-    [PerformanceEvents.HandleServerTokenResponse, "HandleServerTRes"],
-    [PerformanceEvents.DeserializeResponse, "DeserializeRes"],
-    [
-        PerformanceEvents.AuthorityFactoryCreateDiscoveredInstance,
-        "AuthFactCreateDiscInst",
-    ],
-    [
-        PerformanceEvents.AuthorityResolveEndpointsAsync,
-        "AuthResolveEndpointsAsync",
-    ],
-    [
-        PerformanceEvents.AuthorityResolveEndpointsFromLocalSources,
-        "AuthResolveEndpointsFromLocal",
-    ],
-    [
-        PerformanceEvents.AuthorityGetCloudDiscoveryMetadataFromNetwork,
-        "AuthGetCDMetaFromNet",
-    ],
-    [
-        PerformanceEvents.AuthorityUpdateCloudDiscoveryMetadata,
-        "AuthUpdCDMeta",
-    ],
-    [
-        PerformanceEvents.AuthorityGetEndpointMetadataFromNetwork,
-        "AuthUpdCDMetaFromNet",
-    ],
-    [
-        PerformanceEvents.AuthorityUpdateEndpointMetadata,
-        "AuthUpdEndpointMeta",
-    ],
-    [
-        PerformanceEvents.AuthorityUpdateMetadataWithRegionalInformation,
-        "AuthUpdMetaWithRegInfo",
-    ],
-    [PerformanceEvents.RegionDiscoveryDetectRegion, "RegDiscDetectReg"],
-    [
-        PerformanceEvents.RegionDiscoveryGetRegionFromIMDS,
-        "RegDiscGetRegFromIMDS",
-    ],
-    [
-        PerformanceEvents.RegionDiscoveryGetCurrentVersion,
-        "RegDiscGetCurrentVer",
-    ],
-    [PerformanceEvents.AcquireTokenByCodeAsync, "ATByCodeAsync"],
-    [
-        PerformanceEvents.GetEndpointMetadataFromNetwork,
-        "GetEndpointMetaFromNet",
-    ],
-    [
-        PerformanceEvents.GetCloudDiscoveryMetadataFromNetworkMeasurement,
-        "GetCDMetaFromNet",
-    ],
-    [
-        PerformanceEvents.HandleRedirectPromiseMeasurement,
-        "HandleRedirectPromise",
-    ],
-    [
-        PerformanceEvents.HandleNativeRedirectPromiseMeasurement,
-        "HandleNtvRedirectPromise",
-    ],
-    [
-        PerformanceEvents.UpdateCloudDiscoveryMetadataMeasurement,
-        "UpdateCDMeta",
-    ],
-    [
-        PerformanceEvents.UsernamePasswordClientAcquireToken,
-        "UserPassClientAT",
-    ],
-    [
-        PerformanceEvents.NativeMessageHandlerHandshake,
-        "NtvMsgHandlerHandshake",
-    ],
-    [PerformanceEvents.NativeGenerateAuthResult, "NtvGenAuthRes"],
-    [PerformanceEvents.RemoveHiddenIframe, "RemoveHiddenIframe"],
-    [
-        PerformanceEvents.ClearTokensAndKeysWithClaims,
-        "ClearTAndKeysWithClaims",
-    ],
-    [PerformanceEvents.CacheManagerGetRefreshToken, "CacheManagerGetRT"],
-    [PerformanceEvents.GeneratePkceCodes, "GenPkceCodes"],
-    [PerformanceEvents.GenerateCodeVerifier, "GenCodeVerifier"],
-    [
-        PerformanceEvents.GenerateCodeChallengeFromVerifier,
-        "GenCodeChallengeFromVerifier",
-    ],
-    [PerformanceEvents.Sha256Digest, "Sha256Digest"],
-    [PerformanceEvents.GetRandomValues, "GetRandomValues"],
-]);
-/**
- * State of the performance event.
- *
- * @export
- * @enum {number}
- */
-const PerformanceEventStatus = {
-    NotStarted: 0,
-    InProgress: 1,
-    Completed: 2,
-};
-const IntFields = new Set([
-    "accessTokenSize",
-    "durationMs",
-    "idTokenSize",
-    "matsSilentStatus",
-    "matsHttpStatus",
-    "refreshTokenSize",
-    "queuedTimeMs",
-    "startTimeMs",
-    "status",
-    "multiMatchedAT",
-    "multiMatchedID",
-    "multiMatchedRT",
-]);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Wraps a function with a performance measurement.
- * Usage: invoke(functionToCall, performanceClient, "EventName", "correlationId")(...argsToPassToFunction)
- * @param callback
- * @param eventName
- * @param logger
- * @param telemetryClient
- * @param correlationId
- * @returns
- * @internal
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const invoke = (callback, eventName, logger, telemetryClient, correlationId) => {
-    return (...args) => {
-        logger.trace(`Executing function ${eventName}`);
-        const inProgressEvent = telemetryClient?.startMeasurement(eventName, correlationId);
-        if (correlationId) {
-            // Track number of times this API is called in a single request
-            const eventCount = eventName + "CallCount";
-            telemetryClient?.incrementFields({ [eventCount]: 1 }, correlationId);
-        }
-        try {
-            const result = callback(...args);
-            inProgressEvent?.end({
-                success: true,
-            });
-            logger.trace(`Returning result from ${eventName}`);
-            return result;
-        }
-        catch (e) {
-            logger.trace(`Error occurred in ${eventName}`);
-            try {
-                logger.trace(JSON.stringify(e));
-            }
-            catch (e) {
-                logger.trace("Unable to print error message.");
-            }
-            inProgressEvent?.end({
-                success: false,
-            }, e);
-            throw e;
-        }
-    };
-};
-/**
- * Wraps an async function with a performance measurement.
- * Usage: invokeAsync(functionToCall, performanceClient, "EventName", "correlationId")(...argsToPassToFunction)
- * @param callback
- * @param eventName
- * @param logger
- * @param telemetryClient
- * @param correlationId
- * @returns
- * @internal
- *
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const invokeAsync = (callback, eventName, logger, telemetryClient, correlationId) => {
-    return (...args) => {
-        logger.trace(`Executing function ${eventName}`);
-        const inProgressEvent = telemetryClient?.startMeasurement(eventName, correlationId);
-        if (correlationId) {
-            // Track number of times this API is called in a single request
-            const eventCount = eventName + "CallCount";
-            telemetryClient?.incrementFields({ [eventCount]: 1 }, correlationId);
-        }
-        telemetryClient?.setPreQueueTime(eventName, correlationId);
-        return callback(...args)
-            .then((response) => {
-            logger.trace(`Returning result from ${eventName}`);
-            inProgressEvent?.end({
-                success: true,
-            });
-            return response;
-        })
-            .catch((e) => {
-            logger.trace(`Error occurred in ${eventName}`);
-            try {
-                logger.trace(JSON.stringify(e));
-            }
-            catch (e) {
-                logger.trace("Unable to print error message.");
-            }
-            inProgressEvent?.end({
-                success: false,
-            }, e);
-            throw e;
-        });
-    };
-};
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class RegionDiscovery {
-    constructor(networkInterface, logger, performanceClient, correlationId) {
-        this.networkInterface = networkInterface;
-        this.logger = logger;
-        this.performanceClient = performanceClient;
-        this.correlationId = correlationId;
-    }
-    /**
-     * Detect the region from the application's environment.
-     *
-     * @returns Promise<string | null>
-     */
-    async detectRegion(environmentRegion, regionDiscoveryMetadata) {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.RegionDiscoveryDetectRegion, this.correlationId);
-        // Initialize auto detected region with the region from the envrionment
-        let autodetectedRegionName = environmentRegion;
-        // Check if a region was detected from the environment, if not, attempt to get the region from IMDS
-        if (!autodetectedRegionName) {
-            const options = RegionDiscovery.IMDS_OPTIONS;
-            try {
-                const localIMDSVersionResponse = await invokeAsync(this.getRegionFromIMDS.bind(this), PerformanceEvents.RegionDiscoveryGetRegionFromIMDS, this.logger, this.performanceClient, this.correlationId)(Constants.IMDS_VERSION, options);
-                if (localIMDSVersionResponse.status ===
-                    ResponseCodes.httpSuccess) {
-                    autodetectedRegionName = localIMDSVersionResponse.body;
-                    regionDiscoveryMetadata.region_source =
-                        RegionDiscoverySources.IMDS;
-                }
-                // If the response using the local IMDS version failed, try to fetch the current version of IMDS and retry.
-                if (localIMDSVersionResponse.status ===
-                    ResponseCodes.httpBadRequest) {
-                    const currentIMDSVersion = await invokeAsync(this.getCurrentVersion.bind(this), PerformanceEvents.RegionDiscoveryGetCurrentVersion, this.logger, this.performanceClient, this.correlationId)(options);
-                    if (!currentIMDSVersion) {
-                        regionDiscoveryMetadata.region_source =
-                            RegionDiscoverySources.FAILED_AUTO_DETECTION;
-                        return null;
-                    }
-                    const currentIMDSVersionResponse = await invokeAsync(this.getRegionFromIMDS.bind(this), PerformanceEvents.RegionDiscoveryGetRegionFromIMDS, this.logger, this.performanceClient, this.correlationId)(currentIMDSVersion, options);
-                    if (currentIMDSVersionResponse.status ===
-                        ResponseCodes.httpSuccess) {
-                        autodetectedRegionName =
-                            currentIMDSVersionResponse.body;
-                        regionDiscoveryMetadata.region_source =
-                            RegionDiscoverySources.IMDS;
-                    }
-                }
-            }
-            catch (e) {
-                regionDiscoveryMetadata.region_source =
-                    RegionDiscoverySources.FAILED_AUTO_DETECTION;
-                return null;
-            }
-        }
-        else {
-            regionDiscoveryMetadata.region_source =
-                RegionDiscoverySources.ENVIRONMENT_VARIABLE;
-        }
-        // If no region was auto detected from the environment or from the IMDS endpoint, mark the attempt as a FAILED_AUTO_DETECTION
-        if (!autodetectedRegionName) {
-            regionDiscoveryMetadata.region_source =
-                RegionDiscoverySources.FAILED_AUTO_DETECTION;
-        }
-        return autodetectedRegionName || null;
-    }
-    /**
-     * Make the call to the IMDS endpoint
-     *
-     * @param imdsEndpointUrl
-     * @returns Promise<NetworkResponse<string>>
-     */
-    async getRegionFromIMDS(version, options) {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.RegionDiscoveryGetRegionFromIMDS, this.correlationId);
-        return this.networkInterface.sendGetRequestAsync(`${Constants.IMDS_ENDPOINT}?api-version=${version}&format=text`, options, Constants.IMDS_TIMEOUT);
-    }
-    /**
-     * Get the most recent version of the IMDS endpoint available
-     *
-     * @returns Promise<string | null>
-     */
-    async getCurrentVersion(options) {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.RegionDiscoveryGetCurrentVersion, this.correlationId);
-        try {
-            const response = await this.networkInterface.sendGetRequestAsync(`${Constants.IMDS_ENDPOINT}?format=json`, options);
-            // When IMDS endpoint is called without the api version query param, bad request response comes back with latest version.
-            if (response.status === ResponseCodes.httpBadRequest &&
-                response.body &&
-                response.body["newest-versions"] &&
-                response.body["newest-versions"].length > 0) {
-                return response.body["newest-versions"][0];
-            }
-            return null;
-        }
-        catch (e) {
-            return null;
-        }
-    }
-}
-// Options for the IMDS endpoint request
-RegionDiscovery.IMDS_OPTIONS = {
-    headers: {
-        Metadata: "true",
-    },
-};
-
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -73199,13 +72177,7 @@ function delay(t, value) {
     return new Promise((resolve) => setTimeout(() => resolve(value), t));
 }
 
-var TimeUtils = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    delay: delay,
-    isTokenExpired: isTokenExpired,
-    nowSeconds: nowSeconds,
-    wasClockTurnedBack: wasClockTurnedBack
-});
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -73532,1264 +72504,296 @@ function isAuthorityMetadataExpired(metadata) {
     return metadata.expiresAt <= nowSeconds();
 }
 
-var CacheHelpers = /*#__PURE__*/Object.freeze({
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const redirectUriEmpty = "redirect_uri_empty";
+const claimsRequestParsingError = "claims_request_parsing_error";
+const authorityUriInsecure = "authority_uri_insecure";
+const urlParseError = "url_parse_error";
+const urlEmptyError = "empty_url_error";
+const emptyInputScopesError = "empty_input_scopes_error";
+const invalidPromptValue = "invalid_prompt_value";
+const invalidClaims = "invalid_claims";
+const tokenRequestEmpty = "token_request_empty";
+const logoutRequestEmpty = "logout_request_empty";
+const invalidCodeChallengeMethod = "invalid_code_challenge_method";
+const pkceParamsMissing = "pkce_params_missing";
+const invalidCloudDiscoveryMetadata = "invalid_cloud_discovery_metadata";
+const invalidAuthorityMetadata = "invalid_authority_metadata";
+const untrustedAuthority = "untrusted_authority";
+const missingSshJwk = "missing_ssh_jwk";
+const missingSshKid = "missing_ssh_kid";
+const missingNonceAuthenticationHeader = "missing_nonce_authentication_header";
+const invalidAuthenticationHeader = "invalid_authentication_header";
+const cannotSetOIDCOptions = "cannot_set_OIDCOptions";
+const cannotAllowNativeBroker = "cannot_allow_native_broker";
+const authorityMismatch = "authority_mismatch";
+
+var ClientConfigurationErrorCodes = /*#__PURE__*/Object.freeze({
     __proto__: null,
-    createAccessTokenEntity: createAccessTokenEntity,
-    createIdTokenEntity: createIdTokenEntity,
-    createRefreshTokenEntity: createRefreshTokenEntity,
-    generateAppMetadataKey: generateAppMetadataKey,
-    generateAuthorityMetadataExpiresAt: generateAuthorityMetadataExpiresAt,
-    generateCredentialKey: generateCredentialKey,
-    isAccessTokenEntity: isAccessTokenEntity,
-    isAppMetadataEntity: isAppMetadataEntity,
-    isAuthorityMetadataEntity: isAuthorityMetadataEntity,
-    isAuthorityMetadataExpired: isAuthorityMetadataExpired,
-    isCredentialEntity: isCredentialEntity,
-    isIdTokenEntity: isIdTokenEntity,
-    isRefreshTokenEntity: isRefreshTokenEntity,
-    isServerTelemetryEntity: isServerTelemetryEntity,
-    isThrottlingEntity: isThrottlingEntity,
-    updateAuthorityEndpointMetadata: updateAuthorityEndpointMetadata,
-    updateCloudDiscoveryMetadata: updateCloudDiscoveryMetadata
+    authorityMismatch: authorityMismatch,
+    authorityUriInsecure: authorityUriInsecure,
+    cannotAllowNativeBroker: cannotAllowNativeBroker,
+    cannotSetOIDCOptions: cannotSetOIDCOptions,
+    claimsRequestParsingError: claimsRequestParsingError,
+    emptyInputScopesError: emptyInputScopesError,
+    invalidAuthenticationHeader: invalidAuthenticationHeader,
+    invalidAuthorityMetadata: invalidAuthorityMetadata,
+    invalidClaims: invalidClaims,
+    invalidCloudDiscoveryMetadata: invalidCloudDiscoveryMetadata,
+    invalidCodeChallengeMethod: invalidCodeChallengeMethod,
+    invalidPromptValue: invalidPromptValue,
+    logoutRequestEmpty: logoutRequestEmpty,
+    missingNonceAuthenticationHeader: missingNonceAuthenticationHeader,
+    missingSshJwk: missingSshJwk,
+    missingSshKid: missingSshKid,
+    pkceParamsMissing: pkceParamsMissing,
+    redirectUriEmpty: redirectUriEmpty,
+    tokenRequestEmpty: tokenRequestEmpty,
+    untrustedAuthority: untrustedAuthority,
+    urlEmptyError: urlEmptyError,
+    urlParseError: urlParseError
 });
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
+const ClientConfigurationErrorMessages = {
+    [redirectUriEmpty]: "A redirect URI is required for all calls, and none has been set.",
+    [claimsRequestParsingError]: "Could not parse the given claims request object.",
+    [authorityUriInsecure]: "Authority URIs must use https.  Please see here for valid authority configuration options: https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-js-initializing-client-applications#configuration-options",
+    [urlParseError]: "URL could not be parsed into appropriate segments.",
+    [urlEmptyError]: "URL was empty or null.",
+    [emptyInputScopesError]: "Scopes cannot be passed as null, undefined or empty array because they are required to obtain an access token.",
+    [invalidPromptValue]: "Please see here for valid configuration options: https://azuread.github.io/microsoft-authentication-library-for-js/ref/modules/_azure_msal_common.html#commonauthorizationurlrequest",
+    [invalidClaims]: "Given claims parameter must be a stringified JSON object.",
+    [tokenRequestEmpty]: "Token request was empty and not found in cache.",
+    [logoutRequestEmpty]: "The logout request was null or undefined.",
+    [invalidCodeChallengeMethod]: 'code_challenge_method passed is invalid. Valid values are "plain" and "S256".',
+    [pkceParamsMissing]: "Both params: code_challenge and code_challenge_method are to be passed if to be sent in the request",
+    [invalidCloudDiscoveryMetadata]: "Invalid cloudDiscoveryMetadata provided. Must be a stringified JSON object containing tenant_discovery_endpoint and metadata fields",
+    [invalidAuthorityMetadata]: "Invalid authorityMetadata provided. Must by a stringified JSON object containing authorization_endpoint, token_endpoint, issuer fields.",
+    [untrustedAuthority]: "The provided authority is not a trusted authority. Please include this authority in the knownAuthorities config parameter.",
+    [missingSshJwk]: "Missing sshJwk in SSH certificate request. A stringified JSON Web Key is required when using the SSH authentication scheme.",
+    [missingSshKid]: "Missing sshKid in SSH certificate request. A string that uniquely identifies the public SSH key is required when using the SSH authentication scheme.",
+    [missingNonceAuthenticationHeader]: "Unable to find an authentication header containing server nonce. Either the Authentication-Info or WWW-Authenticate headers must be present in order to obtain a server nonce.",
+    [invalidAuthenticationHeader]: "Invalid authentication header provided",
+    [cannotSetOIDCOptions]: "Cannot set OIDCOptions parameter. Please change the protocol mode to OIDC or use a non-Microsoft authority.",
+    [cannotAllowNativeBroker]: "Cannot set allowNativeBroker parameter to true when not in AAD protocol mode.",
+    [authorityMismatch]: "Authority mismatch error. Authority provided in login request or PublicClientApplication config does not match the environment of the provided account. Please use a matching account or make an interactive request to login to this authority.",
+};
 /**
- * The authority class validates the authority URIs used by the user, and retrieves the OpenID Configuration Data from the
- * endpoint. It will store the pertinent config data in this object for use during token calls.
- * @internal
+ * ClientConfigurationErrorMessage class containing string constants used by error codes and messages.
+ * @deprecated Use ClientConfigurationErrorCodes instead
  */
-class Authority {
-    constructor(authority, networkInterface, cacheManager, authorityOptions, logger, correlationId, performanceClient, managedIdentity) {
-        this.canonicalAuthority = authority;
-        this._canonicalAuthority.validateAsUri();
-        this.networkInterface = networkInterface;
-        this.cacheManager = cacheManager;
-        this.authorityOptions = authorityOptions;
-        this.regionDiscoveryMetadata = {
-            region_used: undefined,
-            region_source: undefined,
-            region_outcome: undefined,
-        };
-        this.logger = logger;
-        this.performanceClient = performanceClient;
-        this.correlationId = correlationId;
-        this.managedIdentity = managedIdentity || false;
-        this.regionDiscovery = new RegionDiscovery(networkInterface, this.logger, this.performanceClient, this.correlationId);
-    }
-    /**
-     * Get {@link AuthorityType}
-     * @param authorityUri {@link IUri}
-     * @private
-     */
-    getAuthorityType(authorityUri) {
-        // CIAM auth url pattern is being standardized as: <tenant>.ciamlogin.com
-        if (authorityUri.HostNameAndPort.endsWith(Constants.CIAM_AUTH_URL)) {
-            return AuthorityType.Ciam;
-        }
-        const pathSegments = authorityUri.PathSegments;
-        if (pathSegments.length) {
-            switch (pathSegments[0].toLowerCase()) {
-                case Constants.ADFS:
-                    return AuthorityType.Adfs;
-                case Constants.DSTS:
-                    return AuthorityType.Dsts;
-            }
-        }
-        return AuthorityType.Default;
-    }
-    // See above for AuthorityType
-    get authorityType() {
-        return this.getAuthorityType(this.canonicalAuthorityUrlComponents);
-    }
-    /**
-     * ProtocolMode enum representing the way endpoints are constructed.
-     */
-    get protocolMode() {
-        return this.authorityOptions.protocolMode;
-    }
-    /**
-     * Returns authorityOptions which can be used to reinstantiate a new authority instance
-     */
-    get options() {
-        return this.authorityOptions;
-    }
-    /**
-     * A URL that is the authority set by the developer
-     */
-    get canonicalAuthority() {
-        return this._canonicalAuthority.urlString;
-    }
-    /**
-     * Sets canonical authority.
-     */
-    set canonicalAuthority(url) {
-        this._canonicalAuthority = new UrlString(url);
-        this._canonicalAuthority.validateAsUri();
-        this._canonicalAuthorityUrlComponents = null;
-    }
-    /**
-     * Get authority components.
-     */
-    get canonicalAuthorityUrlComponents() {
-        if (!this._canonicalAuthorityUrlComponents) {
-            this._canonicalAuthorityUrlComponents =
-                this._canonicalAuthority.getUrlComponents();
-        }
-        return this._canonicalAuthorityUrlComponents;
-    }
-    /**
-     * Get hostname and port i.e. login.microsoftonline.com
-     */
-    get hostnameAndPort() {
-        return this.canonicalAuthorityUrlComponents.HostNameAndPort.toLowerCase();
-    }
-    /**
-     * Get tenant for authority.
-     */
-    get tenant() {
-        return this.canonicalAuthorityUrlComponents.PathSegments[0];
-    }
-    /**
-     * OAuth /authorize endpoint for requests
-     */
-    get authorizationEndpoint() {
-        if (this.discoveryComplete()) {
-            return this.replacePath(this.metadata.authorization_endpoint);
-        }
-        else {
-            throw createClientAuthError(endpointResolutionError);
-        }
-    }
-    /**
-     * OAuth /token endpoint for requests
-     */
-    get tokenEndpoint() {
-        if (this.discoveryComplete()) {
-            return this.replacePath(this.metadata.token_endpoint);
-        }
-        else {
-            throw createClientAuthError(endpointResolutionError);
-        }
-    }
-    get deviceCodeEndpoint() {
-        if (this.discoveryComplete()) {
-            return this.replacePath(this.metadata.token_endpoint.replace("/token", "/devicecode"));
-        }
-        else {
-            throw createClientAuthError(endpointResolutionError);
-        }
-    }
-    /**
-     * OAuth logout endpoint for requests
-     */
-    get endSessionEndpoint() {
-        if (this.discoveryComplete()) {
-            // ROPC policies may not have end_session_endpoint set
-            if (!this.metadata.end_session_endpoint) {
-                throw createClientAuthError(endSessionEndpointNotSupported);
-            }
-            return this.replacePath(this.metadata.end_session_endpoint);
-        }
-        else {
-            throw createClientAuthError(endpointResolutionError);
-        }
-    }
-    /**
-     * OAuth issuer for requests
-     */
-    get selfSignedJwtAudience() {
-        if (this.discoveryComplete()) {
-            return this.replacePath(this.metadata.issuer);
-        }
-        else {
-            throw createClientAuthError(endpointResolutionError);
-        }
-    }
-    /**
-     * Jwks_uri for token signing keys
-     */
-    get jwksUri() {
-        if (this.discoveryComplete()) {
-            return this.replacePath(this.metadata.jwks_uri);
-        }
-        else {
-            throw createClientAuthError(endpointResolutionError);
-        }
-    }
-    /**
-     * Returns a flag indicating that tenant name can be replaced in authority {@link IUri}
-     * @param authorityUri {@link IUri}
-     * @private
-     */
-    canReplaceTenant(authorityUri) {
-        return (authorityUri.PathSegments.length === 1 &&
-            !Authority.reservedTenantDomains.has(authorityUri.PathSegments[0]) &&
-            this.getAuthorityType(authorityUri) === AuthorityType.Default &&
-            this.protocolMode === ProtocolMode.AAD);
-    }
-    /**
-     * Replaces tenant in url path with current tenant. Defaults to common.
-     * @param urlString
-     */
-    replaceTenant(urlString) {
-        return urlString.replace(/{tenant}|{tenantid}/g, this.tenant);
-    }
-    /**
-     * Replaces path such as tenant or policy with the current tenant or policy.
-     * @param urlString
-     */
-    replacePath(urlString) {
-        let endpoint = urlString;
-        const cachedAuthorityUrl = new UrlString(this.metadata.canonical_authority);
-        const cachedAuthorityUrlComponents = cachedAuthorityUrl.getUrlComponents();
-        const cachedAuthorityParts = cachedAuthorityUrlComponents.PathSegments;
-        const currentAuthorityParts = this.canonicalAuthorityUrlComponents.PathSegments;
-        currentAuthorityParts.forEach((currentPart, index) => {
-            let cachedPart = cachedAuthorityParts[index];
-            if (index === 0 &&
-                this.canReplaceTenant(cachedAuthorityUrlComponents)) {
-                const tenantId = new UrlString(this.metadata.authorization_endpoint).getUrlComponents().PathSegments[0];
-                /**
-                 * Check if AAD canonical authority contains tenant domain name, for example "testdomain.onmicrosoft.com",
-                 * by comparing its first path segment to the corresponding authorization endpoint path segment, which is
-                 * always resolved with tenant id by OIDC.
-                 */
-                if (cachedPart !== tenantId) {
-                    this.logger.verbose(`Replacing tenant domain name ${cachedPart} with id ${tenantId}`);
-                    cachedPart = tenantId;
-                }
-            }
-            if (currentPart !== cachedPart) {
-                endpoint = endpoint.replace(`/${cachedPart}/`, `/${currentPart}/`);
-            }
-        });
-        return this.replaceTenant(endpoint);
-    }
-    /**
-     * The default open id configuration endpoint for any canonical authority.
-     */
-    get defaultOpenIdConfigurationEndpoint() {
-        const canonicalAuthorityHost = this.hostnameAndPort;
-        if (this.canonicalAuthority.endsWith("v2.0/") ||
-            this.authorityType === AuthorityType.Adfs ||
-            (this.protocolMode !== ProtocolMode.AAD &&
-                !this.isAliasOfKnownMicrosoftAuthority(canonicalAuthorityHost))) {
-            return `${this.canonicalAuthority}.well-known/openid-configuration`;
-        }
-        return `${this.canonicalAuthority}v2.0/.well-known/openid-configuration`;
-    }
-    /**
-     * Boolean that returns whether or not tenant discovery has been completed.
-     */
-    discoveryComplete() {
-        return !!this.metadata;
-    }
-    /**
-     * Perform endpoint discovery to discover aliases, preferred_cache, preferred_network
-     * and the /authorize, /token and logout endpoints.
-     */
-    async resolveEndpointsAsync() {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityResolveEndpointsAsync, this.correlationId);
-        const metadataEntity = this.getCurrentMetadataEntity();
-        const cloudDiscoverySource = await invokeAsync(this.updateCloudDiscoveryMetadata.bind(this), PerformanceEvents.AuthorityUpdateCloudDiscoveryMetadata, this.logger, this.performanceClient, this.correlationId)(metadataEntity);
-        this.canonicalAuthority = this.canonicalAuthority.replace(this.hostnameAndPort, metadataEntity.preferred_network);
-        const endpointSource = await invokeAsync(this.updateEndpointMetadata.bind(this), PerformanceEvents.AuthorityUpdateEndpointMetadata, this.logger, this.performanceClient, this.correlationId)(metadataEntity);
-        this.updateCachedMetadata(metadataEntity, cloudDiscoverySource, {
-            source: endpointSource,
-        });
-        this.performanceClient?.addFields({
-            cloudDiscoverySource: cloudDiscoverySource,
-            authorityEndpointSource: endpointSource,
-        }, this.correlationId);
-    }
-    /**
-     * Returns metadata entity from cache if it exists, otherwiser returns a new metadata entity built
-     * from the configured canonical authority
-     * @returns
-     */
-    getCurrentMetadataEntity() {
-        let metadataEntity = this.cacheManager.getAuthorityMetadataByAlias(this.hostnameAndPort);
-        if (!metadataEntity) {
-            metadataEntity = {
-                aliases: [],
-                preferred_cache: this.hostnameAndPort,
-                preferred_network: this.hostnameAndPort,
-                canonical_authority: this.canonicalAuthority,
-                authorization_endpoint: "",
-                token_endpoint: "",
-                end_session_endpoint: "",
-                issuer: "",
-                aliasesFromNetwork: false,
-                endpointsFromNetwork: false,
-                expiresAt: generateAuthorityMetadataExpiresAt(),
-                jwks_uri: "",
-            };
-        }
-        return metadataEntity;
-    }
-    /**
-     * Updates cached metadata based on metadata source and sets the instance's metadata
-     * property to the same value
-     * @param metadataEntity
-     * @param cloudDiscoverySource
-     * @param endpointMetadataResult
-     */
-    updateCachedMetadata(metadataEntity, cloudDiscoverySource, endpointMetadataResult) {
-        if (cloudDiscoverySource !== AuthorityMetadataSource.CACHE &&
-            endpointMetadataResult?.source !== AuthorityMetadataSource.CACHE) {
-            // Reset the expiration time unless both values came from a successful cache lookup
-            metadataEntity.expiresAt =
-                generateAuthorityMetadataExpiresAt();
-            metadataEntity.canonical_authority = this.canonicalAuthority;
-        }
-        const cacheKey = this.cacheManager.generateAuthorityMetadataCacheKey(metadataEntity.preferred_cache);
-        this.cacheManager.setAuthorityMetadata(cacheKey, metadataEntity);
-        this.metadata = metadataEntity;
-    }
-    /**
-     * Update AuthorityMetadataEntity with new endpoints and return where the information came from
-     * @param metadataEntity
-     */
-    async updateEndpointMetadata(metadataEntity) {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityUpdateEndpointMetadata, this.correlationId);
-        const localMetadata = this.updateEndpointMetadataFromLocalSources(metadataEntity);
-        // Further update may be required for hardcoded metadata if regional metadata is preferred
-        if (localMetadata) {
-            if (localMetadata.source ===
-                AuthorityMetadataSource.HARDCODED_VALUES) {
-                // If the user prefers to use an azure region replace the global endpoints with regional information.
-                if (this.authorityOptions.azureRegionConfiguration?.azureRegion) {
-                    if (localMetadata.metadata) {
-                        const hardcodedMetadata = await invokeAsync(this.updateMetadataWithRegionalInformation.bind(this), PerformanceEvents.AuthorityUpdateMetadataWithRegionalInformation, this.logger, this.performanceClient, this.correlationId)(localMetadata.metadata);
-                        updateAuthorityEndpointMetadata(metadataEntity, hardcodedMetadata, false);
-                        metadataEntity.canonical_authority =
-                            this.canonicalAuthority;
-                    }
-                }
-            }
-            return localMetadata.source;
-        }
-        // Get metadata from network if local sources aren't available
-        let metadata = await invokeAsync(this.getEndpointMetadataFromNetwork.bind(this), PerformanceEvents.AuthorityGetEndpointMetadataFromNetwork, this.logger, this.performanceClient, this.correlationId)();
-        if (metadata) {
-            // If the user prefers to use an azure region replace the global endpoints with regional information.
-            if (this.authorityOptions.azureRegionConfiguration?.azureRegion) {
-                metadata = await invokeAsync(this.updateMetadataWithRegionalInformation.bind(this), PerformanceEvents.AuthorityUpdateMetadataWithRegionalInformation, this.logger, this.performanceClient, this.correlationId)(metadata);
-            }
-            updateAuthorityEndpointMetadata(metadataEntity, metadata, true);
-            return AuthorityMetadataSource.NETWORK;
-        }
-        else {
-            // Metadata could not be obtained from the config, cache, network or hardcoded values
-            throw createClientAuthError(openIdConfigError, this.defaultOpenIdConfigurationEndpoint);
-        }
-    }
-    /**
-     * Updates endpoint metadata from local sources and returns where the information was retrieved from and the metadata config
-     * response if the source is hardcoded metadata
-     * @param metadataEntity
-     * @returns
-     */
-    updateEndpointMetadataFromLocalSources(metadataEntity) {
-        this.logger.verbose("Attempting to get endpoint metadata from authority configuration");
-        const configMetadata = this.getEndpointMetadataFromConfig();
-        if (configMetadata) {
-            this.logger.verbose("Found endpoint metadata in authority configuration");
-            updateAuthorityEndpointMetadata(metadataEntity, configMetadata, false);
-            return {
-                source: AuthorityMetadataSource.CONFIG,
-            };
-        }
-        this.logger.verbose("Did not find endpoint metadata in the config... Attempting to get endpoint metadata from the hardcoded values.");
-        // skipAuthorityMetadataCache is used to bypass hardcoded authority metadata and force a network metadata cache lookup and network metadata request if no cached response is available.
-        if (this.authorityOptions.skipAuthorityMetadataCache) {
-            this.logger.verbose("Skipping hardcoded metadata cache since skipAuthorityMetadataCache is set to true. Attempting to get endpoint metadata from the network metadata cache.");
-        }
-        else {
-            const hardcodedMetadata = this.getEndpointMetadataFromHardcodedValues();
-            if (hardcodedMetadata) {
-                updateAuthorityEndpointMetadata(metadataEntity, hardcodedMetadata, false);
-                return {
-                    source: AuthorityMetadataSource.HARDCODED_VALUES,
-                    metadata: hardcodedMetadata,
-                };
-            }
-            else {
-                this.logger.verbose("Did not find endpoint metadata in hardcoded values... Attempting to get endpoint metadata from the network metadata cache.");
-            }
-        }
-        // Check cached metadata entity expiration status
-        const metadataEntityExpired = isAuthorityMetadataExpired(metadataEntity);
-        if (this.isAuthoritySameType(metadataEntity) &&
-            metadataEntity.endpointsFromNetwork &&
-            !metadataEntityExpired) {
-            // No need to update
-            this.logger.verbose("Found endpoint metadata in the cache.");
-            return { source: AuthorityMetadataSource.CACHE };
-        }
-        else if (metadataEntityExpired) {
-            this.logger.verbose("The metadata entity is expired.");
-        }
-        return null;
-    }
-    /**
-     * Compares the number of url components after the domain to determine if the cached
-     * authority metadata can be used for the requested authority. Protects against same domain different
-     * authority such as login.microsoftonline.com/tenant and login.microsoftonline.com/tfp/tenant/policy
-     * @param metadataEntity
-     */
-    isAuthoritySameType(metadataEntity) {
-        const cachedAuthorityUrl = new UrlString(metadataEntity.canonical_authority);
-        const cachedParts = cachedAuthorityUrl.getUrlComponents().PathSegments;
-        return (cachedParts.length ===
-            this.canonicalAuthorityUrlComponents.PathSegments.length);
-    }
-    /**
-     * Parse authorityMetadata config option
-     */
-    getEndpointMetadataFromConfig() {
-        if (this.authorityOptions.authorityMetadata) {
-            try {
-                return JSON.parse(this.authorityOptions.authorityMetadata);
-            }
-            catch (e) {
-                throw createClientConfigurationError(invalidAuthorityMetadata);
-            }
-        }
-        return null;
-    }
-    /**
-     * Gets OAuth endpoints from the given OpenID configuration endpoint.
-     *
-     * @param hasHardcodedMetadata boolean
-     */
-    async getEndpointMetadataFromNetwork() {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityGetEndpointMetadataFromNetwork, this.correlationId);
-        const options = {};
-        /*
-         * TODO: Add a timeout if the authority exists in our library's
-         * hardcoded list of metadata
-         */
-        const openIdConfigurationEndpoint = this.defaultOpenIdConfigurationEndpoint;
-        this.logger.verbose(`Authority.getEndpointMetadataFromNetwork: attempting to retrieve OAuth endpoints from ${openIdConfigurationEndpoint}`);
-        try {
-            const response = await this.networkInterface.sendGetRequestAsync(openIdConfigurationEndpoint, options);
-            const isValidResponse = isOpenIdConfigResponse(response.body);
-            if (isValidResponse) {
-                return response.body;
-            }
-            else {
-                this.logger.verbose(`Authority.getEndpointMetadataFromNetwork: could not parse response as OpenID configuration`);
-                return null;
-            }
-        }
-        catch (e) {
-            this.logger.verbose(`Authority.getEndpointMetadataFromNetwork: ${e}`);
-            return null;
-        }
-    }
-    /**
-     * Get OAuth endpoints for common authorities.
-     */
-    getEndpointMetadataFromHardcodedValues() {
-        if (this.hostnameAndPort in EndpointMetadata) {
-            return EndpointMetadata[this.hostnameAndPort];
-        }
-        return null;
-    }
-    /**
-     * Update the retrieved metadata with regional information.
-     * User selected Azure region will be used if configured.
-     */
-    async updateMetadataWithRegionalInformation(metadata) {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityUpdateMetadataWithRegionalInformation, this.correlationId);
-        const userConfiguredAzureRegion = this.authorityOptions.azureRegionConfiguration?.azureRegion;
-        if (userConfiguredAzureRegion) {
-            if (userConfiguredAzureRegion !==
-                Constants.AZURE_REGION_AUTO_DISCOVER_FLAG) {
-                this.regionDiscoveryMetadata.region_outcome =
-                    RegionDiscoveryOutcomes.CONFIGURED_NO_AUTO_DETECTION;
-                this.regionDiscoveryMetadata.region_used =
-                    userConfiguredAzureRegion;
-                return Authority.replaceWithRegionalInformation(metadata, userConfiguredAzureRegion);
-            }
-            const autodetectedRegionName = await invokeAsync(this.regionDiscovery.detectRegion.bind(this.regionDiscovery), PerformanceEvents.RegionDiscoveryDetectRegion, this.logger, this.performanceClient, this.correlationId)(this.authorityOptions.azureRegionConfiguration
-                ?.environmentRegion, this.regionDiscoveryMetadata);
-            if (autodetectedRegionName) {
-                this.regionDiscoveryMetadata.region_outcome =
-                    RegionDiscoveryOutcomes.AUTO_DETECTION_REQUESTED_SUCCESSFUL;
-                this.regionDiscoveryMetadata.region_used =
-                    autodetectedRegionName;
-                return Authority.replaceWithRegionalInformation(metadata, autodetectedRegionName);
-            }
-            this.regionDiscoveryMetadata.region_outcome =
-                RegionDiscoveryOutcomes.AUTO_DETECTION_REQUESTED_FAILED;
-        }
-        return metadata;
-    }
-    /**
-     * Updates the AuthorityMetadataEntity with new aliases, preferred_network and preferred_cache
-     * and returns where the information was retrieved from
-     * @param metadataEntity
-     * @returns AuthorityMetadataSource
-     */
-    async updateCloudDiscoveryMetadata(metadataEntity) {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityUpdateCloudDiscoveryMetadata, this.correlationId);
-        const localMetadataSource = this.updateCloudDiscoveryMetadataFromLocalSources(metadataEntity);
-        if (localMetadataSource) {
-            return localMetadataSource;
-        }
-        // Fallback to network as metadata source
-        const metadata = await invokeAsync(this.getCloudDiscoveryMetadataFromNetwork.bind(this), PerformanceEvents.AuthorityGetCloudDiscoveryMetadataFromNetwork, this.logger, this.performanceClient, this.correlationId)();
-        if (metadata) {
-            updateCloudDiscoveryMetadata(metadataEntity, metadata, true);
-            return AuthorityMetadataSource.NETWORK;
-        }
-        // Metadata could not be obtained from the config, cache, network or hardcoded values
-        throw createClientConfigurationError(untrustedAuthority);
-    }
-    updateCloudDiscoveryMetadataFromLocalSources(metadataEntity) {
-        this.logger.verbose("Attempting to get cloud discovery metadata  from authority configuration");
-        this.logger.verbosePii(`Known Authorities: ${this.authorityOptions.knownAuthorities ||
-            Constants.NOT_APPLICABLE}`);
-        this.logger.verbosePii(`Authority Metadata: ${this.authorityOptions.authorityMetadata ||
-            Constants.NOT_APPLICABLE}`);
-        this.logger.verbosePii(`Canonical Authority: ${metadataEntity.canonical_authority || Constants.NOT_APPLICABLE}`);
-        const metadata = this.getCloudDiscoveryMetadataFromConfig();
-        if (metadata) {
-            this.logger.verbose("Found cloud discovery metadata in authority configuration");
-            updateCloudDiscoveryMetadata(metadataEntity, metadata, false);
-            return AuthorityMetadataSource.CONFIG;
-        }
-        // If the cached metadata came from config but that config was not passed to this instance, we must go to hardcoded values
-        this.logger.verbose("Did not find cloud discovery metadata in the config... Attempting to get cloud discovery metadata from the hardcoded values.");
-        if (this.options.skipAuthorityMetadataCache) {
-            this.logger.verbose("Skipping hardcoded cloud discovery metadata cache since skipAuthorityMetadataCache is set to true. Attempting to get cloud discovery metadata from the network metadata cache.");
-        }
-        else {
-            const hardcodedMetadata = getCloudDiscoveryMetadataFromHardcodedValues(this.hostnameAndPort);
-            if (hardcodedMetadata) {
-                this.logger.verbose("Found cloud discovery metadata from hardcoded values.");
-                updateCloudDiscoveryMetadata(metadataEntity, hardcodedMetadata, false);
-                return AuthorityMetadataSource.HARDCODED_VALUES;
-            }
-            this.logger.verbose("Did not find cloud discovery metadata in hardcoded values... Attempting to get cloud discovery metadata from the network metadata cache.");
-        }
-        const metadataEntityExpired = isAuthorityMetadataExpired(metadataEntity);
-        if (this.isAuthoritySameType(metadataEntity) &&
-            metadataEntity.aliasesFromNetwork &&
-            !metadataEntityExpired) {
-            this.logger.verbose("Found cloud discovery metadata in the cache.");
-            // No need to update
-            return AuthorityMetadataSource.CACHE;
-        }
-        else if (metadataEntityExpired) {
-            this.logger.verbose("The metadata entity is expired.");
-        }
-        return null;
-    }
-    /**
-     * Parse cloudDiscoveryMetadata config or check knownAuthorities
-     */
-    getCloudDiscoveryMetadataFromConfig() {
-        // CIAM does not support cloud discovery metadata
-        if (this.authorityType === AuthorityType.Ciam) {
-            this.logger.verbose("CIAM authorities do not support cloud discovery metadata, generate the aliases from authority host.");
-            return Authority.createCloudDiscoveryMetadataFromHost(this.hostnameAndPort);
-        }
-        // Check if network response was provided in config
-        if (this.authorityOptions.cloudDiscoveryMetadata) {
-            this.logger.verbose("The cloud discovery metadata has been provided as a network response, in the config.");
-            try {
-                this.logger.verbose("Attempting to parse the cloud discovery metadata.");
-                const parsedResponse = JSON.parse(this.authorityOptions.cloudDiscoveryMetadata);
-                const metadata = getCloudDiscoveryMetadataFromNetworkResponse(parsedResponse.metadata, this.hostnameAndPort);
-                this.logger.verbose("Parsed the cloud discovery metadata.");
-                if (metadata) {
-                    this.logger.verbose("There is returnable metadata attached to the parsed cloud discovery metadata.");
-                    return metadata;
-                }
-                else {
-                    this.logger.verbose("There is no metadata attached to the parsed cloud discovery metadata.");
-                }
-            }
-            catch (e) {
-                this.logger.verbose("Unable to parse the cloud discovery metadata. Throwing Invalid Cloud Discovery Metadata Error.");
-                throw createClientConfigurationError(invalidCloudDiscoveryMetadata);
-            }
-        }
-        // If cloudDiscoveryMetadata is empty or does not contain the host, check knownAuthorities
-        if (this.isInKnownAuthorities()) {
-            this.logger.verbose("The host is included in knownAuthorities. Creating new cloud discovery metadata from the host.");
-            return Authority.createCloudDiscoveryMetadataFromHost(this.hostnameAndPort);
-        }
-        return null;
-    }
-    /**
-     * Called to get metadata from network if CloudDiscoveryMetadata was not populated by config
-     *
-     * @param hasHardcodedMetadata boolean
-     */
-    async getCloudDiscoveryMetadataFromNetwork() {
-        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityGetCloudDiscoveryMetadataFromNetwork, this.correlationId);
-        const instanceDiscoveryEndpoint = `${Constants.AAD_INSTANCE_DISCOVERY_ENDPT}${this.canonicalAuthority}oauth2/v2.0/authorize`;
-        const options = {};
-        /*
-         * TODO: Add a timeout if the authority exists in our library's
-         * hardcoded list of metadata
-         */
-        let match = null;
-        try {
-            const response = await this.networkInterface.sendGetRequestAsync(instanceDiscoveryEndpoint, options);
-            let typedResponseBody;
-            let metadata;
-            if (isCloudInstanceDiscoveryResponse(response.body)) {
-                typedResponseBody =
-                    response.body;
-                metadata = typedResponseBody.metadata;
-                this.logger.verbosePii(`tenant_discovery_endpoint is: ${typedResponseBody.tenant_discovery_endpoint}`);
-            }
-            else if (isCloudInstanceDiscoveryErrorResponse(response.body)) {
-                this.logger.warning(`A CloudInstanceDiscoveryErrorResponse was returned. The cloud instance discovery network request's status code is: ${response.status}`);
-                typedResponseBody =
-                    response.body;
-                if (typedResponseBody.error === Constants.INVALID_INSTANCE) {
-                    this.logger.error("The CloudInstanceDiscoveryErrorResponse error is invalid_instance.");
-                    return null;
-                }
-                this.logger.warning(`The CloudInstanceDiscoveryErrorResponse error is ${typedResponseBody.error}`);
-                this.logger.warning(`The CloudInstanceDiscoveryErrorResponse error description is ${typedResponseBody.error_description}`);
-                this.logger.warning("Setting the value of the CloudInstanceDiscoveryMetadata (returned from the network) to []");
-                metadata = [];
-            }
-            else {
-                this.logger.error("AAD did not return a CloudInstanceDiscoveryResponse or CloudInstanceDiscoveryErrorResponse");
-                return null;
-            }
-            this.logger.verbose("Attempting to find a match between the developer's authority and the CloudInstanceDiscoveryMetadata returned from the network request.");
-            match = getCloudDiscoveryMetadataFromNetworkResponse(metadata, this.hostnameAndPort);
-        }
-        catch (error) {
-            if (error instanceof AuthError) {
-                this.logger.error(`There was a network error while attempting to get the cloud discovery instance metadata.\nError: ${error.errorCode}\nError Description: ${error.errorMessage}`);
-            }
-            else {
-                const typedError = error;
-                this.logger.error(`A non-MSALJS error was thrown while attempting to get the cloud instance discovery metadata.\nError: ${typedError.name}\nError Description: ${typedError.message}`);
-            }
-            return null;
-        }
-        // Custom Domain scenario, host is trusted because Instance Discovery call succeeded
-        if (!match) {
-            this.logger.warning("The developer's authority was not found within the CloudInstanceDiscoveryMetadata returned from the network request.");
-            this.logger.verbose("Creating custom Authority for custom domain scenario.");
-            match = Authority.createCloudDiscoveryMetadataFromHost(this.hostnameAndPort);
-        }
-        return match;
-    }
-    /**
-     * Helper function to determine if this host is included in the knownAuthorities config option
-     */
-    isInKnownAuthorities() {
-        const matches = this.authorityOptions.knownAuthorities.filter((authority) => {
-            return (authority &&
-                UrlString.getDomainFromUrl(authority).toLowerCase() ===
-                    this.hostnameAndPort);
-        });
-        return matches.length > 0;
-    }
-    /**
-     * helper function to populate the authority based on azureCloudOptions
-     * @param authorityString
-     * @param azureCloudOptions
-     */
-    static generateAuthority(authorityString, azureCloudOptions) {
-        let authorityAzureCloudInstance;
-        if (azureCloudOptions &&
-            azureCloudOptions.azureCloudInstance !== AzureCloudInstance.None) {
-            const tenant = azureCloudOptions.tenant
-                ? azureCloudOptions.tenant
-                : Constants.DEFAULT_COMMON_TENANT;
-            authorityAzureCloudInstance = `${azureCloudOptions.azureCloudInstance}/${tenant}/`;
-        }
-        return authorityAzureCloudInstance
-            ? authorityAzureCloudInstance
-            : authorityString;
-    }
-    /**
-     * Creates cloud discovery metadata object from a given host
-     * @param host
-     */
-    static createCloudDiscoveryMetadataFromHost(host) {
-        return {
-            preferred_network: host,
-            preferred_cache: host,
-            aliases: [host],
-        };
-    }
-    /**
-     * helper function to generate environment from authority object
-     */
-    getPreferredCache() {
-        if (this.managedIdentity) {
-            return Constants.DEFAULT_AUTHORITY_HOST;
-        }
-        else if (this.discoveryComplete()) {
-            return this.metadata.preferred_cache;
-        }
-        else {
-            throw createClientAuthError(endpointResolutionError);
-        }
-    }
-    /**
-     * Returns whether or not the provided host is an alias of this authority instance
-     * @param host
-     */
-    isAlias(host) {
-        return this.metadata.aliases.indexOf(host) > -1;
-    }
-    /**
-     * Returns whether or not the provided host is an alias of a known Microsoft authority for purposes of endpoint discovery
-     * @param host
-     */
-    isAliasOfKnownMicrosoftAuthority(host) {
-        return InstanceDiscoveryMetadataAliases.has(host);
-    }
-    /**
-     * Checks whether the provided host is that of a public cloud authority
-     *
-     * @param authority string
-     * @returns bool
-     */
-    static isPublicCloudAuthority(host) {
-        return Constants.KNOWN_PUBLIC_CLOUDS.indexOf(host) >= 0;
-    }
-    /**
-     * Rebuild the authority string with the region
-     *
-     * @param host string
-     * @param region string
-     */
-    static buildRegionalAuthorityString(host, region, queryString) {
-        // Create and validate a Url string object with the initial authority string
-        const authorityUrlInstance = new UrlString(host);
-        authorityUrlInstance.validateAsUri();
-        const authorityUrlParts = authorityUrlInstance.getUrlComponents();
-        let hostNameAndPort = `${region}.${authorityUrlParts.HostNameAndPort}`;
-        if (this.isPublicCloudAuthority(authorityUrlParts.HostNameAndPort)) {
-            hostNameAndPort = `${region}.${Constants.REGIONAL_AUTH_PUBLIC_CLOUD_SUFFIX}`;
-        }
-        // Include the query string portion of the url
-        const url = UrlString.constructAuthorityUriFromObject({
-            ...authorityUrlInstance.getUrlComponents(),
-            HostNameAndPort: hostNameAndPort,
-        }).urlString;
-        // Add the query string if a query string was provided
-        if (queryString)
-            return `${url}?${queryString}`;
-        return url;
-    }
-    /**
-     * Replace the endpoints in the metadata object with their regional equivalents.
-     *
-     * @param metadata OpenIdConfigResponse
-     * @param azureRegion string
-     */
-    static replaceWithRegionalInformation(metadata, azureRegion) {
-        const regionalMetadata = { ...metadata };
-        regionalMetadata.authorization_endpoint =
-            Authority.buildRegionalAuthorityString(regionalMetadata.authorization_endpoint, azureRegion);
-        regionalMetadata.token_endpoint =
-            Authority.buildRegionalAuthorityString(regionalMetadata.token_endpoint, azureRegion);
-        if (regionalMetadata.end_session_endpoint) {
-            regionalMetadata.end_session_endpoint =
-                Authority.buildRegionalAuthorityString(regionalMetadata.end_session_endpoint, azureRegion);
-        }
-        return regionalMetadata;
-    }
-    /**
-     * Transform CIAM_AUTHORIY as per the below rules:
-     * If no path segments found and it is a CIAM authority (hostname ends with .ciamlogin.com), then transform it
-     *
-     * NOTE: The transformation path should go away once STS supports CIAM with the format: `tenantIdorDomain.ciamlogin.com`
-     * `ciamlogin.com` can also change in the future and we should accommodate the same
-     *
-     * @param authority
-     */
-    static transformCIAMAuthority(authority) {
-        let ciamAuthority = authority;
-        const authorityUrl = new UrlString(authority);
-        const authorityUrlComponents = authorityUrl.getUrlComponents();
-        // check if transformation is needed
-        if (authorityUrlComponents.PathSegments.length === 0 &&
-            authorityUrlComponents.HostNameAndPort.endsWith(Constants.CIAM_AUTH_URL)) {
-            const tenantIdOrDomain = authorityUrlComponents.HostNameAndPort.split(".")[0];
-            ciamAuthority = `${ciamAuthority}${tenantIdOrDomain}${Constants.AAD_TENANT_DOMAIN_SUFFIX}`;
-        }
-        return ciamAuthority;
-    }
-}
-// Reserved tenant domain names that will not be replaced with tenant id
-Authority.reservedTenantDomains = new Set([
-    "{tenant}",
-    "{tenantid}",
-    AADAuthorityConstants.COMMON,
-    AADAuthorityConstants.CONSUMERS,
-    AADAuthorityConstants.ORGANIZATIONS,
-]);
-/**
- * Extract tenantId from authority
- */
-function getTenantFromAuthorityString(authority) {
-    const authorityUrl = new UrlString(authority);
-    const authorityUrlComponents = authorityUrl.getUrlComponents();
-    /**
-     * For credential matching purposes, tenantId is the last path segment of the authority URL:
-     *  AAD Authority - domain/tenantId -> Credentials are cached with realm = tenantId
-     *  B2C Authority - domain/{tenantId}?/.../policy -> Credentials are cached with realm = policy
-     *  tenantId is downcased because B2C policies can have mixed case but tfp claim is downcased
-     *
-     * Note that we may not have any path segments in certain OIDC scenarios.
-     */
-    const tenantId = authorityUrlComponents.PathSegments.slice(-1)[0]?.toLowerCase();
-    switch (tenantId) {
-        case AADAuthorityConstants.COMMON:
-        case AADAuthorityConstants.ORGANIZATIONS:
-        case AADAuthorityConstants.CONSUMERS:
-            return undefined;
-        default:
-            return tenantId;
-    }
-}
-function formatAuthorityUri(authorityUri) {
-    return authorityUri.endsWith(Constants.FORWARD_SLASH)
-        ? authorityUri
-        : `${authorityUri}${Constants.FORWARD_SLASH}`;
-}
-function buildStaticAuthorityOptions(authOptions) {
-    const rawCloudDiscoveryMetadata = authOptions.cloudDiscoveryMetadata;
-    let cloudDiscoveryMetadata = undefined;
-    if (rawCloudDiscoveryMetadata) {
-        try {
-            cloudDiscoveryMetadata = JSON.parse(rawCloudDiscoveryMetadata);
-        }
-        catch (e) {
-            throw createClientConfigurationError(invalidCloudDiscoveryMetadata);
-        }
-    }
-    return {
-        canonicalAuthority: authOptions.authority
-            ? formatAuthorityUri(authOptions.authority)
-            : undefined,
-        knownAuthorities: authOptions.knownAuthorities,
-        cloudDiscoveryMetadata: cloudDiscoveryMetadata,
-    };
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Create an authority object of the correct type based on the url
- * Performs basic authority validation - checks to see if the authority is of a valid type (i.e. aad, b2c, adfs)
- *
- * Also performs endpoint discovery.
- *
- * @param authorityUri
- * @param networkClient
- * @param protocolMode
- * @internal
- */
-async function createDiscoveredInstance(authorityUri, networkClient, cacheManager, authorityOptions, logger, correlationId, performanceClient) {
-    performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityFactoryCreateDiscoveredInstance, correlationId);
-    const authorityUriFinal = Authority.transformCIAMAuthority(formatAuthorityUri(authorityUri));
-    // Initialize authority and perform discovery endpoint check.
-    const acquireTokenAuthority = new Authority(authorityUriFinal, networkClient, cacheManager, authorityOptions, logger, correlationId, performanceClient);
-    try {
-        await invokeAsync(acquireTokenAuthority.resolveEndpointsAsync.bind(acquireTokenAuthority), PerformanceEvents.AuthorityResolveEndpointsAsync, logger, performanceClient, correlationId)();
-        return acquireTokenAuthority;
-    }
-    catch (e) {
-        throw createClientAuthError(endpointResolutionError);
-    }
-}
-
-var AuthorityFactory = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    createDiscoveredInstance: createDiscoveredInstance
-});
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-async function getClientAssertion(clientAssertion, clientId, tokenEndpoint) {
-    if (typeof clientAssertion === "string") {
-        return clientAssertion;
-    }
-    else {
-        const config = {
-            clientId: clientId,
-            tokenEndpoint: tokenEndpoint,
-        };
-        return clientAssertion(config);
-    }
-}
-
-var ClientAssertionUtils = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    getClientAssertion: getClientAssertion
-});
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const CLIENT_ID = "client_id";
-const REDIRECT_URI = "redirect_uri";
-const RESPONSE_TYPE = "response_type";
-const RESPONSE_MODE = "response_mode";
-const GRANT_TYPE = "grant_type";
-const CLAIMS = "claims";
-const SCOPE = "scope";
-const ERROR = "error";
-const ERROR_DESCRIPTION = "error_description";
-const ACCESS_TOKEN = "access_token";
-const ID_TOKEN = "id_token";
-const REFRESH_TOKEN = "refresh_token";
-const EXPIRES_IN = "expires_in";
-const REFRESH_TOKEN_EXPIRES_IN = "refresh_token_expires_in";
-const STATE = "state";
-const NONCE = "nonce";
-const PROMPT = "prompt";
-const SESSION_STATE = "session_state";
-const CLIENT_INFO = "client_info";
-const CODE = "code";
-const CODE_CHALLENGE = "code_challenge";
-const CODE_CHALLENGE_METHOD = "code_challenge_method";
-const CODE_VERIFIER = "code_verifier";
-const CLIENT_REQUEST_ID = "client-request-id";
-const X_CLIENT_SKU = "x-client-SKU";
-const X_CLIENT_VER = "x-client-VER";
-const X_CLIENT_OS = "x-client-OS";
-const X_CLIENT_CPU = "x-client-CPU";
-const X_CLIENT_CURR_TELEM = "x-client-current-telemetry";
-const X_CLIENT_LAST_TELEM = "x-client-last-telemetry";
-const X_MS_LIB_CAPABILITY = "x-ms-lib-capability";
-const X_APP_NAME = "x-app-name";
-const X_APP_VER = "x-app-ver";
-const POST_LOGOUT_URI = "post_logout_redirect_uri";
-const ID_TOKEN_HINT = "id_token_hint";
-const DEVICE_CODE = "device_code";
-const CLIENT_SECRET = "client_secret";
-const CLIENT_ASSERTION = "client_assertion";
-const CLIENT_ASSERTION_TYPE = "client_assertion_type";
-const TOKEN_TYPE = "token_type";
-const REQ_CNF = "req_cnf";
-const OBO_ASSERTION = "assertion";
-const REQUESTED_TOKEN_USE = "requested_token_use";
-const ON_BEHALF_OF = "on_behalf_of";
-const FOCI = "foci";
-const CCS_HEADER = "X-AnchorMailbox";
-const RETURN_SPA_CODE = "return_spa_code";
-const NATIVE_BROKER = "nativebroker";
-const LOGOUT_HINT = "logout_hint";
-const SID = "sid";
-const LOGIN_HINT = "login_hint";
-const DOMAIN_HINT = "domain_hint";
-const X_CLIENT_EXTRA_SKU = "x-client-xtra-sku";
-
-var AADServerParamKeys = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    ACCESS_TOKEN: ACCESS_TOKEN,
-    CCS_HEADER: CCS_HEADER,
-    CLAIMS: CLAIMS,
-    CLIENT_ASSERTION: CLIENT_ASSERTION,
-    CLIENT_ASSERTION_TYPE: CLIENT_ASSERTION_TYPE,
-    CLIENT_ID: CLIENT_ID,
-    CLIENT_INFO: CLIENT_INFO,
-    CLIENT_REQUEST_ID: CLIENT_REQUEST_ID,
-    CLIENT_SECRET: CLIENT_SECRET,
-    CODE: CODE,
-    CODE_CHALLENGE: CODE_CHALLENGE,
-    CODE_CHALLENGE_METHOD: CODE_CHALLENGE_METHOD,
-    CODE_VERIFIER: CODE_VERIFIER,
-    DEVICE_CODE: DEVICE_CODE,
-    DOMAIN_HINT: DOMAIN_HINT,
-    ERROR: ERROR,
-    ERROR_DESCRIPTION: ERROR_DESCRIPTION,
-    EXPIRES_IN: EXPIRES_IN,
-    FOCI: FOCI,
-    GRANT_TYPE: GRANT_TYPE,
-    ID_TOKEN: ID_TOKEN,
-    ID_TOKEN_HINT: ID_TOKEN_HINT,
-    LOGIN_HINT: LOGIN_HINT,
-    LOGOUT_HINT: LOGOUT_HINT,
-    NATIVE_BROKER: NATIVE_BROKER,
-    NONCE: NONCE,
-    OBO_ASSERTION: OBO_ASSERTION,
-    ON_BEHALF_OF: ON_BEHALF_OF,
-    POST_LOGOUT_URI: POST_LOGOUT_URI,
-    PROMPT: PROMPT,
-    REDIRECT_URI: REDIRECT_URI,
-    REFRESH_TOKEN: REFRESH_TOKEN,
-    REFRESH_TOKEN_EXPIRES_IN: REFRESH_TOKEN_EXPIRES_IN,
-    REQUESTED_TOKEN_USE: REQUESTED_TOKEN_USE,
-    REQ_CNF: REQ_CNF,
-    RESPONSE_MODE: RESPONSE_MODE,
-    RESPONSE_TYPE: RESPONSE_TYPE,
-    RETURN_SPA_CODE: RETURN_SPA_CODE,
-    SCOPE: SCOPE,
-    SESSION_STATE: SESSION_STATE,
-    SID: SID,
-    STATE: STATE,
-    TOKEN_TYPE: TOKEN_TYPE,
-    X_APP_NAME: X_APP_NAME,
-    X_APP_VER: X_APP_VER,
-    X_CLIENT_CPU: X_CLIENT_CPU,
-    X_CLIENT_CURR_TELEM: X_CLIENT_CURR_TELEM,
-    X_CLIENT_EXTRA_SKU: X_CLIENT_EXTRA_SKU,
-    X_CLIENT_LAST_TELEM: X_CLIENT_LAST_TELEM,
-    X_CLIENT_OS: X_CLIENT_OS,
-    X_CLIENT_SKU: X_CLIENT_SKU,
-    X_CLIENT_VER: X_CLIENT_VER,
-    X_MS_LIB_CAPABILITY: X_MS_LIB_CAPABILITY
-});
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const DEFAULT_CRYPTO_IMPLEMENTATION = {
-    createNewGuid: () => {
-        throw createClientAuthError(methodNotImplemented);
+const ClientConfigurationErrorMessage = {
+    redirectUriNotSet: {
+        code: redirectUriEmpty,
+        desc: ClientConfigurationErrorMessages[redirectUriEmpty],
     },
-    base64Decode: () => {
-        throw createClientAuthError(methodNotImplemented);
+    claimsRequestParsingError: {
+        code: claimsRequestParsingError,
+        desc: ClientConfigurationErrorMessages[claimsRequestParsingError],
     },
-    base64Encode: () => {
-        throw createClientAuthError(methodNotImplemented);
+    authorityUriInsecure: {
+        code: authorityUriInsecure,
+        desc: ClientConfigurationErrorMessages[authorityUriInsecure],
     },
-    base64UrlEncode: () => {
-        throw createClientAuthError(methodNotImplemented);
+    urlParseError: {
+        code: urlParseError,
+        desc: ClientConfigurationErrorMessages[urlParseError],
     },
-    encodeKid: () => {
-        throw createClientAuthError(methodNotImplemented);
+    urlEmptyError: {
+        code: urlEmptyError,
+        desc: ClientConfigurationErrorMessages[urlEmptyError],
     },
-    async getPublicKeyThumbprint() {
-        throw createClientAuthError(methodNotImplemented);
+    emptyScopesError: {
+        code: emptyInputScopesError,
+        desc: ClientConfigurationErrorMessages[emptyInputScopesError],
     },
-    async removeTokenBindingKey() {
-        throw createClientAuthError(methodNotImplemented);
+    invalidPrompt: {
+        code: invalidPromptValue,
+        desc: ClientConfigurationErrorMessages[invalidPromptValue],
     },
-    async clearKeystore() {
-        throw createClientAuthError(methodNotImplemented);
+    invalidClaimsRequest: {
+        code: invalidClaims,
+        desc: ClientConfigurationErrorMessages[invalidClaims],
     },
-    async signJwt() {
-        throw createClientAuthError(methodNotImplemented);
+    tokenRequestEmptyError: {
+        code: tokenRequestEmpty,
+        desc: ClientConfigurationErrorMessages[tokenRequestEmpty],
     },
-    async hashString() {
-        throw createClientAuthError(methodNotImplemented);
+    logoutRequestEmptyError: {
+        code: logoutRequestEmpty,
+        desc: ClientConfigurationErrorMessages[logoutRequestEmpty],
+    },
+    invalidCodeChallengeMethod: {
+        code: invalidCodeChallengeMethod,
+        desc: ClientConfigurationErrorMessages[invalidCodeChallengeMethod],
+    },
+    invalidCodeChallengeParams: {
+        code: pkceParamsMissing,
+        desc: ClientConfigurationErrorMessages[pkceParamsMissing],
+    },
+    invalidCloudDiscoveryMetadata: {
+        code: invalidCloudDiscoveryMetadata,
+        desc: ClientConfigurationErrorMessages[invalidCloudDiscoveryMetadata],
+    },
+    invalidAuthorityMetadata: {
+        code: invalidAuthorityMetadata,
+        desc: ClientConfigurationErrorMessages[invalidAuthorityMetadata],
+    },
+    untrustedAuthority: {
+        code: untrustedAuthority,
+        desc: ClientConfigurationErrorMessages[untrustedAuthority],
+    },
+    missingSshJwk: {
+        code: missingSshJwk,
+        desc: ClientConfigurationErrorMessages[missingSshJwk],
+    },
+    missingSshKid: {
+        code: missingSshKid,
+        desc: ClientConfigurationErrorMessages[missingSshKid],
+    },
+    missingNonceAuthenticationHeader: {
+        code: missingNonceAuthenticationHeader,
+        desc: ClientConfigurationErrorMessages[missingNonceAuthenticationHeader],
+    },
+    invalidAuthenticationHeader: {
+        code: invalidAuthenticationHeader,
+        desc: ClientConfigurationErrorMessages[invalidAuthenticationHeader],
+    },
+    cannotSetOIDCOptions: {
+        code: cannotSetOIDCOptions,
+        desc: ClientConfigurationErrorMessages[cannotSetOIDCOptions],
+    },
+    cannotAllowNativeBroker: {
+        code: cannotAllowNativeBroker,
+        desc: ClientConfigurationErrorMessages[cannotAllowNativeBroker],
+    },
+    authorityMismatch: {
+        code: authorityMismatch,
+        desc: ClientConfigurationErrorMessages[authorityMismatch],
     },
 };
+/**
+ * Error thrown when there is an error in configuration of the MSAL.js library.
+ */
+class ClientConfigurationError extends AuthError {
+    constructor(errorCode) {
+        super(errorCode, ClientConfigurationErrorMessages[errorCode]);
+        this.name = "ClientConfigurationError";
+        Object.setPrototypeOf(this, ClientConfigurationError.prototype);
+    }
+}
+function createClientConfigurationError(errorCode) {
+    return new ClientConfigurationError(errorCode);
+}
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
 /**
- * Log message level.
+ * @hidden
  */
-exports.LogLevel = void 0;
-(function (LogLevel) {
-    LogLevel[LogLevel["Error"] = 0] = "Error";
-    LogLevel[LogLevel["Warning"] = 1] = "Warning";
-    LogLevel[LogLevel["Info"] = 2] = "Info";
-    LogLevel[LogLevel["Verbose"] = 3] = "Verbose";
-    LogLevel[LogLevel["Trace"] = 4] = "Trace";
-})(exports.LogLevel || (exports.LogLevel = {}));
-/**
- * Class which facilitates logging of messages to a specific place.
- */
-class Logger {
-    constructor(loggerOptions, packageName, packageVersion) {
-        // Current log level, defaults to info.
-        this.level = exports.LogLevel.Info;
-        const defaultLoggerCallback = () => {
-            return;
-        };
-        const setLoggerOptions = loggerOptions || Logger.createDefaultLoggerOptions();
-        this.localCallback =
-            setLoggerOptions.loggerCallback || defaultLoggerCallback;
-        this.piiLoggingEnabled = setLoggerOptions.piiLoggingEnabled || false;
-        this.level =
-            typeof setLoggerOptions.logLevel === "number"
-                ? setLoggerOptions.logLevel
-                : exports.LogLevel.Info;
-        this.correlationId =
-            setLoggerOptions.correlationId || Constants.EMPTY_STRING;
-        this.packageName = packageName || Constants.EMPTY_STRING;
-        this.packageVersion = packageVersion || Constants.EMPTY_STRING;
-    }
-    static createDefaultLoggerOptions() {
-        return {
-            loggerCallback: () => {
-                // allow users to not set loggerCallback
-            },
-            piiLoggingEnabled: false,
-            logLevel: exports.LogLevel.Info,
-        };
-    }
+class StringUtils {
     /**
-     * Create new Logger with existing configurations.
+     * Check if stringified object is empty
+     * @param strObj
      */
-    clone(packageName, packageVersion, correlationId) {
-        return new Logger({
-            loggerCallback: this.localCallback,
-            piiLoggingEnabled: this.piiLoggingEnabled,
-            logLevel: this.level,
-            correlationId: correlationId || this.correlationId,
-        }, packageName, packageVersion);
-    }
-    /**
-     * Log message with required options.
-     */
-    logMessage(logMessage, options) {
-        if (options.logLevel > this.level ||
-            (!this.piiLoggingEnabled && options.containsPii)) {
-            return;
+    static isEmptyObj(strObj) {
+        if (strObj) {
+            try {
+                const obj = JSON.parse(strObj);
+                return Object.keys(obj).length === 0;
+            }
+            catch (e) { }
         }
-        const timestamp = new Date().toUTCString();
-        // Add correlationId to logs if set, correlationId provided on log messages take precedence
-        const logHeader = `[${timestamp}] : [${options.correlationId || this.correlationId || ""}]`;
-        const log = `${logHeader} : ${this.packageName}@${this.packageVersion} : ${exports.LogLevel[options.logLevel]} - ${logMessage}`;
-        // debug(`msal:${LogLevel[options.logLevel]}${options.containsPii ? "-Pii": Constants.EMPTY_STRING}${options.context ? `:${options.context}` : Constants.EMPTY_STRING}`)(logMessage);
-        this.executeCallback(options.logLevel, log, options.containsPii || false);
+        return true;
+    }
+    static startsWith(str, search) {
+        return str.indexOf(search) === 0;
+    }
+    static endsWith(str, search) {
+        return (str.length >= search.length &&
+            str.lastIndexOf(search) === str.length - search.length);
     }
     /**
-     * Execute callback with message.
+     * Parses string into an object.
+     *
+     * @param query
      */
-    executeCallback(level, message, containsPii) {
-        if (this.localCallback) {
-            this.localCallback(level, message, containsPii);
+    static queryStringToObject(query) {
+        const obj = {};
+        const params = query.split("&");
+        const decode = (s) => decodeURIComponent(s.replace(/\+/g, " "));
+        params.forEach((pair) => {
+            if (pair.trim()) {
+                const [key, value] = pair.split(/=(.+)/g, 2); // Split on the first occurence of the '=' character
+                if (key && value) {
+                    obj[decode(key)] = decode(value);
+                }
+            }
+        });
+        return obj;
+    }
+    /**
+     * Trims entries in an array.
+     *
+     * @param arr
+     */
+    static trimArrayEntries(arr) {
+        return arr.map((entry) => entry.trim());
+    }
+    /**
+     * Removes empty strings from array
+     * @param arr
+     */
+    static removeEmptyStringsFromArray(arr) {
+        return arr.filter((entry) => {
+            return !!entry;
+        });
+    }
+    /**
+     * Attempts to parse a string into JSON
+     * @param str
+     */
+    static jsonParseHelper(str) {
+        try {
+            return JSON.parse(str);
+        }
+        catch (e) {
+            return null;
         }
     }
     /**
-     * Logs error messages.
+     * Tests if a given string matches a given pattern, with support for wildcards and queries.
+     * @param pattern Wildcard pattern to string match. Supports "*" for wildcards and "?" for queries
+     * @param input String to match against
      */
-    error(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Error,
-            containsPii: false,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs error messages with PII.
-     */
-    errorPii(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Error,
-            containsPii: true,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs warning messages.
-     */
-    warning(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Warning,
-            containsPii: false,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs warning messages with PII.
-     */
-    warningPii(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Warning,
-            containsPii: true,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs info messages.
-     */
-    info(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Info,
-            containsPii: false,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs info messages with PII.
-     */
-    infoPii(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Info,
-            containsPii: true,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs verbose messages.
-     */
-    verbose(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Verbose,
-            containsPii: false,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs verbose messages with PII.
-     */
-    verbosePii(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Verbose,
-            containsPii: true,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs trace messages.
-     */
-    trace(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Trace,
-            containsPii: false,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Logs trace messages with PII.
-     */
-    tracePii(message, correlationId) {
-        this.logMessage(message, {
-            logLevel: exports.LogLevel.Trace,
-            containsPii: true,
-            correlationId: correlationId || Constants.EMPTY_STRING,
-        });
-    }
-    /**
-     * Returns whether PII Logging is enabled or not.
-     */
-    isPiiLoggingEnabled() {
-        return this.piiLoggingEnabled || false;
+    static matchPattern(pattern, input) {
+        /**
+         * Wildcard support: https://stackoverflow.com/a/3117248/4888559
+         * Queries: replaces "?" in string with escaped "\?" for regex test
+         */
+        // eslint-disable-next-line security/detect-non-literal-regexp
+        const regex = new RegExp(pattern
+            .replace(/\\/g, "\\\\")
+            .replace(/\*/g, "[^ ]*")
+            .replace(/\?/g, "\\?"));
+        return regex.test(input);
     }
 }
 
-/* eslint-disable header/header */
-const name = "@azure/msal-common";
-const version = "14.14.2";
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -74821,7 +72825,7 @@ class ScopeSet {
      * @param scopesRequired
      */
     static fromString(inputScopeString) {
-        const scopeString = inputScopeString || Constants.EMPTY_STRING;
+        const scopeString = inputScopeString || Constants$1.EMPTY_STRING;
         const inputScopes = scopeString.split(" ");
         return new ScopeSet(inputScopes);
     }
@@ -74836,7 +72840,7 @@ class ScopeSet {
             scopeSet.removeOIDCScopes();
         }
         else {
-            scopeSet.removeScope(Constants.OFFLINE_ACCESS_SCOPE);
+            scopeSet.removeScope(Constants$1.OFFLINE_ACCESS_SCOPE);
         }
         return scopeSet;
     }
@@ -74979,7 +72983,7 @@ class ScopeSet {
             const scopeArr = this.asArray();
             return scopeArr.join(" ");
         }
-        return Constants.EMPTY_STRING;
+        return Constants$1.EMPTY_STRING;
     }
     /**
      * Prints scopes into a space-delimited lower-case string (used for caching)
@@ -74988,6 +72992,8 @@ class ScopeSet {
         return this.printScopes().toLowerCase();
     }
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -75022,11 +73028,12 @@ function buildClientInfoFromHomeAccountId(homeAccountId) {
     return {
         uid: clientInfoParts[0],
         utid: clientInfoParts.length < 2
-            ? Constants.EMPTY_STRING
+            ? Constants$1.EMPTY_STRING
             : clientInfoParts[1],
     };
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -75105,6 +73112,22 @@ function updateAccountTenantProfileData(baseAccountInfo, tenantProfile, idTokenC
     return updatedAccountInfo;
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Authority types supported by MSAL.
+ */
+const AuthorityType = {
+    Default: 0,
+    Adfs: 1,
+    Dsts: 2,
+    Ciam: 3,
+};
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -75125,6 +73148,21 @@ function getTenantIdFromIdTokenClaims(idTokenClaims) {
     }
     return null;
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Protocol modes supported by MSAL.
+ */
+const ProtocolMode = {
+    AAD: "AAD",
+    OIDC: "OIDC",
+};
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -75367,6 +73405,358 @@ class AccountEntity {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Parses hash string from given string. Returns empty string if no hash symbol is found.
+ * @param hashString
+ */
+function stripLeadingHashOrQuery(responseString) {
+    if (responseString.startsWith("#/")) {
+        return responseString.substring(2);
+    }
+    else if (responseString.startsWith("#") ||
+        responseString.startsWith("?")) {
+        return responseString.substring(1);
+    }
+    return responseString;
+}
+/**
+ * Returns URL hash as server auth code response object.
+ */
+function getDeserializedResponse(responseString) {
+    // Check if given hash is empty
+    if (!responseString || responseString.indexOf("=") < 0) {
+        return null;
+    }
+    try {
+        // Strip the # or ? symbol if present
+        const normalizedResponse = stripLeadingHashOrQuery(responseString);
+        // If # symbol was not present, above will return empty string, so give original hash value
+        const deserializedHash = Object.fromEntries(new URLSearchParams(normalizedResponse));
+        // Check for known response properties
+        if (deserializedHash.code ||
+            deserializedHash.error ||
+            deserializedHash.error_description ||
+            deserializedHash.state) {
+            return deserializedHash;
+        }
+    }
+    catch (e) {
+        throw createClientAuthError(hashNotDeserialized);
+    }
+    return null;
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Url object class which can perform various transformations on url strings.
+ */
+class UrlString {
+    get urlString() {
+        return this._urlString;
+    }
+    constructor(url) {
+        this._urlString = url;
+        if (!this._urlString) {
+            // Throws error if url is empty
+            throw createClientConfigurationError(urlEmptyError);
+        }
+        if (!url.includes("#")) {
+            this._urlString = UrlString.canonicalizeUri(url);
+        }
+    }
+    /**
+     * Ensure urls are lower case and end with a / character.
+     * @param url
+     */
+    static canonicalizeUri(url) {
+        if (url) {
+            let lowerCaseUrl = url.toLowerCase();
+            if (StringUtils.endsWith(lowerCaseUrl, "?")) {
+                lowerCaseUrl = lowerCaseUrl.slice(0, -1);
+            }
+            else if (StringUtils.endsWith(lowerCaseUrl, "?/")) {
+                lowerCaseUrl = lowerCaseUrl.slice(0, -2);
+            }
+            if (!StringUtils.endsWith(lowerCaseUrl, "/")) {
+                lowerCaseUrl += "/";
+            }
+            return lowerCaseUrl;
+        }
+        return url;
+    }
+    /**
+     * Throws if urlString passed is not a valid authority URI string.
+     */
+    validateAsUri() {
+        // Attempts to parse url for uri components
+        let components;
+        try {
+            components = this.getUrlComponents();
+        }
+        catch (e) {
+            throw createClientConfigurationError(urlParseError);
+        }
+        // Throw error if URI or path segments are not parseable.
+        if (!components.HostNameAndPort || !components.PathSegments) {
+            throw createClientConfigurationError(urlParseError);
+        }
+        // Throw error if uri is insecure.
+        if (!components.Protocol ||
+            components.Protocol.toLowerCase() !== "https:") {
+            throw createClientConfigurationError(authorityUriInsecure);
+        }
+    }
+    /**
+     * Given a url and a query string return the url with provided query string appended
+     * @param url
+     * @param queryString
+     */
+    static appendQueryString(url, queryString) {
+        if (!queryString) {
+            return url;
+        }
+        return url.indexOf("?") < 0
+            ? `${url}?${queryString}`
+            : `${url}&${queryString}`;
+    }
+    /**
+     * Returns a url with the hash removed
+     * @param url
+     */
+    static removeHashFromUrl(url) {
+        return UrlString.canonicalizeUri(url.split("#")[0]);
+    }
+    /**
+     * Given a url like https://a:b/common/d?e=f#g, and a tenantId, returns https://a:b/tenantId/d
+     * @param href The url
+     * @param tenantId The tenant id to replace
+     */
+    replaceTenantPath(tenantId) {
+        const urlObject = this.getUrlComponents();
+        const pathArray = urlObject.PathSegments;
+        if (tenantId &&
+            pathArray.length !== 0 &&
+            (pathArray[0] === AADAuthorityConstants.COMMON ||
+                pathArray[0] === AADAuthorityConstants.ORGANIZATIONS)) {
+            pathArray[0] = tenantId;
+        }
+        return UrlString.constructAuthorityUriFromObject(urlObject);
+    }
+    /**
+     * Parses out the components from a url string.
+     * @returns An object with the various components. Please cache this value insted of calling this multiple times on the same url.
+     */
+    getUrlComponents() {
+        // https://gist.github.com/curtisz/11139b2cfcaef4a261e0
+        const regEx = RegExp("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+        // If url string does not match regEx, we throw an error
+        const match = this.urlString.match(regEx);
+        if (!match) {
+            throw createClientConfigurationError(urlParseError);
+        }
+        // Url component object
+        const urlComponents = {
+            Protocol: match[1],
+            HostNameAndPort: match[4],
+            AbsolutePath: match[5],
+            QueryString: match[7],
+        };
+        let pathSegments = urlComponents.AbsolutePath.split("/");
+        pathSegments = pathSegments.filter((val) => val && val.length > 0); // remove empty elements
+        urlComponents.PathSegments = pathSegments;
+        if (urlComponents.QueryString &&
+            urlComponents.QueryString.endsWith("/")) {
+            urlComponents.QueryString = urlComponents.QueryString.substring(0, urlComponents.QueryString.length - 1);
+        }
+        return urlComponents;
+    }
+    static getDomainFromUrl(url) {
+        const regEx = RegExp("^([^:/?#]+://)?([^/?#]*)");
+        const match = url.match(regEx);
+        if (!match) {
+            throw createClientConfigurationError(urlParseError);
+        }
+        return match[2];
+    }
+    static getAbsoluteUrl(relativeUrl, baseUrl) {
+        if (relativeUrl[0] === Constants$1.FORWARD_SLASH) {
+            const url = new UrlString(baseUrl);
+            const baseComponents = url.getUrlComponents();
+            return (baseComponents.Protocol +
+                "//" +
+                baseComponents.HostNameAndPort +
+                relativeUrl);
+        }
+        return relativeUrl;
+    }
+    static constructAuthorityUriFromObject(urlObject) {
+        return new UrlString(urlObject.Protocol +
+            "//" +
+            urlObject.HostNameAndPort +
+            "/" +
+            urlObject.PathSegments.join("/"));
+    }
+    /**
+     * Check if the hash of the URL string contains known properties
+     * @deprecated This API will be removed in a future version
+     */
+    static hashContainsKnownProperties(response) {
+        return !!getDeserializedResponse(response);
+    }
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const rawMetdataJSON = {
+    endpointMetadata: {
+        "login.microsoftonline.com": {
+            token_endpoint: "https://login.microsoftonline.com/{tenantid}/oauth2/v2.0/token",
+            jwks_uri: "https://login.microsoftonline.com/{tenantid}/discovery/v2.0/keys",
+            issuer: "https://login.microsoftonline.com/{tenantid}/v2.0",
+            authorization_endpoint: "https://login.microsoftonline.com/{tenantid}/oauth2/v2.0/authorize",
+            end_session_endpoint: "https://login.microsoftonline.com/{tenantid}/oauth2/v2.0/logout",
+        },
+        "login.chinacloudapi.cn": {
+            token_endpoint: "https://login.chinacloudapi.cn/{tenantid}/oauth2/v2.0/token",
+            jwks_uri: "https://login.chinacloudapi.cn/{tenantid}/discovery/v2.0/keys",
+            issuer: "https://login.partner.microsoftonline.cn/{tenantid}/v2.0",
+            authorization_endpoint: "https://login.chinacloudapi.cn/{tenantid}/oauth2/v2.0/authorize",
+            end_session_endpoint: "https://login.chinacloudapi.cn/{tenantid}/oauth2/v2.0/logout",
+        },
+        "login.microsoftonline.us": {
+            token_endpoint: "https://login.microsoftonline.us/{tenantid}/oauth2/v2.0/token",
+            jwks_uri: "https://login.microsoftonline.us/{tenantid}/discovery/v2.0/keys",
+            issuer: "https://login.microsoftonline.us/{tenantid}/v2.0",
+            authorization_endpoint: "https://login.microsoftonline.us/{tenantid}/oauth2/v2.0/authorize",
+            end_session_endpoint: "https://login.microsoftonline.us/{tenantid}/oauth2/v2.0/logout",
+        },
+    },
+    instanceDiscoveryMetadata: {
+        tenant_discovery_endpoint: "https://{canonicalAuthority}/v2.0/.well-known/openid-configuration",
+        metadata: [
+            {
+                preferred_network: "login.microsoftonline.com",
+                preferred_cache: "login.windows.net",
+                aliases: [
+                    "login.microsoftonline.com",
+                    "login.windows.net",
+                    "login.microsoft.com",
+                    "sts.windows.net",
+                ],
+            },
+            {
+                preferred_network: "login.partner.microsoftonline.cn",
+                preferred_cache: "login.partner.microsoftonline.cn",
+                aliases: [
+                    "login.partner.microsoftonline.cn",
+                    "login.chinacloudapi.cn",
+                ],
+            },
+            {
+                preferred_network: "login.microsoftonline.de",
+                preferred_cache: "login.microsoftonline.de",
+                aliases: ["login.microsoftonline.de"],
+            },
+            {
+                preferred_network: "login.microsoftonline.us",
+                preferred_cache: "login.microsoftonline.us",
+                aliases: [
+                    "login.microsoftonline.us",
+                    "login.usgovcloudapi.net",
+                ],
+            },
+            {
+                preferred_network: "login-us.microsoftonline.com",
+                preferred_cache: "login-us.microsoftonline.com",
+                aliases: ["login-us.microsoftonline.com"],
+            },
+        ],
+    },
+};
+const EndpointMetadata = rawMetdataJSON.endpointMetadata;
+const InstanceDiscoveryMetadata = rawMetdataJSON.instanceDiscoveryMetadata;
+const InstanceDiscoveryMetadataAliases = new Set();
+InstanceDiscoveryMetadata.metadata.forEach((metadataEntry) => {
+    metadataEntry.aliases.forEach((alias) => {
+        InstanceDiscoveryMetadataAliases.add(alias);
+    });
+});
+/**
+ * Attempts to get an aliases array from the static authority metadata sources based on the canonical authority host
+ * @param staticAuthorityOptions
+ * @param logger
+ * @returns
+ */
+function getAliasesFromStaticSources(staticAuthorityOptions, logger) {
+    let staticAliases;
+    const canonicalAuthority = staticAuthorityOptions.canonicalAuthority;
+    if (canonicalAuthority) {
+        const authorityHost = new UrlString(canonicalAuthority).getUrlComponents().HostNameAndPort;
+        staticAliases =
+            getAliasesFromMetadata(authorityHost, staticAuthorityOptions.cloudDiscoveryMetadata?.metadata, AuthorityMetadataSource.CONFIG, logger) ||
+                getAliasesFromMetadata(authorityHost, InstanceDiscoveryMetadata.metadata, AuthorityMetadataSource.HARDCODED_VALUES, logger) ||
+                staticAuthorityOptions.knownAuthorities;
+    }
+    return staticAliases || [];
+}
+/**
+ * Returns aliases for from the raw cloud discovery metadata passed in
+ * @param authorityHost
+ * @param rawCloudDiscoveryMetadata
+ * @returns
+ */
+function getAliasesFromMetadata(authorityHost, cloudDiscoveryMetadata, source, logger) {
+    logger?.trace(`getAliasesFromMetadata called with source: ${source}`);
+    if (authorityHost && cloudDiscoveryMetadata) {
+        const metadata = getCloudDiscoveryMetadataFromNetworkResponse(cloudDiscoveryMetadata, authorityHost);
+        if (metadata) {
+            logger?.trace(`getAliasesFromMetadata: found cloud discovery metadata in ${source}, returning aliases`);
+            return metadata.aliases;
+        }
+        else {
+            logger?.trace(`getAliasesFromMetadata: did not find cloud discovery metadata in ${source}`);
+        }
+    }
+    return null;
+}
+/**
+ * Get cloud discovery metadata for common authorities
+ */
+function getCloudDiscoveryMetadataFromHardcodedValues(authorityHost) {
+    const metadata = getCloudDiscoveryMetadataFromNetworkResponse(InstanceDiscoveryMetadata.metadata, authorityHost);
+    return metadata;
+}
+/**
+ * Searches instance discovery network response for the entry that contains the host in the aliases list
+ * @param response
+ * @param authority
+ */
+function getCloudDiscoveryMetadataFromNetworkResponse(response, authorityHost) {
+    for (let i = 0; i < response.length; i++) {
+        const metadata = response[i];
+        if (metadata.aliases.includes(authorityHost)) {
+            return metadata;
+        }
+    }
+    return null;
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -75374,11 +73764,7 @@ class AccountEntity {
 const cacheQuotaExceededErrorCode = "cache_quota_exceeded";
 const cacheUnknownErrorCode = "cache_error_unknown";
 
-var CacheErrorCodes = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    cacheQuotaExceededErrorCode: cacheQuotaExceededErrorCode,
-    cacheUnknownErrorCode: cacheUnknownErrorCode
-});
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -75405,6 +73791,8 @@ class CacheError extends Error {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -75417,7 +73805,7 @@ class CacheManager {
     constructor(clientId, cryptoImpl, logger, staticAuthorityOptions) {
         this.clientId = clientId;
         this.cryptoImpl = cryptoImpl;
-        this.commonLogger = logger.clone(name, version);
+        this.commonLogger = logger.clone(name$1, version$1);
         this.staticAuthorityOptions = staticAuthorityOptions;
     }
     /**
@@ -76655,11 +75043,13 @@ class DefaultStorageClass extends CacheManager {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-const DEFAULT_SYSTEM_OPTIONS = {
+const DEFAULT_SYSTEM_OPTIONS$1 = {
     tokenRenewalOffsetSeconds: DEFAULT_TOKEN_RENEWAL_OFFSET_SEC,
     preventCorsPreflight: false,
 };
@@ -76669,9 +75059,9 @@ const DEFAULT_LOGGER_IMPLEMENTATION = {
     },
     piiLoggingEnabled: false,
     logLevel: exports.LogLevel.Info,
-    correlationId: Constants.EMPTY_STRING,
+    correlationId: Constants$1.EMPTY_STRING,
 };
-const DEFAULT_CACHE_OPTIONS = {
+const DEFAULT_CACHE_OPTIONS$1 = {
     claimsBasedCachingEnabled: false,
 };
 const DEFAULT_NETWORK_IMPLEMENTATION = {
@@ -76683,20 +75073,20 @@ const DEFAULT_NETWORK_IMPLEMENTATION = {
     },
 };
 const DEFAULT_LIBRARY_INFO = {
-    sku: Constants.SKU,
-    version: version,
-    cpu: Constants.EMPTY_STRING,
-    os: Constants.EMPTY_STRING,
+    sku: Constants$1.SKU,
+    version: version$1,
+    cpu: Constants$1.EMPTY_STRING,
+    os: Constants$1.EMPTY_STRING,
 };
 const DEFAULT_CLIENT_CREDENTIALS = {
-    clientSecret: Constants.EMPTY_STRING,
+    clientSecret: Constants$1.EMPTY_STRING,
     clientAssertion: undefined,
 };
 const DEFAULT_AZURE_CLOUD_OPTIONS = {
     azureCloudInstance: AzureCloudInstance.None,
-    tenant: `${Constants.DEFAULT_COMMON_TENANT}`,
+    tenant: `${Constants$1.DEFAULT_COMMON_TENANT}`,
 };
-const DEFAULT_TELEMETRY_OPTIONS = {
+const DEFAULT_TELEMETRY_OPTIONS$1 = {
     application: {
         appName: "",
         appVersion: "",
@@ -76716,16 +75106,16 @@ function buildClientConfiguration({ authOptions: userAuthOptions, systemOptions:
     };
     return {
         authOptions: buildAuthOptions(userAuthOptions),
-        systemOptions: { ...DEFAULT_SYSTEM_OPTIONS, ...userSystemOptions },
+        systemOptions: { ...DEFAULT_SYSTEM_OPTIONS$1, ...userSystemOptions },
         loggerOptions: loggerOptions,
-        cacheOptions: { ...DEFAULT_CACHE_OPTIONS, ...userCacheOptions },
+        cacheOptions: { ...DEFAULT_CACHE_OPTIONS$1, ...userCacheOptions },
         storageInterface: storageImplementation ||
             new DefaultStorageClass(userAuthOptions.clientId, DEFAULT_CRYPTO_IMPLEMENTATION, new Logger(loggerOptions)),
         networkInterface: networkImplementation || DEFAULT_NETWORK_IMPLEMENTATION,
         cryptoInterface: cryptoImplementation || DEFAULT_CRYPTO_IMPLEMENTATION,
         clientCredentials: clientCredentials || DEFAULT_CLIENT_CREDENTIALS,
         libraryInfo: { ...DEFAULT_LIBRARY_INFO, ...libraryInfo },
-        telemetry: { ...DEFAULT_TELEMETRY_OPTIONS, ...telemetry },
+        telemetry: { ...DEFAULT_TELEMETRY_OPTIONS$1, ...telemetry },
         serverTelemetryManager: serverTelemetryManager || null,
         persistencePlugin: persistencePlugin || null,
         serializableCache: serializableCache || null,
@@ -76740,6 +75130,7 @@ function buildAuthOptions(authOptions) {
         clientCapabilities: [],
         azureCloudOptions: DEFAULT_AZURE_CLOUD_OPTIONS,
         skipAuthorityMetadataCache: false,
+        instanceAware: false,
         ...authOptions,
     };
 }
@@ -76750,6 +75141,8 @@ function buildAuthOptions(authOptions) {
 function isOidcProtocolMode(config) {
     return (config.authOptions.authority.options.protocolMode === ProtocolMode.OIDC);
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -76767,6 +75160,8 @@ class ServerError extends AuthError {
         Object.setPrototypeOf(this, ServerError.prototype);
     }
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -76794,7 +75189,7 @@ class ThrottlingUtils {
                 cacheManager.removeItem(key);
                 return;
             }
-            throw new ServerError(value.errorCodes?.join(" ") || Constants.EMPTY_STRING, value.errorMessage, value.subError);
+            throw new ServerError(value.errorCodes?.join(" ") || Constants$1.EMPTY_STRING, value.errorMessage, value.subError);
         }
     }
     /**
@@ -76864,6 +75259,8 @@ class ThrottlingUtils {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -76899,6 +75296,7 @@ class NetworkManager {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -76907,6 +75305,57 @@ const CcsCredentialType = {
     HOME_ACCOUNT_ID: "home_account_id",
     UPN: "UPN",
 };
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const CLIENT_ID = "client_id";
+const REDIRECT_URI = "redirect_uri";
+const RESPONSE_TYPE = "response_type";
+const RESPONSE_MODE = "response_mode";
+const GRANT_TYPE = "grant_type";
+const CLAIMS = "claims";
+const SCOPE = "scope";
+const REFRESH_TOKEN = "refresh_token";
+const STATE = "state";
+const NONCE = "nonce";
+const PROMPT = "prompt";
+const CODE = "code";
+const CODE_CHALLENGE = "code_challenge";
+const CODE_CHALLENGE_METHOD = "code_challenge_method";
+const CODE_VERIFIER = "code_verifier";
+const CLIENT_REQUEST_ID = "client-request-id";
+const X_CLIENT_SKU = "x-client-SKU";
+const X_CLIENT_VER = "x-client-VER";
+const X_CLIENT_OS = "x-client-OS";
+const X_CLIENT_CPU = "x-client-CPU";
+const X_CLIENT_CURR_TELEM = "x-client-current-telemetry";
+const X_CLIENT_LAST_TELEM = "x-client-last-telemetry";
+const X_MS_LIB_CAPABILITY = "x-ms-lib-capability";
+const X_APP_NAME = "x-app-name";
+const X_APP_VER = "x-app-ver";
+const POST_LOGOUT_URI = "post_logout_redirect_uri";
+const ID_TOKEN_HINT = "id_token_hint";
+const DEVICE_CODE = "device_code";
+const CLIENT_SECRET = "client_secret";
+const CLIENT_ASSERTION = "client_assertion";
+const CLIENT_ASSERTION_TYPE = "client_assertion_type";
+const TOKEN_TYPE = "token_type";
+const REQ_CNF = "req_cnf";
+const OBO_ASSERTION = "assertion";
+const REQUESTED_TOKEN_USE = "requested_token_use";
+const ON_BEHALF_OF = "on_behalf_of";
+const RETURN_SPA_CODE = "return_spa_code";
+const NATIVE_BROKER = "nativebroker";
+const LOGOUT_HINT = "logout_hint";
+const SID = "sid";
+const LOGIN_HINT = "login_hint";
+const DOMAIN_HINT = "domain_hint";
+const X_CLIENT_EXTRA_SKU = "x-client-xtra-sku";
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -76973,6 +75422,8 @@ class RequestValidator {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -76986,13 +75437,13 @@ class RequestParameterBuilder {
      * add response_type = code
      */
     addResponseTypeCode() {
-        this.parameters.set(RESPONSE_TYPE, encodeURIComponent(Constants.CODE_RESPONSE_TYPE));
+        this.parameters.set(RESPONSE_TYPE, encodeURIComponent(Constants$1.CODE_RESPONSE_TYPE));
     }
     /**
      * add response_type = token id_token
      */
     addResponseTypeForTokenAndIdToken() {
-        this.parameters.set(RESPONSE_TYPE, encodeURIComponent(`${Constants.TOKEN_RESPONSE_TYPE} ${Constants.ID_TOKEN_RESPONSE_TYPE}`));
+        this.parameters.set(RESPONSE_TYPE, encodeURIComponent(`${Constants$1.TOKEN_RESPONSE_TYPE} ${Constants$1.ID_TOKEN_RESPONSE_TYPE}`));
     }
     /**
      * add response_mode. defaults to query.
@@ -77252,7 +75703,7 @@ class RequestParameterBuilder {
      *
      */
     addClientInfo() {
-        this.parameters.set(CLIENT_INFO$1, "1");
+        this.parameters.set(CLIENT_INFO, "1");
     }
     /**
      * add extraQueryParams
@@ -77356,6 +75807,1359 @@ class RequestParameterBuilder {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+function isOpenIdConfigResponse(response) {
+    return (response.hasOwnProperty("authorization_endpoint") &&
+        response.hasOwnProperty("token_endpoint") &&
+        response.hasOwnProperty("issuer") &&
+        response.hasOwnProperty("jwks_uri"));
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+function isCloudInstanceDiscoveryResponse(response) {
+    return (response.hasOwnProperty("tenant_discovery_endpoint") &&
+        response.hasOwnProperty("metadata"));
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+function isCloudInstanceDiscoveryErrorResponse(response) {
+    return (response.hasOwnProperty("error") &&
+        response.hasOwnProperty("error_description"));
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Enumeration of operations that are instrumented by have their performance measured by the PerformanceClient.
+ *
+ * @export
+ * @enum {number}
+ */
+const PerformanceEvents = {
+    /**
+     * acquireTokenByCode API (msal-browser and msal-node).
+     * Used to acquire tokens by trading an authorization code against the token endpoint.
+     */
+    AcquireTokenByCode: "acquireTokenByCode",
+    /**
+     * acquireTokenByRefreshToken API (msal-browser and msal-node).
+     * Used to renew an access token using a refresh token against the token endpoint.
+     */
+    AcquireTokenByRefreshToken: "acquireTokenByRefreshToken",
+    /**
+     * acquireTokenSilent API (msal-browser and msal-node).
+     * Used to silently acquire a new access token (from the cache or the network).
+     */
+    AcquireTokenSilent: "acquireTokenSilent",
+    /**
+     * acquireTokenSilentAsync (msal-browser).
+     * Internal API for acquireTokenSilent.
+     */
+    AcquireTokenSilentAsync: "acquireTokenSilentAsync",
+    /**
+     * acquireTokenPopup (msal-browser).
+     * Used to acquire a new access token interactively through pop ups
+     */
+    AcquireTokenPopup: "acquireTokenPopup",
+    /**
+     * acquireTokenPreRedirect (msal-browser).
+     * First part of the redirect flow.
+     * Used to acquire a new access token interactively through redirects.
+     */
+    AcquireTokenPreRedirect: "acquireTokenPreRedirect",
+    /**
+     * acquireTokenRedirect (msal-browser).
+     * Second part of the redirect flow.
+     * Used to acquire a new access token interactively through redirects.
+     */
+    AcquireTokenRedirect: "acquireTokenRedirect",
+    /**
+     * getPublicKeyThumbprint API in CryptoOpts class (msal-browser).
+     * Used to generate a public/private keypair and generate a public key thumbprint for pop requests.
+     */
+    CryptoOptsGetPublicKeyThumbprint: "cryptoOptsGetPublicKeyThumbprint",
+    /**
+     * signJwt API in CryptoOpts class (msal-browser).
+     * Used to signed a pop token.
+     */
+    CryptoOptsSignJwt: "cryptoOptsSignJwt",
+    /**
+     * acquireToken API in the SilentCacheClient class (msal-browser).
+     * Used to read access tokens from the cache.
+     */
+    SilentCacheClientAcquireToken: "silentCacheClientAcquireToken",
+    /**
+     * acquireToken API in the SilentIframeClient class (msal-browser).
+     * Used to acquire a new set of tokens from the authorize endpoint in a hidden iframe.
+     */
+    SilentIframeClientAcquireToken: "silentIframeClientAcquireToken",
+    AwaitConcurrentIframe: "awaitConcurrentIframe",
+    /**
+     * acquireToken API in SilentRereshClient (msal-browser).
+     * Used to acquire a new set of tokens from the token endpoint using a refresh token.
+     */
+    SilentRefreshClientAcquireToken: "silentRefreshClientAcquireToken",
+    /**
+     * ssoSilent API (msal-browser).
+     * Used to silently acquire an authorization code and set of tokens using a hidden iframe.
+     */
+    SsoSilent: "ssoSilent",
+    /**
+     * getDiscoveredAuthority API in StandardInteractionClient class (msal-browser).
+     * Used to load authority metadata for a request.
+     */
+    StandardInteractionClientGetDiscoveredAuthority: "standardInteractionClientGetDiscoveredAuthority",
+    /**
+     * acquireToken APIs in msal-browser.
+     * Used to make an /authorize endpoint call with native brokering enabled.
+     */
+    FetchAccountIdWithNativeBroker: "fetchAccountIdWithNativeBroker",
+    /**
+     * acquireToken API in NativeInteractionClient class (msal-browser).
+     * Used to acquire a token from Native component when native brokering is enabled.
+     */
+    NativeInteractionClientAcquireToken: "nativeInteractionClientAcquireToken",
+    /**
+     * Time spent creating default headers for requests to token endpoint
+     */
+    BaseClientCreateTokenRequestHeaders: "baseClientCreateTokenRequestHeaders",
+    /**
+     * Time spent sending/waiting for the response of a request to the token endpoint
+     */
+    RefreshTokenClientExecutePostToTokenEndpoint: "refreshTokenClientExecutePostToTokenEndpoint",
+    AuthorizationCodeClientExecutePostToTokenEndpoint: "authorizationCodeClientExecutePostToTokenEndpoint",
+    /**
+     * Used to measure the time taken for completing embedded-broker handshake (PW-Broker).
+     */
+    BrokerHandhshake: "brokerHandshake",
+    /**
+     * acquireTokenByRefreshToken API in BrokerClientApplication (PW-Broker) .
+     */
+    AcquireTokenByRefreshTokenInBroker: "acquireTokenByRefreshTokenInBroker",
+    /**
+     * Time taken for token acquisition by broker
+     */
+    AcquireTokenByBroker: "acquireTokenByBroker",
+    /**
+     * Time spent on the network for refresh token acquisition
+     */
+    RefreshTokenClientExecuteTokenRequest: "refreshTokenClientExecuteTokenRequest",
+    /**
+     * Time taken for acquiring refresh token , records RT size
+     */
+    RefreshTokenClientAcquireToken: "refreshTokenClientAcquireToken",
+    /**
+     * Time taken for acquiring cached refresh token
+     */
+    RefreshTokenClientAcquireTokenWithCachedRefreshToken: "refreshTokenClientAcquireTokenWithCachedRefreshToken",
+    /**
+     * acquireTokenByRefreshToken API in RefreshTokenClient (msal-common).
+     */
+    RefreshTokenClientAcquireTokenByRefreshToken: "refreshTokenClientAcquireTokenByRefreshToken",
+    /**
+     * Helper function to create token request body in RefreshTokenClient (msal-common).
+     */
+    RefreshTokenClientCreateTokenRequestBody: "refreshTokenClientCreateTokenRequestBody",
+    /**
+     * acquireTokenFromCache (msal-browser).
+     * Internal API for acquiring token from cache
+     */
+    AcquireTokenFromCache: "acquireTokenFromCache",
+    SilentFlowClientAcquireCachedToken: "silentFlowClientAcquireCachedToken",
+    SilentFlowClientGenerateResultFromCacheRecord: "silentFlowClientGenerateResultFromCacheRecord",
+    /**
+     * acquireTokenBySilentIframe (msal-browser).
+     * Internal API for acquiring token by silent Iframe
+     */
+    AcquireTokenBySilentIframe: "acquireTokenBySilentIframe",
+    /**
+     * Internal API for initializing base request in BaseInteractionClient (msal-browser)
+     */
+    InitializeBaseRequest: "initializeBaseRequest",
+    /**
+     * Internal API for initializing silent request in SilentCacheClient (msal-browser)
+     */
+    InitializeSilentRequest: "initializeSilentRequest",
+    InitializeClientApplication: "initializeClientApplication",
+    /**
+     * Helper function in SilentIframeClient class (msal-browser).
+     */
+    SilentIframeClientTokenHelper: "silentIframeClientTokenHelper",
+    /**
+     * SilentHandler
+     */
+    SilentHandlerInitiateAuthRequest: "silentHandlerInitiateAuthRequest",
+    SilentHandlerMonitorIframeForHash: "silentHandlerMonitorIframeForHash",
+    SilentHandlerLoadFrame: "silentHandlerLoadFrame",
+    SilentHandlerLoadFrameSync: "silentHandlerLoadFrameSync",
+    /**
+     * Helper functions in StandardInteractionClient class (msal-browser)
+     */
+    StandardInteractionClientCreateAuthCodeClient: "standardInteractionClientCreateAuthCodeClient",
+    StandardInteractionClientGetClientConfiguration: "standardInteractionClientGetClientConfiguration",
+    StandardInteractionClientInitializeAuthorizationRequest: "standardInteractionClientInitializeAuthorizationRequest",
+    StandardInteractionClientInitializeAuthorizationCodeRequest: "standardInteractionClientInitializeAuthorizationCodeRequest",
+    /**
+     * getAuthCodeUrl API (msal-browser and msal-node).
+     */
+    GetAuthCodeUrl: "getAuthCodeUrl",
+    /**
+     * Functions from InteractionHandler (msal-browser)
+     */
+    HandleCodeResponseFromServer: "handleCodeResponseFromServer",
+    HandleCodeResponse: "handleCodeResponse",
+    UpdateTokenEndpointAuthority: "updateTokenEndpointAuthority",
+    /**
+     * APIs in Authorization Code Client (msal-common)
+     */
+    AuthClientAcquireToken: "authClientAcquireToken",
+    AuthClientExecuteTokenRequest: "authClientExecuteTokenRequest",
+    AuthClientCreateTokenRequestBody: "authClientCreateTokenRequestBody",
+    AuthClientCreateQueryString: "authClientCreateQueryString",
+    /**
+     * Generate functions in PopTokenGenerator (msal-common)
+     */
+    PopTokenGenerateCnf: "popTokenGenerateCnf",
+    PopTokenGenerateKid: "popTokenGenerateKid",
+    /**
+     * handleServerTokenResponse API in ResponseHandler (msal-common)
+     */
+    HandleServerTokenResponse: "handleServerTokenResponse",
+    DeserializeResponse: "deserializeResponse",
+    /**
+     * Authority functions
+     */
+    AuthorityFactoryCreateDiscoveredInstance: "authorityFactoryCreateDiscoveredInstance",
+    AuthorityResolveEndpointsAsync: "authorityResolveEndpointsAsync",
+    AuthorityResolveEndpointsFromLocalSources: "authorityResolveEndpointsFromLocalSources",
+    AuthorityGetCloudDiscoveryMetadataFromNetwork: "authorityGetCloudDiscoveryMetadataFromNetwork",
+    AuthorityUpdateCloudDiscoveryMetadata: "authorityUpdateCloudDiscoveryMetadata",
+    AuthorityGetEndpointMetadataFromNetwork: "authorityGetEndpointMetadataFromNetwork",
+    AuthorityUpdateEndpointMetadata: "authorityUpdateEndpointMetadata",
+    AuthorityUpdateMetadataWithRegionalInformation: "authorityUpdateMetadataWithRegionalInformation",
+    /**
+     * Region Discovery functions
+     */
+    RegionDiscoveryDetectRegion: "regionDiscoveryDetectRegion",
+    RegionDiscoveryGetRegionFromIMDS: "regionDiscoveryGetRegionFromIMDS",
+    RegionDiscoveryGetCurrentVersion: "regionDiscoveryGetCurrentVersion",
+    AcquireTokenByCodeAsync: "acquireTokenByCodeAsync",
+    GetEndpointMetadataFromNetwork: "getEndpointMetadataFromNetwork",
+    GetCloudDiscoveryMetadataFromNetworkMeasurement: "getCloudDiscoveryMetadataFromNetworkMeasurement",
+    HandleRedirectPromiseMeasurement: "handleRedirectPromise",
+    HandleNativeRedirectPromiseMeasurement: "handleNativeRedirectPromise",
+    UpdateCloudDiscoveryMetadataMeasurement: "updateCloudDiscoveryMetadataMeasurement",
+    UsernamePasswordClientAcquireToken: "usernamePasswordClientAcquireToken",
+    NativeMessageHandlerHandshake: "nativeMessageHandlerHandshake",
+    NativeGenerateAuthResult: "nativeGenerateAuthResult",
+    RemoveHiddenIframe: "removeHiddenIframe",
+    /**
+     * Cache operations
+     */
+    ClearTokensAndKeysWithClaims: "clearTokensAndKeysWithClaims",
+    CacheManagerGetRefreshToken: "cacheManagerGetRefreshToken",
+    /**
+     * Crypto Operations
+     */
+    GeneratePkceCodes: "generatePkceCodes",
+    GenerateCodeVerifier: "generateCodeVerifier",
+    GenerateCodeChallengeFromVerifier: "generateCodeChallengeFromVerifier",
+    Sha256Digest: "sha256Digest",
+    GetRandomValues: "getRandomValues",
+};
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Wraps a function with a performance measurement.
+ * Usage: invoke(functionToCall, performanceClient, "EventName", "correlationId")(...argsToPassToFunction)
+ * @param callback
+ * @param eventName
+ * @param logger
+ * @param telemetryClient
+ * @param correlationId
+ * @returns
+ * @internal
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const invoke = (callback, eventName, logger, telemetryClient, correlationId) => {
+    return (...args) => {
+        logger.trace(`Executing function ${eventName}`);
+        const inProgressEvent = telemetryClient?.startMeasurement(eventName, correlationId);
+        if (correlationId) {
+            // Track number of times this API is called in a single request
+            const eventCount = eventName + "CallCount";
+            telemetryClient?.incrementFields({ [eventCount]: 1 }, correlationId);
+        }
+        try {
+            const result = callback(...args);
+            inProgressEvent?.end({
+                success: true,
+            });
+            logger.trace(`Returning result from ${eventName}`);
+            return result;
+        }
+        catch (e) {
+            logger.trace(`Error occurred in ${eventName}`);
+            try {
+                logger.trace(JSON.stringify(e));
+            }
+            catch (e) {
+                logger.trace("Unable to print error message.");
+            }
+            inProgressEvent?.end({
+                success: false,
+            }, e);
+            throw e;
+        }
+    };
+};
+/**
+ * Wraps an async function with a performance measurement.
+ * Usage: invokeAsync(functionToCall, performanceClient, "EventName", "correlationId")(...argsToPassToFunction)
+ * @param callback
+ * @param eventName
+ * @param logger
+ * @param telemetryClient
+ * @param correlationId
+ * @returns
+ * @internal
+ *
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const invokeAsync = (callback, eventName, logger, telemetryClient, correlationId) => {
+    return (...args) => {
+        logger.trace(`Executing function ${eventName}`);
+        const inProgressEvent = telemetryClient?.startMeasurement(eventName, correlationId);
+        if (correlationId) {
+            // Track number of times this API is called in a single request
+            const eventCount = eventName + "CallCount";
+            telemetryClient?.incrementFields({ [eventCount]: 1 }, correlationId);
+        }
+        telemetryClient?.setPreQueueTime(eventName, correlationId);
+        return callback(...args)
+            .then((response) => {
+            logger.trace(`Returning result from ${eventName}`);
+            inProgressEvent?.end({
+                success: true,
+            });
+            return response;
+        })
+            .catch((e) => {
+            logger.trace(`Error occurred in ${eventName}`);
+            try {
+                logger.trace(JSON.stringify(e));
+            }
+            catch (e) {
+                logger.trace("Unable to print error message.");
+            }
+            inProgressEvent?.end({
+                success: false,
+            }, e);
+            throw e;
+        });
+    };
+};
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class RegionDiscovery {
+    constructor(networkInterface, logger, performanceClient, correlationId) {
+        this.networkInterface = networkInterface;
+        this.logger = logger;
+        this.performanceClient = performanceClient;
+        this.correlationId = correlationId;
+    }
+    /**
+     * Detect the region from the application's environment.
+     *
+     * @returns Promise<string | null>
+     */
+    async detectRegion(environmentRegion, regionDiscoveryMetadata) {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.RegionDiscoveryDetectRegion, this.correlationId);
+        // Initialize auto detected region with the region from the envrionment
+        let autodetectedRegionName = environmentRegion;
+        // Check if a region was detected from the environment, if not, attempt to get the region from IMDS
+        if (!autodetectedRegionName) {
+            const options = RegionDiscovery.IMDS_OPTIONS;
+            try {
+                const localIMDSVersionResponse = await invokeAsync(this.getRegionFromIMDS.bind(this), PerformanceEvents.RegionDiscoveryGetRegionFromIMDS, this.logger, this.performanceClient, this.correlationId)(Constants$1.IMDS_VERSION, options);
+                if (localIMDSVersionResponse.status ===
+                    ResponseCodes.httpSuccess) {
+                    autodetectedRegionName = localIMDSVersionResponse.body;
+                    regionDiscoveryMetadata.region_source =
+                        RegionDiscoverySources.IMDS;
+                }
+                // If the response using the local IMDS version failed, try to fetch the current version of IMDS and retry.
+                if (localIMDSVersionResponse.status ===
+                    ResponseCodes.httpBadRequest) {
+                    const currentIMDSVersion = await invokeAsync(this.getCurrentVersion.bind(this), PerformanceEvents.RegionDiscoveryGetCurrentVersion, this.logger, this.performanceClient, this.correlationId)(options);
+                    if (!currentIMDSVersion) {
+                        regionDiscoveryMetadata.region_source =
+                            RegionDiscoverySources.FAILED_AUTO_DETECTION;
+                        return null;
+                    }
+                    const currentIMDSVersionResponse = await invokeAsync(this.getRegionFromIMDS.bind(this), PerformanceEvents.RegionDiscoveryGetRegionFromIMDS, this.logger, this.performanceClient, this.correlationId)(currentIMDSVersion, options);
+                    if (currentIMDSVersionResponse.status ===
+                        ResponseCodes.httpSuccess) {
+                        autodetectedRegionName =
+                            currentIMDSVersionResponse.body;
+                        regionDiscoveryMetadata.region_source =
+                            RegionDiscoverySources.IMDS;
+                    }
+                }
+            }
+            catch (e) {
+                regionDiscoveryMetadata.region_source =
+                    RegionDiscoverySources.FAILED_AUTO_DETECTION;
+                return null;
+            }
+        }
+        else {
+            regionDiscoveryMetadata.region_source =
+                RegionDiscoverySources.ENVIRONMENT_VARIABLE;
+        }
+        // If no region was auto detected from the environment or from the IMDS endpoint, mark the attempt as a FAILED_AUTO_DETECTION
+        if (!autodetectedRegionName) {
+            regionDiscoveryMetadata.region_source =
+                RegionDiscoverySources.FAILED_AUTO_DETECTION;
+        }
+        return autodetectedRegionName || null;
+    }
+    /**
+     * Make the call to the IMDS endpoint
+     *
+     * @param imdsEndpointUrl
+     * @returns Promise<NetworkResponse<string>>
+     */
+    async getRegionFromIMDS(version, options) {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.RegionDiscoveryGetRegionFromIMDS, this.correlationId);
+        return this.networkInterface.sendGetRequestAsync(`${Constants$1.IMDS_ENDPOINT}?api-version=${version}&format=text`, options, Constants$1.IMDS_TIMEOUT);
+    }
+    /**
+     * Get the most recent version of the IMDS endpoint available
+     *
+     * @returns Promise<string | null>
+     */
+    async getCurrentVersion(options) {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.RegionDiscoveryGetCurrentVersion, this.correlationId);
+        try {
+            const response = await this.networkInterface.sendGetRequestAsync(`${Constants$1.IMDS_ENDPOINT}?format=json`, options);
+            // When IMDS endpoint is called without the api version query param, bad request response comes back with latest version.
+            if (response.status === ResponseCodes.httpBadRequest &&
+                response.body &&
+                response.body["newest-versions"] &&
+                response.body["newest-versions"].length > 0) {
+                return response.body["newest-versions"][0];
+            }
+            return null;
+        }
+        catch (e) {
+            return null;
+        }
+    }
+}
+// Options for the IMDS endpoint request
+RegionDiscovery.IMDS_OPTIONS = {
+    headers: {
+        Metadata: "true",
+    },
+};
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * The authority class validates the authority URIs used by the user, and retrieves the OpenID Configuration Data from the
+ * endpoint. It will store the pertinent config data in this object for use during token calls.
+ * @internal
+ */
+class Authority {
+    constructor(authority, networkInterface, cacheManager, authorityOptions, logger, correlationId, performanceClient, managedIdentity) {
+        this.canonicalAuthority = authority;
+        this._canonicalAuthority.validateAsUri();
+        this.networkInterface = networkInterface;
+        this.cacheManager = cacheManager;
+        this.authorityOptions = authorityOptions;
+        this.regionDiscoveryMetadata = {
+            region_used: undefined,
+            region_source: undefined,
+            region_outcome: undefined,
+        };
+        this.logger = logger;
+        this.performanceClient = performanceClient;
+        this.correlationId = correlationId;
+        this.managedIdentity = managedIdentity || false;
+        this.regionDiscovery = new RegionDiscovery(networkInterface, this.logger, this.performanceClient, this.correlationId);
+    }
+    /**
+     * Get {@link AuthorityType}
+     * @param authorityUri {@link IUri}
+     * @private
+     */
+    getAuthorityType(authorityUri) {
+        // CIAM auth url pattern is being standardized as: <tenant>.ciamlogin.com
+        if (authorityUri.HostNameAndPort.endsWith(Constants$1.CIAM_AUTH_URL)) {
+            return AuthorityType.Ciam;
+        }
+        const pathSegments = authorityUri.PathSegments;
+        if (pathSegments.length) {
+            switch (pathSegments[0].toLowerCase()) {
+                case Constants$1.ADFS:
+                    return AuthorityType.Adfs;
+                case Constants$1.DSTS:
+                    return AuthorityType.Dsts;
+            }
+        }
+        return AuthorityType.Default;
+    }
+    // See above for AuthorityType
+    get authorityType() {
+        return this.getAuthorityType(this.canonicalAuthorityUrlComponents);
+    }
+    /**
+     * ProtocolMode enum representing the way endpoints are constructed.
+     */
+    get protocolMode() {
+        return this.authorityOptions.protocolMode;
+    }
+    /**
+     * Returns authorityOptions which can be used to reinstantiate a new authority instance
+     */
+    get options() {
+        return this.authorityOptions;
+    }
+    /**
+     * A URL that is the authority set by the developer
+     */
+    get canonicalAuthority() {
+        return this._canonicalAuthority.urlString;
+    }
+    /**
+     * Sets canonical authority.
+     */
+    set canonicalAuthority(url) {
+        this._canonicalAuthority = new UrlString(url);
+        this._canonicalAuthority.validateAsUri();
+        this._canonicalAuthorityUrlComponents = null;
+    }
+    /**
+     * Get authority components.
+     */
+    get canonicalAuthorityUrlComponents() {
+        if (!this._canonicalAuthorityUrlComponents) {
+            this._canonicalAuthorityUrlComponents =
+                this._canonicalAuthority.getUrlComponents();
+        }
+        return this._canonicalAuthorityUrlComponents;
+    }
+    /**
+     * Get hostname and port i.e. login.microsoftonline.com
+     */
+    get hostnameAndPort() {
+        return this.canonicalAuthorityUrlComponents.HostNameAndPort.toLowerCase();
+    }
+    /**
+     * Get tenant for authority.
+     */
+    get tenant() {
+        return this.canonicalAuthorityUrlComponents.PathSegments[0];
+    }
+    /**
+     * OAuth /authorize endpoint for requests
+     */
+    get authorizationEndpoint() {
+        if (this.discoveryComplete()) {
+            return this.replacePath(this.metadata.authorization_endpoint);
+        }
+        else {
+            throw createClientAuthError(endpointResolutionError);
+        }
+    }
+    /**
+     * OAuth /token endpoint for requests
+     */
+    get tokenEndpoint() {
+        if (this.discoveryComplete()) {
+            return this.replacePath(this.metadata.token_endpoint);
+        }
+        else {
+            throw createClientAuthError(endpointResolutionError);
+        }
+    }
+    get deviceCodeEndpoint() {
+        if (this.discoveryComplete()) {
+            return this.replacePath(this.metadata.token_endpoint.replace("/token", "/devicecode"));
+        }
+        else {
+            throw createClientAuthError(endpointResolutionError);
+        }
+    }
+    /**
+     * OAuth logout endpoint for requests
+     */
+    get endSessionEndpoint() {
+        if (this.discoveryComplete()) {
+            // ROPC policies may not have end_session_endpoint set
+            if (!this.metadata.end_session_endpoint) {
+                throw createClientAuthError(endSessionEndpointNotSupported);
+            }
+            return this.replacePath(this.metadata.end_session_endpoint);
+        }
+        else {
+            throw createClientAuthError(endpointResolutionError);
+        }
+    }
+    /**
+     * OAuth issuer for requests
+     */
+    get selfSignedJwtAudience() {
+        if (this.discoveryComplete()) {
+            return this.replacePath(this.metadata.issuer);
+        }
+        else {
+            throw createClientAuthError(endpointResolutionError);
+        }
+    }
+    /**
+     * Jwks_uri for token signing keys
+     */
+    get jwksUri() {
+        if (this.discoveryComplete()) {
+            return this.replacePath(this.metadata.jwks_uri);
+        }
+        else {
+            throw createClientAuthError(endpointResolutionError);
+        }
+    }
+    /**
+     * Returns a flag indicating that tenant name can be replaced in authority {@link IUri}
+     * @param authorityUri {@link IUri}
+     * @private
+     */
+    canReplaceTenant(authorityUri) {
+        return (authorityUri.PathSegments.length === 1 &&
+            !Authority.reservedTenantDomains.has(authorityUri.PathSegments[0]) &&
+            this.getAuthorityType(authorityUri) === AuthorityType.Default &&
+            this.protocolMode === ProtocolMode.AAD);
+    }
+    /**
+     * Replaces tenant in url path with current tenant. Defaults to common.
+     * @param urlString
+     */
+    replaceTenant(urlString) {
+        return urlString.replace(/{tenant}|{tenantid}/g, this.tenant);
+    }
+    /**
+     * Replaces path such as tenant or policy with the current tenant or policy.
+     * @param urlString
+     */
+    replacePath(urlString) {
+        let endpoint = urlString;
+        const cachedAuthorityUrl = new UrlString(this.metadata.canonical_authority);
+        const cachedAuthorityUrlComponents = cachedAuthorityUrl.getUrlComponents();
+        const cachedAuthorityParts = cachedAuthorityUrlComponents.PathSegments;
+        const currentAuthorityParts = this.canonicalAuthorityUrlComponents.PathSegments;
+        currentAuthorityParts.forEach((currentPart, index) => {
+            let cachedPart = cachedAuthorityParts[index];
+            if (index === 0 &&
+                this.canReplaceTenant(cachedAuthorityUrlComponents)) {
+                const tenantId = new UrlString(this.metadata.authorization_endpoint).getUrlComponents().PathSegments[0];
+                /**
+                 * Check if AAD canonical authority contains tenant domain name, for example "testdomain.onmicrosoft.com",
+                 * by comparing its first path segment to the corresponding authorization endpoint path segment, which is
+                 * always resolved with tenant id by OIDC.
+                 */
+                if (cachedPart !== tenantId) {
+                    this.logger.verbose(`Replacing tenant domain name ${cachedPart} with id ${tenantId}`);
+                    cachedPart = tenantId;
+                }
+            }
+            if (currentPart !== cachedPart) {
+                endpoint = endpoint.replace(`/${cachedPart}/`, `/${currentPart}/`);
+            }
+        });
+        return this.replaceTenant(endpoint);
+    }
+    /**
+     * The default open id configuration endpoint for any canonical authority.
+     */
+    get defaultOpenIdConfigurationEndpoint() {
+        const canonicalAuthorityHost = this.hostnameAndPort;
+        if (this.canonicalAuthority.endsWith("v2.0/") ||
+            this.authorityType === AuthorityType.Adfs ||
+            (this.protocolMode !== ProtocolMode.AAD &&
+                !this.isAliasOfKnownMicrosoftAuthority(canonicalAuthorityHost))) {
+            return `${this.canonicalAuthority}.well-known/openid-configuration`;
+        }
+        return `${this.canonicalAuthority}v2.0/.well-known/openid-configuration`;
+    }
+    /**
+     * Boolean that returns whether or not tenant discovery has been completed.
+     */
+    discoveryComplete() {
+        return !!this.metadata;
+    }
+    /**
+     * Perform endpoint discovery to discover aliases, preferred_cache, preferred_network
+     * and the /authorize, /token and logout endpoints.
+     */
+    async resolveEndpointsAsync() {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityResolveEndpointsAsync, this.correlationId);
+        const metadataEntity = this.getCurrentMetadataEntity();
+        const cloudDiscoverySource = await invokeAsync(this.updateCloudDiscoveryMetadata.bind(this), PerformanceEvents.AuthorityUpdateCloudDiscoveryMetadata, this.logger, this.performanceClient, this.correlationId)(metadataEntity);
+        this.canonicalAuthority = this.canonicalAuthority.replace(this.hostnameAndPort, metadataEntity.preferred_network);
+        const endpointSource = await invokeAsync(this.updateEndpointMetadata.bind(this), PerformanceEvents.AuthorityUpdateEndpointMetadata, this.logger, this.performanceClient, this.correlationId)(metadataEntity);
+        this.updateCachedMetadata(metadataEntity, cloudDiscoverySource, {
+            source: endpointSource,
+        });
+        this.performanceClient?.addFields({
+            cloudDiscoverySource: cloudDiscoverySource,
+            authorityEndpointSource: endpointSource,
+        }, this.correlationId);
+    }
+    /**
+     * Returns metadata entity from cache if it exists, otherwiser returns a new metadata entity built
+     * from the configured canonical authority
+     * @returns
+     */
+    getCurrentMetadataEntity() {
+        let metadataEntity = this.cacheManager.getAuthorityMetadataByAlias(this.hostnameAndPort);
+        if (!metadataEntity) {
+            metadataEntity = {
+                aliases: [],
+                preferred_cache: this.hostnameAndPort,
+                preferred_network: this.hostnameAndPort,
+                canonical_authority: this.canonicalAuthority,
+                authorization_endpoint: "",
+                token_endpoint: "",
+                end_session_endpoint: "",
+                issuer: "",
+                aliasesFromNetwork: false,
+                endpointsFromNetwork: false,
+                expiresAt: generateAuthorityMetadataExpiresAt(),
+                jwks_uri: "",
+            };
+        }
+        return metadataEntity;
+    }
+    /**
+     * Updates cached metadata based on metadata source and sets the instance's metadata
+     * property to the same value
+     * @param metadataEntity
+     * @param cloudDiscoverySource
+     * @param endpointMetadataResult
+     */
+    updateCachedMetadata(metadataEntity, cloudDiscoverySource, endpointMetadataResult) {
+        if (cloudDiscoverySource !== AuthorityMetadataSource.CACHE &&
+            endpointMetadataResult?.source !== AuthorityMetadataSource.CACHE) {
+            // Reset the expiration time unless both values came from a successful cache lookup
+            metadataEntity.expiresAt =
+                generateAuthorityMetadataExpiresAt();
+            metadataEntity.canonical_authority = this.canonicalAuthority;
+        }
+        const cacheKey = this.cacheManager.generateAuthorityMetadataCacheKey(metadataEntity.preferred_cache);
+        this.cacheManager.setAuthorityMetadata(cacheKey, metadataEntity);
+        this.metadata = metadataEntity;
+    }
+    /**
+     * Update AuthorityMetadataEntity with new endpoints and return where the information came from
+     * @param metadataEntity
+     */
+    async updateEndpointMetadata(metadataEntity) {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityUpdateEndpointMetadata, this.correlationId);
+        const localMetadata = this.updateEndpointMetadataFromLocalSources(metadataEntity);
+        // Further update may be required for hardcoded metadata if regional metadata is preferred
+        if (localMetadata) {
+            if (localMetadata.source ===
+                AuthorityMetadataSource.HARDCODED_VALUES) {
+                // If the user prefers to use an azure region replace the global endpoints with regional information.
+                if (this.authorityOptions.azureRegionConfiguration?.azureRegion) {
+                    if (localMetadata.metadata) {
+                        const hardcodedMetadata = await invokeAsync(this.updateMetadataWithRegionalInformation.bind(this), PerformanceEvents.AuthorityUpdateMetadataWithRegionalInformation, this.logger, this.performanceClient, this.correlationId)(localMetadata.metadata);
+                        updateAuthorityEndpointMetadata(metadataEntity, hardcodedMetadata, false);
+                        metadataEntity.canonical_authority =
+                            this.canonicalAuthority;
+                    }
+                }
+            }
+            return localMetadata.source;
+        }
+        // Get metadata from network if local sources aren't available
+        let metadata = await invokeAsync(this.getEndpointMetadataFromNetwork.bind(this), PerformanceEvents.AuthorityGetEndpointMetadataFromNetwork, this.logger, this.performanceClient, this.correlationId)();
+        if (metadata) {
+            // If the user prefers to use an azure region replace the global endpoints with regional information.
+            if (this.authorityOptions.azureRegionConfiguration?.azureRegion) {
+                metadata = await invokeAsync(this.updateMetadataWithRegionalInformation.bind(this), PerformanceEvents.AuthorityUpdateMetadataWithRegionalInformation, this.logger, this.performanceClient, this.correlationId)(metadata);
+            }
+            updateAuthorityEndpointMetadata(metadataEntity, metadata, true);
+            return AuthorityMetadataSource.NETWORK;
+        }
+        else {
+            // Metadata could not be obtained from the config, cache, network or hardcoded values
+            throw createClientAuthError(openIdConfigError, this.defaultOpenIdConfigurationEndpoint);
+        }
+    }
+    /**
+     * Updates endpoint metadata from local sources and returns where the information was retrieved from and the metadata config
+     * response if the source is hardcoded metadata
+     * @param metadataEntity
+     * @returns
+     */
+    updateEndpointMetadataFromLocalSources(metadataEntity) {
+        this.logger.verbose("Attempting to get endpoint metadata from authority configuration");
+        const configMetadata = this.getEndpointMetadataFromConfig();
+        if (configMetadata) {
+            this.logger.verbose("Found endpoint metadata in authority configuration");
+            updateAuthorityEndpointMetadata(metadataEntity, configMetadata, false);
+            return {
+                source: AuthorityMetadataSource.CONFIG,
+            };
+        }
+        this.logger.verbose("Did not find endpoint metadata in the config... Attempting to get endpoint metadata from the hardcoded values.");
+        // skipAuthorityMetadataCache is used to bypass hardcoded authority metadata and force a network metadata cache lookup and network metadata request if no cached response is available.
+        if (this.authorityOptions.skipAuthorityMetadataCache) {
+            this.logger.verbose("Skipping hardcoded metadata cache since skipAuthorityMetadataCache is set to true. Attempting to get endpoint metadata from the network metadata cache.");
+        }
+        else {
+            const hardcodedMetadata = this.getEndpointMetadataFromHardcodedValues();
+            if (hardcodedMetadata) {
+                updateAuthorityEndpointMetadata(metadataEntity, hardcodedMetadata, false);
+                return {
+                    source: AuthorityMetadataSource.HARDCODED_VALUES,
+                    metadata: hardcodedMetadata,
+                };
+            }
+            else {
+                this.logger.verbose("Did not find endpoint metadata in hardcoded values... Attempting to get endpoint metadata from the network metadata cache.");
+            }
+        }
+        // Check cached metadata entity expiration status
+        const metadataEntityExpired = isAuthorityMetadataExpired(metadataEntity);
+        if (this.isAuthoritySameType(metadataEntity) &&
+            metadataEntity.endpointsFromNetwork &&
+            !metadataEntityExpired) {
+            // No need to update
+            this.logger.verbose("Found endpoint metadata in the cache.");
+            return { source: AuthorityMetadataSource.CACHE };
+        }
+        else if (metadataEntityExpired) {
+            this.logger.verbose("The metadata entity is expired.");
+        }
+        return null;
+    }
+    /**
+     * Compares the number of url components after the domain to determine if the cached
+     * authority metadata can be used for the requested authority. Protects against same domain different
+     * authority such as login.microsoftonline.com/tenant and login.microsoftonline.com/tfp/tenant/policy
+     * @param metadataEntity
+     */
+    isAuthoritySameType(metadataEntity) {
+        const cachedAuthorityUrl = new UrlString(metadataEntity.canonical_authority);
+        const cachedParts = cachedAuthorityUrl.getUrlComponents().PathSegments;
+        return (cachedParts.length ===
+            this.canonicalAuthorityUrlComponents.PathSegments.length);
+    }
+    /**
+     * Parse authorityMetadata config option
+     */
+    getEndpointMetadataFromConfig() {
+        if (this.authorityOptions.authorityMetadata) {
+            try {
+                return JSON.parse(this.authorityOptions.authorityMetadata);
+            }
+            catch (e) {
+                throw createClientConfigurationError(invalidAuthorityMetadata);
+            }
+        }
+        return null;
+    }
+    /**
+     * Gets OAuth endpoints from the given OpenID configuration endpoint.
+     *
+     * @param hasHardcodedMetadata boolean
+     */
+    async getEndpointMetadataFromNetwork() {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityGetEndpointMetadataFromNetwork, this.correlationId);
+        const options = {};
+        /*
+         * TODO: Add a timeout if the authority exists in our library's
+         * hardcoded list of metadata
+         */
+        const openIdConfigurationEndpoint = this.defaultOpenIdConfigurationEndpoint;
+        this.logger.verbose(`Authority.getEndpointMetadataFromNetwork: attempting to retrieve OAuth endpoints from ${openIdConfigurationEndpoint}`);
+        try {
+            const response = await this.networkInterface.sendGetRequestAsync(openIdConfigurationEndpoint, options);
+            const isValidResponse = isOpenIdConfigResponse(response.body);
+            if (isValidResponse) {
+                return response.body;
+            }
+            else {
+                this.logger.verbose(`Authority.getEndpointMetadataFromNetwork: could not parse response as OpenID configuration`);
+                return null;
+            }
+        }
+        catch (e) {
+            this.logger.verbose(`Authority.getEndpointMetadataFromNetwork: ${e}`);
+            return null;
+        }
+    }
+    /**
+     * Get OAuth endpoints for common authorities.
+     */
+    getEndpointMetadataFromHardcodedValues() {
+        if (this.hostnameAndPort in EndpointMetadata) {
+            return EndpointMetadata[this.hostnameAndPort];
+        }
+        return null;
+    }
+    /**
+     * Update the retrieved metadata with regional information.
+     * User selected Azure region will be used if configured.
+     */
+    async updateMetadataWithRegionalInformation(metadata) {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityUpdateMetadataWithRegionalInformation, this.correlationId);
+        const userConfiguredAzureRegion = this.authorityOptions.azureRegionConfiguration?.azureRegion;
+        if (userConfiguredAzureRegion) {
+            if (userConfiguredAzureRegion !==
+                Constants$1.AZURE_REGION_AUTO_DISCOVER_FLAG) {
+                this.regionDiscoveryMetadata.region_outcome =
+                    RegionDiscoveryOutcomes.CONFIGURED_NO_AUTO_DETECTION;
+                this.regionDiscoveryMetadata.region_used =
+                    userConfiguredAzureRegion;
+                return Authority.replaceWithRegionalInformation(metadata, userConfiguredAzureRegion);
+            }
+            const autodetectedRegionName = await invokeAsync(this.regionDiscovery.detectRegion.bind(this.regionDiscovery), PerformanceEvents.RegionDiscoveryDetectRegion, this.logger, this.performanceClient, this.correlationId)(this.authorityOptions.azureRegionConfiguration
+                ?.environmentRegion, this.regionDiscoveryMetadata);
+            if (autodetectedRegionName) {
+                this.regionDiscoveryMetadata.region_outcome =
+                    RegionDiscoveryOutcomes.AUTO_DETECTION_REQUESTED_SUCCESSFUL;
+                this.regionDiscoveryMetadata.region_used =
+                    autodetectedRegionName;
+                return Authority.replaceWithRegionalInformation(metadata, autodetectedRegionName);
+            }
+            this.regionDiscoveryMetadata.region_outcome =
+                RegionDiscoveryOutcomes.AUTO_DETECTION_REQUESTED_FAILED;
+        }
+        return metadata;
+    }
+    /**
+     * Updates the AuthorityMetadataEntity with new aliases, preferred_network and preferred_cache
+     * and returns where the information was retrieved from
+     * @param metadataEntity
+     * @returns AuthorityMetadataSource
+     */
+    async updateCloudDiscoveryMetadata(metadataEntity) {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityUpdateCloudDiscoveryMetadata, this.correlationId);
+        const localMetadataSource = this.updateCloudDiscoveryMetadataFromLocalSources(metadataEntity);
+        if (localMetadataSource) {
+            return localMetadataSource;
+        }
+        // Fallback to network as metadata source
+        const metadata = await invokeAsync(this.getCloudDiscoveryMetadataFromNetwork.bind(this), PerformanceEvents.AuthorityGetCloudDiscoveryMetadataFromNetwork, this.logger, this.performanceClient, this.correlationId)();
+        if (metadata) {
+            updateCloudDiscoveryMetadata(metadataEntity, metadata, true);
+            return AuthorityMetadataSource.NETWORK;
+        }
+        // Metadata could not be obtained from the config, cache, network or hardcoded values
+        throw createClientConfigurationError(untrustedAuthority);
+    }
+    updateCloudDiscoveryMetadataFromLocalSources(metadataEntity) {
+        this.logger.verbose("Attempting to get cloud discovery metadata  from authority configuration");
+        this.logger.verbosePii(`Known Authorities: ${this.authorityOptions.knownAuthorities ||
+            Constants$1.NOT_APPLICABLE}`);
+        this.logger.verbosePii(`Authority Metadata: ${this.authorityOptions.authorityMetadata ||
+            Constants$1.NOT_APPLICABLE}`);
+        this.logger.verbosePii(`Canonical Authority: ${metadataEntity.canonical_authority || Constants$1.NOT_APPLICABLE}`);
+        const metadata = this.getCloudDiscoveryMetadataFromConfig();
+        if (metadata) {
+            this.logger.verbose("Found cloud discovery metadata in authority configuration");
+            updateCloudDiscoveryMetadata(metadataEntity, metadata, false);
+            return AuthorityMetadataSource.CONFIG;
+        }
+        // If the cached metadata came from config but that config was not passed to this instance, we must go to hardcoded values
+        this.logger.verbose("Did not find cloud discovery metadata in the config... Attempting to get cloud discovery metadata from the hardcoded values.");
+        if (this.options.skipAuthorityMetadataCache) {
+            this.logger.verbose("Skipping hardcoded cloud discovery metadata cache since skipAuthorityMetadataCache is set to true. Attempting to get cloud discovery metadata from the network metadata cache.");
+        }
+        else {
+            const hardcodedMetadata = getCloudDiscoveryMetadataFromHardcodedValues(this.hostnameAndPort);
+            if (hardcodedMetadata) {
+                this.logger.verbose("Found cloud discovery metadata from hardcoded values.");
+                updateCloudDiscoveryMetadata(metadataEntity, hardcodedMetadata, false);
+                return AuthorityMetadataSource.HARDCODED_VALUES;
+            }
+            this.logger.verbose("Did not find cloud discovery metadata in hardcoded values... Attempting to get cloud discovery metadata from the network metadata cache.");
+        }
+        const metadataEntityExpired = isAuthorityMetadataExpired(metadataEntity);
+        if (this.isAuthoritySameType(metadataEntity) &&
+            metadataEntity.aliasesFromNetwork &&
+            !metadataEntityExpired) {
+            this.logger.verbose("Found cloud discovery metadata in the cache.");
+            // No need to update
+            return AuthorityMetadataSource.CACHE;
+        }
+        else if (metadataEntityExpired) {
+            this.logger.verbose("The metadata entity is expired.");
+        }
+        return null;
+    }
+    /**
+     * Parse cloudDiscoveryMetadata config or check knownAuthorities
+     */
+    getCloudDiscoveryMetadataFromConfig() {
+        // CIAM does not support cloud discovery metadata
+        if (this.authorityType === AuthorityType.Ciam) {
+            this.logger.verbose("CIAM authorities do not support cloud discovery metadata, generate the aliases from authority host.");
+            return Authority.createCloudDiscoveryMetadataFromHost(this.hostnameAndPort);
+        }
+        // Check if network response was provided in config
+        if (this.authorityOptions.cloudDiscoveryMetadata) {
+            this.logger.verbose("The cloud discovery metadata has been provided as a network response, in the config.");
+            try {
+                this.logger.verbose("Attempting to parse the cloud discovery metadata.");
+                const parsedResponse = JSON.parse(this.authorityOptions.cloudDiscoveryMetadata);
+                const metadata = getCloudDiscoveryMetadataFromNetworkResponse(parsedResponse.metadata, this.hostnameAndPort);
+                this.logger.verbose("Parsed the cloud discovery metadata.");
+                if (metadata) {
+                    this.logger.verbose("There is returnable metadata attached to the parsed cloud discovery metadata.");
+                    return metadata;
+                }
+                else {
+                    this.logger.verbose("There is no metadata attached to the parsed cloud discovery metadata.");
+                }
+            }
+            catch (e) {
+                this.logger.verbose("Unable to parse the cloud discovery metadata. Throwing Invalid Cloud Discovery Metadata Error.");
+                throw createClientConfigurationError(invalidCloudDiscoveryMetadata);
+            }
+        }
+        // If cloudDiscoveryMetadata is empty or does not contain the host, check knownAuthorities
+        if (this.isInKnownAuthorities()) {
+            this.logger.verbose("The host is included in knownAuthorities. Creating new cloud discovery metadata from the host.");
+            return Authority.createCloudDiscoveryMetadataFromHost(this.hostnameAndPort);
+        }
+        return null;
+    }
+    /**
+     * Called to get metadata from network if CloudDiscoveryMetadata was not populated by config
+     *
+     * @param hasHardcodedMetadata boolean
+     */
+    async getCloudDiscoveryMetadataFromNetwork() {
+        this.performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityGetCloudDiscoveryMetadataFromNetwork, this.correlationId);
+        const instanceDiscoveryEndpoint = `${Constants$1.AAD_INSTANCE_DISCOVERY_ENDPT}${this.canonicalAuthority}oauth2/v2.0/authorize`;
+        const options = {};
+        /*
+         * TODO: Add a timeout if the authority exists in our library's
+         * hardcoded list of metadata
+         */
+        let match = null;
+        try {
+            const response = await this.networkInterface.sendGetRequestAsync(instanceDiscoveryEndpoint, options);
+            let typedResponseBody;
+            let metadata;
+            if (isCloudInstanceDiscoveryResponse(response.body)) {
+                typedResponseBody =
+                    response.body;
+                metadata = typedResponseBody.metadata;
+                this.logger.verbosePii(`tenant_discovery_endpoint is: ${typedResponseBody.tenant_discovery_endpoint}`);
+            }
+            else if (isCloudInstanceDiscoveryErrorResponse(response.body)) {
+                this.logger.warning(`A CloudInstanceDiscoveryErrorResponse was returned. The cloud instance discovery network request's status code is: ${response.status}`);
+                typedResponseBody =
+                    response.body;
+                if (typedResponseBody.error === Constants$1.INVALID_INSTANCE) {
+                    this.logger.error("The CloudInstanceDiscoveryErrorResponse error is invalid_instance.");
+                    return null;
+                }
+                this.logger.warning(`The CloudInstanceDiscoveryErrorResponse error is ${typedResponseBody.error}`);
+                this.logger.warning(`The CloudInstanceDiscoveryErrorResponse error description is ${typedResponseBody.error_description}`);
+                this.logger.warning("Setting the value of the CloudInstanceDiscoveryMetadata (returned from the network) to []");
+                metadata = [];
+            }
+            else {
+                this.logger.error("AAD did not return a CloudInstanceDiscoveryResponse or CloudInstanceDiscoveryErrorResponse");
+                return null;
+            }
+            this.logger.verbose("Attempting to find a match between the developer's authority and the CloudInstanceDiscoveryMetadata returned from the network request.");
+            match = getCloudDiscoveryMetadataFromNetworkResponse(metadata, this.hostnameAndPort);
+        }
+        catch (error) {
+            if (error instanceof AuthError) {
+                this.logger.error(`There was a network error while attempting to get the cloud discovery instance metadata.\nError: ${error.errorCode}\nError Description: ${error.errorMessage}`);
+            }
+            else {
+                const typedError = error;
+                this.logger.error(`A non-MSALJS error was thrown while attempting to get the cloud instance discovery metadata.\nError: ${typedError.name}\nError Description: ${typedError.message}`);
+            }
+            return null;
+        }
+        // Custom Domain scenario, host is trusted because Instance Discovery call succeeded
+        if (!match) {
+            this.logger.warning("The developer's authority was not found within the CloudInstanceDiscoveryMetadata returned from the network request.");
+            this.logger.verbose("Creating custom Authority for custom domain scenario.");
+            match = Authority.createCloudDiscoveryMetadataFromHost(this.hostnameAndPort);
+        }
+        return match;
+    }
+    /**
+     * Helper function to determine if this host is included in the knownAuthorities config option
+     */
+    isInKnownAuthorities() {
+        const matches = this.authorityOptions.knownAuthorities.filter((authority) => {
+            return (authority &&
+                UrlString.getDomainFromUrl(authority).toLowerCase() ===
+                    this.hostnameAndPort);
+        });
+        return matches.length > 0;
+    }
+    /**
+     * helper function to populate the authority based on azureCloudOptions
+     * @param authorityString
+     * @param azureCloudOptions
+     */
+    static generateAuthority(authorityString, azureCloudOptions) {
+        let authorityAzureCloudInstance;
+        if (azureCloudOptions &&
+            azureCloudOptions.azureCloudInstance !== AzureCloudInstance.None) {
+            const tenant = azureCloudOptions.tenant
+                ? azureCloudOptions.tenant
+                : Constants$1.DEFAULT_COMMON_TENANT;
+            authorityAzureCloudInstance = `${azureCloudOptions.azureCloudInstance}/${tenant}/`;
+        }
+        return authorityAzureCloudInstance
+            ? authorityAzureCloudInstance
+            : authorityString;
+    }
+    /**
+     * Creates cloud discovery metadata object from a given host
+     * @param host
+     */
+    static createCloudDiscoveryMetadataFromHost(host) {
+        return {
+            preferred_network: host,
+            preferred_cache: host,
+            aliases: [host],
+        };
+    }
+    /**
+     * helper function to generate environment from authority object
+     */
+    getPreferredCache() {
+        if (this.managedIdentity) {
+            return Constants$1.DEFAULT_AUTHORITY_HOST;
+        }
+        else if (this.discoveryComplete()) {
+            return this.metadata.preferred_cache;
+        }
+        else {
+            throw createClientAuthError(endpointResolutionError);
+        }
+    }
+    /**
+     * Returns whether or not the provided host is an alias of this authority instance
+     * @param host
+     */
+    isAlias(host) {
+        return this.metadata.aliases.indexOf(host) > -1;
+    }
+    /**
+     * Returns whether or not the provided host is an alias of a known Microsoft authority for purposes of endpoint discovery
+     * @param host
+     */
+    isAliasOfKnownMicrosoftAuthority(host) {
+        return InstanceDiscoveryMetadataAliases.has(host);
+    }
+    /**
+     * Checks whether the provided host is that of a public cloud authority
+     *
+     * @param authority string
+     * @returns bool
+     */
+    static isPublicCloudAuthority(host) {
+        return Constants$1.KNOWN_PUBLIC_CLOUDS.indexOf(host) >= 0;
+    }
+    /**
+     * Rebuild the authority string with the region
+     *
+     * @param host string
+     * @param region string
+     */
+    static buildRegionalAuthorityString(host, region, queryString) {
+        // Create and validate a Url string object with the initial authority string
+        const authorityUrlInstance = new UrlString(host);
+        authorityUrlInstance.validateAsUri();
+        const authorityUrlParts = authorityUrlInstance.getUrlComponents();
+        let hostNameAndPort = `${region}.${authorityUrlParts.HostNameAndPort}`;
+        if (this.isPublicCloudAuthority(authorityUrlParts.HostNameAndPort)) {
+            hostNameAndPort = `${region}.${Constants$1.REGIONAL_AUTH_PUBLIC_CLOUD_SUFFIX}`;
+        }
+        // Include the query string portion of the url
+        const url = UrlString.constructAuthorityUriFromObject({
+            ...authorityUrlInstance.getUrlComponents(),
+            HostNameAndPort: hostNameAndPort,
+        }).urlString;
+        // Add the query string if a query string was provided
+        if (queryString)
+            return `${url}?${queryString}`;
+        return url;
+    }
+    /**
+     * Replace the endpoints in the metadata object with their regional equivalents.
+     *
+     * @param metadata OpenIdConfigResponse
+     * @param azureRegion string
+     */
+    static replaceWithRegionalInformation(metadata, azureRegion) {
+        const regionalMetadata = { ...metadata };
+        regionalMetadata.authorization_endpoint =
+            Authority.buildRegionalAuthorityString(regionalMetadata.authorization_endpoint, azureRegion);
+        regionalMetadata.token_endpoint =
+            Authority.buildRegionalAuthorityString(regionalMetadata.token_endpoint, azureRegion);
+        if (regionalMetadata.end_session_endpoint) {
+            regionalMetadata.end_session_endpoint =
+                Authority.buildRegionalAuthorityString(regionalMetadata.end_session_endpoint, azureRegion);
+        }
+        return regionalMetadata;
+    }
+    /**
+     * Transform CIAM_AUTHORIY as per the below rules:
+     * If no path segments found and it is a CIAM authority (hostname ends with .ciamlogin.com), then transform it
+     *
+     * NOTE: The transformation path should go away once STS supports CIAM with the format: `tenantIdorDomain.ciamlogin.com`
+     * `ciamlogin.com` can also change in the future and we should accommodate the same
+     *
+     * @param authority
+     */
+    static transformCIAMAuthority(authority) {
+        let ciamAuthority = authority;
+        const authorityUrl = new UrlString(authority);
+        const authorityUrlComponents = authorityUrl.getUrlComponents();
+        // check if transformation is needed
+        if (authorityUrlComponents.PathSegments.length === 0 &&
+            authorityUrlComponents.HostNameAndPort.endsWith(Constants$1.CIAM_AUTH_URL)) {
+            const tenantIdOrDomain = authorityUrlComponents.HostNameAndPort.split(".")[0];
+            ciamAuthority = `${ciamAuthority}${tenantIdOrDomain}${Constants$1.AAD_TENANT_DOMAIN_SUFFIX}`;
+        }
+        return ciamAuthority;
+    }
+}
+// Reserved tenant domain names that will not be replaced with tenant id
+Authority.reservedTenantDomains = new Set([
+    "{tenant}",
+    "{tenantid}",
+    AADAuthorityConstants.COMMON,
+    AADAuthorityConstants.CONSUMERS,
+    AADAuthorityConstants.ORGANIZATIONS,
+]);
+/**
+ * Extract tenantId from authority
+ */
+function getTenantFromAuthorityString(authority) {
+    const authorityUrl = new UrlString(authority);
+    const authorityUrlComponents = authorityUrl.getUrlComponents();
+    /**
+     * For credential matching purposes, tenantId is the last path segment of the authority URL:
+     *  AAD Authority - domain/tenantId -> Credentials are cached with realm = tenantId
+     *  B2C Authority - domain/{tenantId}?/.../policy -> Credentials are cached with realm = policy
+     *  tenantId is downcased because B2C policies can have mixed case but tfp claim is downcased
+     *
+     * Note that we may not have any path segments in certain OIDC scenarios.
+     */
+    const tenantId = authorityUrlComponents.PathSegments.slice(-1)[0]?.toLowerCase();
+    switch (tenantId) {
+        case AADAuthorityConstants.COMMON:
+        case AADAuthorityConstants.ORGANIZATIONS:
+        case AADAuthorityConstants.CONSUMERS:
+            return undefined;
+        default:
+            return tenantId;
+    }
+}
+function formatAuthorityUri(authorityUri) {
+    return authorityUri.endsWith(Constants$1.FORWARD_SLASH)
+        ? authorityUri
+        : `${authorityUri}${Constants$1.FORWARD_SLASH}`;
+}
+function buildStaticAuthorityOptions(authOptions) {
+    const rawCloudDiscoveryMetadata = authOptions.cloudDiscoveryMetadata;
+    let cloudDiscoveryMetadata = undefined;
+    if (rawCloudDiscoveryMetadata) {
+        try {
+            cloudDiscoveryMetadata = JSON.parse(rawCloudDiscoveryMetadata);
+        }
+        catch (e) {
+            throw createClientConfigurationError(invalidCloudDiscoveryMetadata);
+        }
+    }
+    return {
+        canonicalAuthority: authOptions.authority
+            ? formatAuthorityUri(authOptions.authority)
+            : undefined,
+        knownAuthorities: authOptions.knownAuthorities,
+        cloudDiscoveryMetadata: cloudDiscoveryMetadata,
+    };
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Create an authority object of the correct type based on the url
+ * Performs basic authority validation - checks to see if the authority is of a valid type (i.e. aad, b2c, adfs)
+ *
+ * Also performs endpoint discovery.
+ *
+ * @param authorityUri
+ * @param networkClient
+ * @param protocolMode
+ * @internal
+ */
+async function createDiscoveredInstance(authorityUri, networkClient, cacheManager, authorityOptions, logger, correlationId, performanceClient) {
+    performanceClient?.addQueueMeasurement(PerformanceEvents.AuthorityFactoryCreateDiscoveredInstance, correlationId);
+    const authorityUriFinal = Authority.transformCIAMAuthority(formatAuthorityUri(authorityUri));
+    // Initialize authority and perform discovery endpoint check.
+    const acquireTokenAuthority = new Authority(authorityUriFinal, networkClient, cacheManager, authorityOptions, logger, correlationId, performanceClient);
+    try {
+        await invokeAsync(acquireTokenAuthority.resolveEndpointsAsync.bind(acquireTokenAuthority), PerformanceEvents.AuthorityResolveEndpointsAsync, logger, performanceClient, correlationId)();
+        return acquireTokenAuthority;
+    }
+    catch (e) {
+        throw createClientAuthError(endpointResolutionError);
+    }
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -77369,7 +77173,7 @@ class BaseClient {
         // Set the configuration
         this.config = buildClientConfiguration(configuration);
         // Initialize the logger
-        this.logger = new Logger(this.config.loggerOptions, name, version);
+        this.logger = new Logger(this.config.loggerOptions, name$1, version$1);
         // Initialize crypto
         this.cryptoUtils = this.config.cryptoInterface;
         // Initialize storage interface
@@ -77390,7 +77194,7 @@ class BaseClient {
      */
     createTokenRequestHeaders(ccsCred) {
         const headers = {};
-        headers[HeaderNames.CONTENT_TYPE] = Constants.URL_FORM_CONTENT_TYPE;
+        headers[HeaderNames.CONTENT_TYPE] = Constants$1.URL_FORM_CONTENT_TYPE;
         if (!this.config.systemOptions.preventCorsPreflight && ccsCred) {
             switch (ccsCred.type) {
                 case CcsCredentialType.HOME_ACCOUNT_ID:
@@ -77457,6 +77261,7 @@ class BaseClient {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -77481,6 +77286,8 @@ var InteractionRequiredAuthErrorCodes = /*#__PURE__*/Object.freeze({
     noTokensFound: noTokensFound,
     refreshTokenExpired: refreshTokenExpired
 });
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -77534,10 +77341,10 @@ class InteractionRequiredAuthError extends AuthError {
     constructor(errorCode, errorMessage, subError, timestamp, traceId, correlationId, claims, errorNo) {
         super(errorCode, errorMessage, subError);
         Object.setPrototypeOf(this, InteractionRequiredAuthError.prototype);
-        this.timestamp = timestamp || Constants.EMPTY_STRING;
-        this.traceId = traceId || Constants.EMPTY_STRING;
-        this.correlationId = correlationId || Constants.EMPTY_STRING;
-        this.claims = claims || Constants.EMPTY_STRING;
+        this.timestamp = timestamp || Constants$1.EMPTY_STRING;
+        this.traceId = traceId || Constants$1.EMPTY_STRING;
+        this.correlationId = correlationId || Constants$1.EMPTY_STRING;
+        this.claims = claims || Constants$1.EMPTY_STRING;
         this.name = "InteractionRequiredAuthError";
         this.errorNo = errorNo;
     }
@@ -77568,6 +77375,8 @@ function createInteractionRequiredAuthError(errorCode) {
     return new InteractionRequiredAuthError(errorCode, InteractionRequiredAuthErrorMessages[errorCode]);
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -77584,7 +77393,7 @@ class ProtocolUtils {
     static setRequestState(cryptoObj, userState, meta) {
         const libraryState = ProtocolUtils.generateLibraryState(cryptoObj, meta);
         return userState
-            ? `${libraryState}${Constants.RESOURCE_DELIM}${userState}`
+            ? `${libraryState}${Constants$1.RESOURCE_DELIM}${userState}`
             : libraryState;
     }
     /**
@@ -77620,15 +77429,15 @@ class ProtocolUtils {
         }
         try {
             // Split the state between library state and user passed state and decode them separately
-            const splitState = state.split(Constants.RESOURCE_DELIM);
+            const splitState = state.split(Constants$1.RESOURCE_DELIM);
             const libraryState = splitState[0];
             const userState = splitState.length > 1
-                ? splitState.slice(1).join(Constants.RESOURCE_DELIM)
-                : Constants.EMPTY_STRING;
+                ? splitState.slice(1).join(Constants$1.RESOURCE_DELIM)
+                : Constants$1.EMPTY_STRING;
             const libraryStateString = cryptoObj.base64Decode(libraryState);
             const libraryStateObj = JSON.parse(libraryStateString);
             return {
-                userRequestState: userState || Constants.EMPTY_STRING,
+                userRequestState: userState || Constants$1.EMPTY_STRING,
                 libraryState: libraryStateObj,
             };
         }
@@ -77637,6 +77446,8 @@ class ProtocolUtils {
         }
     }
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -77720,6 +77531,7 @@ class PopTokenGenerator {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -77745,6 +77557,8 @@ class PopTokenGenerator {
         return this.cache;
     }
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -77821,7 +77635,7 @@ class ResponseHandler {
         if (serverResponse.error ||
             serverResponse.error_description ||
             serverResponse.suberror) {
-            const errString = `Error(s): ${serverResponse.error_codes || Constants.NOT_AVAILABLE} - Timestamp: ${serverResponse.timestamp || Constants.NOT_AVAILABLE} - Description: ${serverResponse.error_description || Constants.NOT_AVAILABLE} - Correlation ID: ${serverResponse.correlation_id || Constants.NOT_AVAILABLE} - Trace ID: ${serverResponse.trace_id || Constants.NOT_AVAILABLE}`;
+            const errString = `Error(s): ${serverResponse.error_codes || Constants$1.NOT_AVAILABLE} - Timestamp: ${serverResponse.timestamp || Constants$1.NOT_AVAILABLE} - Description: ${serverResponse.error_description || Constants$1.NOT_AVAILABLE} - Correlation ID: ${serverResponse.correlation_id || Constants$1.NOT_AVAILABLE} - Trace ID: ${serverResponse.trace_id || Constants$1.NOT_AVAILABLE}`;
             const serverErrorNo = serverResponse.error_codes?.length
                 ? serverResponse.error_codes[0]
                 : undefined;
@@ -77845,7 +77659,7 @@ class ResponseHandler {
                 return;
             }
             if (isInteractionRequiredError(serverResponse.error, serverResponse.error_description, serverResponse.suberror)) {
-                throw new InteractionRequiredAuthError(serverResponse.error, serverResponse.error_description, serverResponse.suberror, serverResponse.timestamp || Constants.EMPTY_STRING, serverResponse.trace_id || Constants.EMPTY_STRING, serverResponse.correlation_id || Constants.EMPTY_STRING, serverResponse.claims || Constants.EMPTY_STRING, serverErrorNo);
+                throw new InteractionRequiredAuthError(serverResponse.error, serverResponse.error_description, serverResponse.suberror, serverResponse.timestamp || Constants$1.EMPTY_STRING, serverResponse.trace_id || Constants$1.EMPTY_STRING, serverResponse.correlation_id || Constants$1.EMPTY_STRING, serverResponse.claims || Constants$1.EMPTY_STRING, serverErrorNo);
             }
             throw serverError;
         }
@@ -77860,7 +77674,7 @@ class ResponseHandler {
         // create an idToken object (not entity)
         let idTokenClaims;
         if (serverTokenResponse.id_token) {
-            idTokenClaims = extractTokenClaims(serverTokenResponse.id_token || Constants.EMPTY_STRING, this.cryptoObj.base64Decode);
+            idTokenClaims = extractTokenClaims(serverTokenResponse.id_token || Constants$1.EMPTY_STRING, this.cryptoObj.base64Decode);
             // token nonce check (TODO: Add a warning if no nonce is given?)
             if (authCodePayload && authCodePayload.nonce) {
                 if (idTokenClaims.nonce !== authCodePayload.nonce) {
@@ -77877,7 +77691,7 @@ class ResponseHandler {
             }
         }
         // generate homeAccountId
-        this.homeAccountIdentifier = AccountEntity.generateHomeAccountId(serverTokenResponse.client_info || Constants.EMPTY_STRING, authority.authorityType, this.logger, this.cryptoObj, idTokenClaims);
+        this.homeAccountIdentifier = AccountEntity.generateHomeAccountId(serverTokenResponse.client_info || Constants$1.EMPTY_STRING, authority.authorityType, this.logger, this.cryptoObj, idTokenClaims);
         // save the response tokens
         let requestStateObj;
         if (!!authCodePayload && !!authCodePayload.state) {
@@ -78011,12 +77825,12 @@ class ResponseHandler {
      * @param stateString
      */
     static async generateAuthenticationResult(cryptoObj, authority, cacheRecord, fromTokenCache, request, idTokenClaims, requestState, serverTokenResponse, requestId) {
-        let accessToken = Constants.EMPTY_STRING;
+        let accessToken = Constants$1.EMPTY_STRING;
         let responseScopes = [];
         let expiresOn = null;
         let extExpiresOn;
         let refreshOn;
-        let familyId = Constants.EMPTY_STRING;
+        let familyId = Constants$1.EMPTY_STRING;
         if (cacheRecord.accessToken) {
             /*
              * if the request object has `popKid` property, `signPopToken` will be set to false and
@@ -78073,15 +77887,15 @@ class ResponseHandler {
             extExpiresOn: extExpiresOn,
             refreshOn: refreshOn,
             correlationId: request.correlationId,
-            requestId: requestId || Constants.EMPTY_STRING,
+            requestId: requestId || Constants$1.EMPTY_STRING,
             familyId: familyId,
-            tokenType: cacheRecord.accessToken?.tokenType || Constants.EMPTY_STRING,
+            tokenType: cacheRecord.accessToken?.tokenType || Constants$1.EMPTY_STRING,
             state: requestState
                 ? requestState.userRequestState
-                : Constants.EMPTY_STRING,
+                : Constants$1.EMPTY_STRING,
             cloudGraphHostName: cacheRecord.account?.cloudGraphHostName ||
-                Constants.EMPTY_STRING,
-            msGraphHost: cacheRecord.account?.msGraphHost || Constants.EMPTY_STRING,
+                Constants$1.EMPTY_STRING,
+            msGraphHost: cacheRecord.account?.msGraphHost || Constants$1.EMPTY_STRING,
             code: serverTokenResponse?.spa_code,
             fromNativeBroker: false,
         };
@@ -78120,6 +77934,26 @@ function buildAccountToCache(cacheStorage, authority, homeAccountId, base64Decod
     baseAccount.tenantProfiles = tenantProfiles;
     return baseAccount;
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+async function getClientAssertion(clientAssertion, clientId, tokenEndpoint) {
+    if (typeof clientAssertion === "string") {
+        return clientAssertion;
+    }
+    else {
+        const config = {
+            clientId: clientId,
+            tokenEndpoint: tokenEndpoint,
+        };
+        return clientAssertion(config);
+    }
+}
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -78481,9 +78315,7 @@ class AuthorizationCodeClient extends BaseClient {
                 this.config.authOptions.clientCapabilities.length > 0)) {
             parameterBuilder.addClaims(request.claims, this.config.authOptions.clientCapabilities);
         }
-        if (request.extraQueryParameters) {
-            parameterBuilder.addExtraQueryParameters(request.extraQueryParameters);
-        }
+        this.addExtraQueryParams(request, parameterBuilder);
         if (request.nativeBroker) {
             // signal ests that this is a WAM call
             parameterBuilder.addNativeBroker();
@@ -78525,10 +78357,20 @@ class AuthorizationCodeClient extends BaseClient {
         if (request.logoutHint) {
             parameterBuilder.addLogoutHint(request.logoutHint);
         }
+        this.addExtraQueryParams(request, parameterBuilder);
+        return parameterBuilder.createQueryString();
+    }
+    addExtraQueryParams(request, parameterBuilder) {
+        const hasRequestInstanceAware = request.extraQueryParameters &&
+            request.extraQueryParameters.hasOwnProperty("instance_aware");
+        // Set instance_aware flag if config auth param is set
+        if (!hasRequestInstanceAware && this.config.authOptions.instanceAware) {
+            request.extraQueryParameters = request.extraQueryParameters || {};
+            request.extraQueryParameters["instance_aware"] = "true";
+        }
         if (request.extraQueryParameters) {
             parameterBuilder.addExtraQueryParameters(request.extraQueryParameters);
         }
-        return parameterBuilder.createQueryString();
     }
     /**
      * Helper to get sid from account. Returns null if idTokenClaims are not present or sid is not present.
@@ -78541,6 +78383,8 @@ class AuthorizationCodeClient extends BaseClient {
         return account.idTokenClaims?.login_hint || null;
     }
 }
+
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -78754,6 +78598,8 @@ class RefreshTokenClient extends BaseClient {
     }
 }
 
+/*! @azure/msal-common v14.15.0 2024-10-03 */
+
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -78888,142 +78734,7 @@ class SilentFlowClient extends BaseClient {
     }
 }
 
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const StubbedNetworkModule = {
-    sendGetRequestAsync: () => {
-        return Promise.reject(createClientAuthError(methodNotImplemented));
-    },
-    sendPostRequestAsync: () => {
-        return Promise.reject(createClientAuthError(methodNotImplemented));
-    },
-};
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const missingKidError = "missing_kid_error";
-const missingAlgError = "missing_alg_error";
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const JoseHeaderErrorMessages = {
-    [missingKidError]: "The JOSE Header for the requested JWT, JWS or JWK object requires a keyId to be configured as the 'kid' header claim. No 'kid' value was provided.",
-    [missingAlgError]: "The JOSE Header for the requested JWT, JWS or JWK object requires an algorithm to be specified as the 'alg' header claim. No 'alg' value was provided.",
-};
-/**
- * Error thrown when there is an error in the client code running on the browser.
- */
-class JoseHeaderError extends AuthError {
-    constructor(errorCode, errorMessage) {
-        super(errorCode, errorMessage);
-        this.name = "JoseHeaderError";
-        Object.setPrototypeOf(this, JoseHeaderError.prototype);
-    }
-}
-/** Returns JoseHeaderError object */
-function createJoseHeaderError(code) {
-    return new JoseHeaderError(code, JoseHeaderErrorMessages[code]);
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/** @internal */
-class JoseHeader {
-    constructor(options) {
-        this.typ = options.typ;
-        this.alg = options.alg;
-        this.kid = options.kid;
-    }
-    /**
-     * Builds SignedHttpRequest formatted JOSE Header from the
-     * JOSE Header options provided or previously set on the object and returns
-     * the stringified header object.
-     * Throws if keyId or algorithm aren't provided since they are required for Access Token Binding.
-     * @param shrHeaderOptions
-     * @returns
-     */
-    static getShrHeaderString(shrHeaderOptions) {
-        // KeyID is required on the SHR header
-        if (!shrHeaderOptions.kid) {
-            throw createJoseHeaderError(missingKidError);
-        }
-        // Alg is required on the SHR header
-        if (!shrHeaderOptions.alg) {
-            throw createJoseHeaderError(missingAlgError);
-        }
-        const shrHeader = new JoseHeader({
-            // Access Token PoP headers must have type pop, but the type header can be overriden for special cases
-            typ: shrHeaderOptions.typ || JsonWebTokenTypes.Pop,
-            kid: shrHeaderOptions.kid,
-            alg: shrHeaderOptions.alg,
-        });
-        return JSON.stringify(shrHeader);
-    }
-}
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * This is a helper class that parses supported HTTP response authentication headers to extract and return
- * header challenge values that can be used outside the basic authorization flows.
- */
-class AuthenticationHeaderParser {
-    constructor(headers) {
-        this.headers = headers;
-    }
-    /**
-     * This method parses the SHR nonce value out of either the Authentication-Info or WWW-Authenticate authentication headers.
-     * @returns
-     */
-    getShrNonce() {
-        // Attempt to parse nonce from Authentiacation-Info
-        const authenticationInfo = this.headers[HeaderNames.AuthenticationInfo];
-        if (authenticationInfo) {
-            const authenticationInfoChallenges = this.parseChallenges(authenticationInfo);
-            if (authenticationInfoChallenges.nextnonce) {
-                return authenticationInfoChallenges.nextnonce;
-            }
-            throw createClientConfigurationError(invalidAuthenticationHeader);
-        }
-        // Attempt to parse nonce from WWW-Authenticate
-        const wwwAuthenticate = this.headers[HeaderNames.WWWAuthenticate];
-        if (wwwAuthenticate) {
-            const wwwAuthenticateChallenges = this.parseChallenges(wwwAuthenticate);
-            if (wwwAuthenticateChallenges.nonce) {
-                return wwwAuthenticateChallenges.nonce;
-            }
-            throw createClientConfigurationError(invalidAuthenticationHeader);
-        }
-        // If neither header is present, throw missing headers error
-        throw createClientConfigurationError(missingNonceAuthenticationHeader);
-    }
-    /**
-     * Parses an HTTP header's challenge set into a key/value map.
-     * @param header
-     * @returns
-     */
-    parseChallenges(header) {
-        const schemeSeparator = header.indexOf(" ");
-        const challenges = header.substr(schemeSeparator + 1).split(",");
-        const challengeMap = {};
-        challenges.forEach((challenge) => {
-            const [key, value] = challenge.split("=");
-            // Remove escaped quotation marks (', ") from challenge string to keep only the challenge value
-            challengeMap[key] = unescape(value.replace(/['"]+/g, Constants.EMPTY_STRING));
-        });
-        return challengeMap;
-    }
-}
+/*! @azure/msal-common v14.15.0 2024-10-03 */
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -79074,8 +78785,8 @@ class ServerTelemetryManager {
         this.cacheManager = cacheManager;
         this.apiId = telemetryRequest.apiId;
         this.correlationId = telemetryRequest.correlationId;
-        this.wrapperSKU = telemetryRequest.wrapperSKU || Constants.EMPTY_STRING;
-        this.wrapperVer = telemetryRequest.wrapperVer || Constants.EMPTY_STRING;
+        this.wrapperSKU = telemetryRequest.wrapperSKU || Constants$1.EMPTY_STRING;
+        this.wrapperVer = telemetryRequest.wrapperVer || Constants$1.EMPTY_STRING;
         this.telemetryCacheKey =
             SERVER_TELEM_CONSTANTS.CACHE_KEY +
                 Separators.CACHE_KEY_SEPARATOR +
@@ -79219,10 +78930,10 @@ class ServerTelemetryManager {
         for (i = 0; i < errorCount; i++) {
             // failedRequests parameter contains pairs of apiId and correlationId, multiply index by 2 to preserve pairs
             const apiId = serverTelemetryEntity.failedRequests[2 * i] ||
-                Constants.EMPTY_STRING;
+                Constants$1.EMPTY_STRING;
             const correlationId = serverTelemetryEntity.failedRequests[2 * i + 1] ||
-                Constants.EMPTY_STRING;
-            const errorCode = serverTelemetryEntity.errors[i] || Constants.EMPTY_STRING;
+                Constants$1.EMPTY_STRING;
+            const errorCode = serverTelemetryEntity.errors[i] || Constants$1.EMPTY_STRING;
             // Count number of characters that would be added to header, each character is 1 byte. Add 3 at the end to account for separators
             dataSize +=
                 apiId.toString().length +
@@ -79246,9 +78957,9 @@ class ServerTelemetryManager {
      */
     getRegionDiscoveryFields() {
         const regionDiscoveryFields = [];
-        regionDiscoveryFields.push(this.regionUsed || Constants.EMPTY_STRING);
-        regionDiscoveryFields.push(this.regionSource || Constants.EMPTY_STRING);
-        regionDiscoveryFields.push(this.regionOutcome || Constants.EMPTY_STRING);
+        regionDiscoveryFields.push(this.regionUsed || Constants$1.EMPTY_STRING);
+        regionDiscoveryFields.push(this.regionSource || Constants$1.EMPTY_STRING);
+        regionDiscoveryFields.push(this.regionOutcome || Constants$1.EMPTY_STRING);
         return regionDiscoveryFields.join(",");
     }
     /**
@@ -79290,76 +79001,167 @@ class ServerTelemetryManager {
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-class StubPerformanceMeasurement {
-    startMeasurement() {
-        return;
+/**
+ * This class deserializes cache entities read from the file into in memory object types defined internally
+ */
+class Deserializer {
+    /**
+     * Parse the JSON blob in memory and deserialize the content
+     * @param cachedJson
+     */
+    static deserializeJSONBlob(jsonFile) {
+        const deserializedCache = !jsonFile ? {} : JSON.parse(jsonFile);
+        return deserializedCache;
     }
-    endMeasurement() {
-        return;
+    /**
+     * Deserializes accounts to AccountEntity objects
+     * @param accounts
+     */
+    static deserializeAccounts(accounts) {
+        const accountObjects = {};
+        if (accounts) {
+            Object.keys(accounts).map(function (key) {
+                const serializedAcc = accounts[key];
+                const mappedAcc = {
+                    homeAccountId: serializedAcc.home_account_id,
+                    environment: serializedAcc.environment,
+                    realm: serializedAcc.realm,
+                    localAccountId: serializedAcc.local_account_id,
+                    username: serializedAcc.username,
+                    authorityType: serializedAcc.authority_type,
+                    name: serializedAcc.name,
+                    clientInfo: serializedAcc.client_info,
+                    lastModificationTime: serializedAcc.last_modification_time,
+                    lastModificationApp: serializedAcc.last_modification_app,
+                    tenantProfiles: serializedAcc.tenantProfiles?.map((serializedTenantProfile) => {
+                        return JSON.parse(serializedTenantProfile);
+                    }),
+                };
+                const account = new AccountEntity();
+                CacheManager.toObject(account, mappedAcc);
+                accountObjects[key] = account;
+            });
+        }
+        return accountObjects;
     }
-    flushMeasurement() {
-        return null;
+    /**
+     * Deserializes id tokens to IdTokenEntity objects
+     * @param idTokens
+     */
+    static deserializeIdTokens(idTokens) {
+        const idObjects = {};
+        if (idTokens) {
+            Object.keys(idTokens).map(function (key) {
+                const serializedIdT = idTokens[key];
+                const idToken = {
+                    homeAccountId: serializedIdT.home_account_id,
+                    environment: serializedIdT.environment,
+                    credentialType: serializedIdT.credential_type,
+                    clientId: serializedIdT.client_id,
+                    secret: serializedIdT.secret,
+                    realm: serializedIdT.realm,
+                };
+                idObjects[key] = idToken;
+            });
+        }
+        return idObjects;
     }
-}
-class StubPerformanceClient {
-    generateId() {
-        return "callback-id";
+    /**
+     * Deserializes access tokens to AccessTokenEntity objects
+     * @param accessTokens
+     */
+    static deserializeAccessTokens(accessTokens) {
+        const atObjects = {};
+        if (accessTokens) {
+            Object.keys(accessTokens).map(function (key) {
+                const serializedAT = accessTokens[key];
+                const accessToken = {
+                    homeAccountId: serializedAT.home_account_id,
+                    environment: serializedAT.environment,
+                    credentialType: serializedAT.credential_type,
+                    clientId: serializedAT.client_id,
+                    secret: serializedAT.secret,
+                    realm: serializedAT.realm,
+                    target: serializedAT.target,
+                    cachedAt: serializedAT.cached_at,
+                    expiresOn: serializedAT.expires_on,
+                    extendedExpiresOn: serializedAT.extended_expires_on,
+                    refreshOn: serializedAT.refresh_on,
+                    keyId: serializedAT.key_id,
+                    tokenType: serializedAT.token_type,
+                    requestedClaims: serializedAT.requestedClaims,
+                    requestedClaimsHash: serializedAT.requestedClaimsHash,
+                    userAssertionHash: serializedAT.userAssertionHash,
+                };
+                atObjects[key] = accessToken;
+            });
+        }
+        return atObjects;
     }
-    startMeasurement(measureName, correlationId) {
+    /**
+     * Deserializes refresh tokens to RefreshTokenEntity objects
+     * @param refreshTokens
+     */
+    static deserializeRefreshTokens(refreshTokens) {
+        const rtObjects = {};
+        if (refreshTokens) {
+            Object.keys(refreshTokens).map(function (key) {
+                const serializedRT = refreshTokens[key];
+                const refreshToken = {
+                    homeAccountId: serializedRT.home_account_id,
+                    environment: serializedRT.environment,
+                    credentialType: serializedRT.credential_type,
+                    clientId: serializedRT.client_id,
+                    secret: serializedRT.secret,
+                    familyId: serializedRT.family_id,
+                    target: serializedRT.target,
+                    realm: serializedRT.realm,
+                };
+                rtObjects[key] = refreshToken;
+            });
+        }
+        return rtObjects;
+    }
+    /**
+     * Deserializes appMetadata to AppMetaData objects
+     * @param appMetadata
+     */
+    static deserializeAppMetadata(appMetadata) {
+        const appMetadataObjects = {};
+        if (appMetadata) {
+            Object.keys(appMetadata).map(function (key) {
+                const serializedAmdt = appMetadata[key];
+                appMetadataObjects[key] = {
+                    clientId: serializedAmdt.client_id,
+                    environment: serializedAmdt.environment,
+                    familyId: serializedAmdt.family_id,
+                };
+            });
+        }
+        return appMetadataObjects;
+    }
+    /**
+     * Deserialize an inMemory Cache
+     * @param jsonCache
+     */
+    static deserializeAllCache(jsonCache) {
         return {
-            end: () => null,
-            discard: () => { },
-            add: () => { },
-            increment: () => { },
-            event: {
-                eventId: this.generateId(),
-                status: PerformanceEventStatus.InProgress,
-                authority: "",
-                libraryName: "",
-                libraryVersion: "",
-                clientId: "",
-                name: measureName,
-                startTimeMs: Date.now(),
-                correlationId: correlationId || "",
-            },
-            measurement: new StubPerformanceMeasurement(),
+            accounts: jsonCache.Account
+                ? this.deserializeAccounts(jsonCache.Account)
+                : {},
+            idTokens: jsonCache.IdToken
+                ? this.deserializeIdTokens(jsonCache.IdToken)
+                : {},
+            accessTokens: jsonCache.AccessToken
+                ? this.deserializeAccessTokens(jsonCache.AccessToken)
+                : {},
+            refreshTokens: jsonCache.RefreshToken
+                ? this.deserializeRefreshTokens(jsonCache.RefreshToken)
+                : {},
+            appMetadata: jsonCache.AppMetadata
+                ? this.deserializeAppMetadata(jsonCache.AppMetadata)
+                : {},
         };
-    }
-    startPerformanceMeasurement() {
-        return new StubPerformanceMeasurement();
-    }
-    calculateQueuedTime() {
-        return 0;
-    }
-    addQueueMeasurement() {
-        return;
-    }
-    setPreQueueTime() {
-        return;
-    }
-    endMeasurement() {
-        return null;
-    }
-    discardMeasurements() {
-        return;
-    }
-    removePerformanceCallback() {
-        return true;
-    }
-    addPerformanceCallback() {
-        return "";
-    }
-    emitEvents() {
-        return;
-    }
-    addFields() {
-        return;
-    }
-    incrementFields() {
-        return;
-    }
-    cacheEventByCorrelationId() {
-        return;
     }
 }
 
@@ -79368,702 +79170,1090 @@ class StubPerformanceClient {
  * Licensed under the MIT License.
  */
 /**
- * Starts context by adding payload to the stack
- * @param event {PerformanceEvent}
- * @param abbreviations {Map<string, string>} event name abbreviations
- * @param stack {?PerformanceEventStackedContext[]} stack
+ * Warning: This set of exports is purely intended to be used by other MSAL libraries, and should be considered potentially unstable. We strongly discourage using them directly, you do so at your own risk.
+ * Breaking changes to these APIs will be shipped under a minor version, instead of a major version.
  */
-function startContext(event, abbreviations, stack) {
-    if (!stack) {
-        return;
-    }
-    stack.push({
-        name: abbreviations.get(event.name) || event.name,
-    });
-}
+
+var internals = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    Deserializer: Deserializer,
+    Serializer: Serializer
+});
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+// MSI Constants. Docs for MSI are available here https://docs.microsoft.com/azure/app-service/overview-managed-identity
+const AUTHORIZATION_HEADER_NAME = "Authorization";
+const METADATA_HEADER_NAME = "Metadata";
+const APP_SERVICE_SECRET_HEADER_NAME = "X-IDENTITY-HEADER";
+const SERVICE_FABRIC_SECRET_HEADER_NAME = "secret";
+const API_VERSION_QUERY_PARAMETER_NAME = "api-version";
+const RESOURCE_BODY_OR_QUERY_PARAMETER_NAME = "resource";
+const DEFAULT_MANAGED_IDENTITY_ID = "system_assigned_managed_identity";
+const MANAGED_IDENTITY_DEFAULT_TENANT = "managed_identity";
+const DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY = `https://login.microsoftonline.com/${MANAGED_IDENTITY_DEFAULT_TENANT}/`;
 /**
- * Ends context by removing payload from the stack and returning parent or self, if stack is empty, payload
- *
- * @param event {PerformanceEvent}
- * @param abbreviations {Map<string, string>} event name abbreviations
- * @param stack {?PerformanceEventStackedContext[]} stack
- * @param error {?unknown} error
+ * Managed Identity Environment Variable Names
  */
-function endContext(event, abbreviations, stack, error) {
-    if (!stack?.length) {
-        return;
+const ManagedIdentityEnvironmentVariableNames = {
+    AZURE_POD_IDENTITY_AUTHORITY_HOST: "AZURE_POD_IDENTITY_AUTHORITY_HOST",
+    IDENTITY_ENDPOINT: "IDENTITY_ENDPOINT",
+    IDENTITY_HEADER: "IDENTITY_HEADER",
+    IDENTITY_SERVER_THUMBPRINT: "IDENTITY_SERVER_THUMBPRINT",
+    IMDS_ENDPOINT: "IMDS_ENDPOINT",
+    MSI_ENDPOINT: "MSI_ENDPOINT",
+};
+/**
+ * Managed Identity Source Names
+ * @public
+ */
+const ManagedIdentitySourceNames = {
+    APP_SERVICE: "AppService",
+    AZURE_ARC: "AzureArc",
+    CLOUD_SHELL: "CloudShell",
+    DEFAULT_TO_IMDS: "DefaultToImds",
+    IMDS: "Imds",
+    SERVICE_FABRIC: "ServiceFabric",
+};
+/**
+ * Managed Identity Ids
+ */
+const ManagedIdentityIdType = {
+    SYSTEM_ASSIGNED: "system-assigned",
+    USER_ASSIGNED_CLIENT_ID: "user-assigned-client-id",
+    USER_ASSIGNED_RESOURCE_ID: "user-assigned-resource-id",
+    USER_ASSIGNED_OBJECT_ID: "user-assigned-object-id",
+};
+/**
+ * http methods
+ */
+const HttpMethod = {
+    GET: "get",
+    POST: "post",
+};
+const ProxyStatus = {
+    SUCCESS: HttpStatus.SUCCESS,
+    SUCCESS_RANGE_START: HttpStatus.SUCCESS_RANGE_START,
+    SUCCESS_RANGE_END: HttpStatus.SUCCESS_RANGE_END,
+    SERVER_ERROR: HttpStatus.SERVER_ERROR,
+};
+/**
+ * Constants used for region discovery
+ */
+const REGION_ENVIRONMENT_VARIABLE = "REGION_NAME";
+/**
+ * Constant used for PKCE
+ */
+const RANDOM_OCTET_SIZE = 32;
+/**
+ * Constants used in PKCE
+ */
+const Hash = {
+    SHA256: "sha256",
+};
+/**
+ * Constants for encoding schemes
+ */
+const CharSet = {
+    CV_CHARSET: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~",
+};
+/**
+ * Constants
+ */
+const Constants = {
+    MSAL_SKU: "msal.js.node",
+    JWT_BEARER_ASSERTION_TYPE: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    AUTHORIZATION_PENDING: "authorization_pending",
+    HTTP_PROTOCOL: "http://",
+    LOCALHOST: "localhost",
+};
+/**
+ * API Codes for Telemetry purposes.
+ * Before adding a new code you must claim it in the MSAL Telemetry tracker as these number spaces are shared across all MSALs
+ * 0-99 Silent Flow
+ * 600-699 Device Code Flow
+ * 800-899 Auth Code Flow
+ */
+const ApiId = {
+    acquireTokenSilent: 62,
+    acquireTokenByUsernamePassword: 371,
+    acquireTokenByDeviceCode: 671,
+    acquireTokenByClientCredential: 771,
+    acquireTokenByCode: 871,
+    acquireTokenByRefreshToken: 872,
+};
+/**
+ * JWT  constants
+ */
+const JwtConstants = {
+    ALGORITHM: "alg",
+    RSA_256: "RS256",
+    PSS_256: "PS256",
+    X5T_256: "x5t#S256",
+    X5T: "x5t",
+    X5C: "x5c",
+    AUDIENCE: "aud",
+    EXPIRATION_TIME: "exp",
+    ISSUER: "iss",
+    SUBJECT: "sub",
+    NOT_BEFORE: "nbf",
+    JWT_ID: "jti",
+};
+const LOOPBACK_SERVER_CONSTANTS = {
+    INTERVAL_MS: 100,
+    TIMEOUT_MS: 5000,
+};
+const AZURE_ARC_SECRET_FILE_MAX_SIZE_BYTES = 4096; // 4 KB
+const MANAGED_IDENTITY_MAX_RETRIES = 3;
+const MANAGED_IDENTITY_RETRY_DELAY = 1000;
+const MANAGED_IDENTITY_HTTP_STATUS_CODES_TO_RETRY_ON = [
+    HttpStatus.NOT_FOUND,
+    HttpStatus.REQUEST_TIMEOUT,
+    HttpStatus.TOO_MANY_REQUESTS,
+    HttpStatus.SERVER_ERROR,
+    HttpStatus.SERVICE_UNAVAILABLE,
+    HttpStatus.GATEWAY_TIMEOUT,
+];
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class NetworkUtils {
+    static getNetworkResponse(headers, body, statusCode) {
+        return {
+            headers: headers,
+            body: body,
+            status: statusCode,
+        };
     }
-    const peek = (stack) => {
-        return stack.length ? stack[stack.length - 1] : undefined;
-    };
-    const abbrEventName = abbreviations.get(event.name) || event.name;
-    const top = peek(stack);
-    if (top?.name !== abbrEventName) {
-        return;
+    /*
+     * Utility function that converts a URL object into an ordinary options object as expected by the
+     * http.request and https.request APIs.
+     * https://github.com/nodejs/node/blob/main/lib/internal/url.js#L1090
+     */
+    static urlToHttpOptions(url) {
+        const options = {
+            protocol: url.protocol,
+            hostname: url.hostname && url.hostname.startsWith("[")
+                ? url.hostname.slice(1, -1)
+                : url.hostname,
+            hash: url.hash,
+            search: url.search,
+            pathname: url.pathname,
+            path: `${url.pathname || ""}${url.search || ""}`,
+            href: url.href,
+        };
+        if (url.port !== "") {
+            options.port = Number(url.port);
+        }
+        if (url.username || url.password) {
+            options.auth = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`;
+        }
+        return options;
     }
-    const current = stack?.pop();
-    if (!current) {
-        return;
+}
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * This class implements the API for network requests.
+ */
+class HttpClient {
+    constructor(proxyUrl, customAgentOptions) {
+        this.proxyUrl = proxyUrl || "";
+        this.customAgentOptions = customAgentOptions || {};
     }
-    const errorCode = error instanceof AuthError
-        ? error.errorCode
-        : error instanceof Error
-            ? error.name
-            : undefined;
-    const subErr = error instanceof AuthError ? error.subError : undefined;
-    if (errorCode && current.childErr !== errorCode) {
-        current.err = errorCode;
-        if (subErr) {
-            current.subErr = subErr;
+    /**
+     * Http Get request
+     * @param url
+     * @param options
+     */
+    async sendGetRequestAsync(url, options, timeout) {
+        if (this.proxyUrl) {
+            return networkRequestViaProxy(url, this.proxyUrl, HttpMethod.GET, options, this.customAgentOptions, timeout);
+        }
+        else {
+            return networkRequestViaHttps(url, HttpMethod.GET, options, this.customAgentOptions, timeout);
         }
     }
-    delete current.name;
-    delete current.childErr;
-    const context = {
-        ...current,
-        dur: event.durationMs,
+    /**
+     * Http Post request
+     * @param url
+     * @param options
+     */
+    async sendPostRequestAsync(url, options) {
+        if (this.proxyUrl) {
+            return networkRequestViaProxy(url, this.proxyUrl, HttpMethod.POST, options, this.customAgentOptions);
+        }
+        else {
+            return networkRequestViaHttps(url, HttpMethod.POST, options, this.customAgentOptions);
+        }
+    }
+}
+const networkRequestViaProxy = (destinationUrlString, proxyUrlString, httpMethod, options, agentOptions, timeout) => {
+    const destinationUrl = new URL(destinationUrlString);
+    const proxyUrl = new URL(proxyUrlString);
+    // "method: connect" must be used to establish a connection to the proxy
+    const headers = options?.headers || {};
+    const tunnelRequestOptions = {
+        host: proxyUrl.hostname,
+        port: proxyUrl.port,
+        method: "CONNECT",
+        path: destinationUrl.hostname,
+        headers: headers,
     };
-    if (!event.success) {
-        context.fail = 1;
+    if (agentOptions && Object.keys(agentOptions).length) {
+        tunnelRequestOptions.agent = new http.Agent(agentOptions);
     }
-    const parent = peek(stack);
-    if (!parent) {
-        return { [abbrEventName]: context };
-    }
-    if (errorCode) {
-        parent.childErr = errorCode;
-    }
-    let childName;
-    if (!parent[abbrEventName]) {
-        childName = abbrEventName;
+    // compose a request string for the socket
+    let postRequestStringContent = "";
+    if (httpMethod === HttpMethod.POST) {
+        const body = options?.body || "";
+        postRequestStringContent =
+            "Content-Type: application/x-www-form-urlencoded\r\n" +
+                `Content-Length: ${body.length}\r\n` +
+                `\r\n${body}`;
     }
     else {
-        const siblings = Object.keys(parent).filter((key) => key.startsWith(abbrEventName)).length;
-        childName = `${abbrEventName}_${siblings + 1}`;
-    }
-    parent[childName] = context;
-    return parent;
-}
-/**
- * Adds error name and stack trace to the telemetry event
- * @param error {Error}
- * @param logger {Logger}
- * @param event {PerformanceEvent}
- * @param stackMaxSize {number} max error stack size to capture
- */
-function addError(error, logger, event, stackMaxSize = 5) {
-    if (!(error instanceof Error)) {
-        logger.trace("PerformanceClient.addErrorStack: Input error is not instance of Error", event.correlationId);
-        return;
-    }
-    else if (error instanceof AuthError) {
-        event.errorCode = error.errorCode;
-        event.subErrorCode = error.subError;
-        if (error instanceof ServerError ||
-            error instanceof InteractionRequiredAuthError) {
-            event.serverErrorNo = error.errorNo;
-        }
-        return;
-    }
-    else if (error instanceof CacheError) {
-        event.errorCode = error.errorCode;
-        return;
-    }
-    else if (event.errorStack?.length) {
-        logger.trace("PerformanceClient.addErrorStack: Stack already exist", event.correlationId);
-        return;
-    }
-    else if (!error.stack?.length) {
-        logger.trace("PerformanceClient.addErrorStack: Input stack is empty", event.correlationId);
-        return;
-    }
-    if (error.stack) {
-        event.errorStack = compactStack(error.stack, stackMaxSize);
-    }
-    event.errorName = error.name;
-}
-/**
- * Compacts error stack into array by fetching N first entries
- * @param stack {string} error stack
- * @param stackMaxSize {number} max error stack size to capture
- * @returns {string[]}
- */
-function compactStack(stack, stackMaxSize) {
-    if (stackMaxSize < 0) {
-        return [];
-    }
-    const stackArr = stack.split("\n") || [];
-    if (stackArr.length < 2) {
-        return [];
-    }
-    const res = [];
-    // Get top N stack lines
-    for (
-    // Skip first line as it may contain PII data
-    let ix = Math.max(stackArr.length - stackMaxSize - 1, 1); ix < stackArr.length; ix++) {
-        const line = stackArr[ix];
-        if (res.length >= stackMaxSize) {
-            break;
-        }
-        res.push(compactStackLine(line));
-    }
-    return res;
-}
-/**
- * Compacts error stack line by shortening file path
- * Example: https://localhost/msal-common/src/authority/Authority.js:100:1 -> Authority.js:100:1
- * @param line {string} stack line
- * @returns {string}
- */
-function compactStackLine(line) {
-    const filePathIx = line.lastIndexOf(" ") + 1;
-    if (filePathIx < 1) {
-        return line;
-    }
-    const filePath = line.substring(filePathIx);
-    let fileNameIx = filePath.lastIndexOf("/");
-    fileNameIx = fileNameIx < 0 ? filePath.lastIndexOf("\\") : fileNameIx;
-    if (fileNameIx >= 0) {
-        return (line.substring(0, filePathIx) +
-            "(" +
-            filePath.substring(fileNameIx + 1) +
-            (filePath.charAt(filePath.length - 1) === ")" ? "" : ")")).trimStart();
-    }
-    return line.trimStart();
-}
-class PerformanceClient {
-    /**
-     * Creates an instance of PerformanceClient,
-     * an abstract class containing core performance telemetry logic.
-     *
-     * @constructor
-     * @param {string} clientId Client ID of the application
-     * @param {string} authority Authority used by the application
-     * @param {Logger} logger Logger used by the application
-     * @param {string} libraryName Name of the library
-     * @param {string} libraryVersion Version of the library
-     * @param {ApplicationTelemetry} applicationTelemetry application name and version
-     * @param {Set<String>} intFields integer fields to be truncated
-     * @param {Map<string, string>} abbreviations event name abbreviations
-     */
-    constructor(clientId, authority, logger, libraryName, libraryVersion, applicationTelemetry, intFields, abbreviations) {
-        this.authority = authority;
-        this.libraryName = libraryName;
-        this.libraryVersion = libraryVersion;
-        this.applicationTelemetry = applicationTelemetry;
-        this.clientId = clientId;
-        this.logger = logger;
-        this.callbacks = new Map();
-        this.eventsByCorrelationId = new Map();
-        this.eventStack = new Map();
-        this.queueMeasurements = new Map();
-        this.preQueueTimeByCorrelationId = new Map();
-        this.intFields = intFields || new Set();
-        for (const item of IntFields) {
-            this.intFields.add(item);
-        }
-        this.abbreviations = abbreviations || new Map();
-        for (const [key, value] of PerformanceEventAbbreviations) {
-            this.abbreviations.set(key, value);
+        // optional timeout is only for get requests (regionDiscovery, for example)
+        if (timeout) {
+            tunnelRequestOptions.timeout = timeout;
         }
     }
-    /**
-     * Starts and returns an platform-specific implementation of IPerformanceMeasurement.
-     * Note: this function can be changed to abstract at the next major version bump.
-     *
-     * @param {string} measureName
-     * @param {string} correlationId
-     * @returns {IPerformanceMeasurement}
-     * @deprecated This method will be removed in the next major version
-     */
-    startPerformanceMeasurement(measureName, // eslint-disable-line @typescript-eslint/no-unused-vars
-    correlationId // eslint-disable-line @typescript-eslint/no-unused-vars
-    ) {
-        return {};
-    }
-    /**
-     * Gets map of pre-queue times by correlation Id
-     *
-     * @param {PerformanceEvents} eventName
-     * @param {string} correlationId
-     * @returns {number}
-     */
-    getPreQueueTime(eventName, correlationId) {
-        const preQueueEvent = this.preQueueTimeByCorrelationId.get(correlationId);
-        if (!preQueueEvent) {
-            this.logger.trace(`PerformanceClient.getPreQueueTime: no pre-queue times found for correlationId: ${correlationId}, unable to add queue measurement`);
-            return;
-        }
-        else if (preQueueEvent.name !== eventName) {
-            this.logger.trace(`PerformanceClient.getPreQueueTime: no pre-queue time found for ${eventName}, unable to add queue measurement`);
-            return;
-        }
-        return preQueueEvent.time;
-    }
-    /**
-     * Calculates the difference between current time and time when function was queued.
-     * Note: It is possible to have 0 as the queue time if the current time and the queued time was the same.
-     *
-     * @param {number} preQueueTime
-     * @param {number} currentTime
-     * @returns {number}
-     */
-    calculateQueuedTime(preQueueTime, currentTime) {
-        if (preQueueTime < 1) {
-            this.logger.trace(`PerformanceClient: preQueueTime should be a positive integer and not ${preQueueTime}`);
-            return 0;
-        }
-        if (currentTime < 1) {
-            this.logger.trace(`PerformanceClient: currentTime should be a positive integer and not ${currentTime}`);
-            return 0;
-        }
-        if (currentTime < preQueueTime) {
-            this.logger.trace("PerformanceClient: currentTime is less than preQueueTime, check how time is being retrieved");
-            return 0;
-        }
-        return currentTime - preQueueTime;
-    }
-    /**
-     * Adds queue measurement time to QueueMeasurements array for given correlation ID.
-     *
-     * @param {PerformanceEvents} eventName
-     * @param {?string} correlationId
-     * @param {?number} queueTime
-     * @param {?boolean} manuallyCompleted - indicator for manually completed queue measurements
-     * @returns
-     */
-    addQueueMeasurement(eventName, correlationId, queueTime, manuallyCompleted) {
-        if (!correlationId) {
-            this.logger.trace(`PerformanceClient.addQueueMeasurement: correlationId not provided for ${eventName}, cannot add queue measurement`);
-            return;
-        }
-        if (queueTime === 0) {
-            // Possible for there to be no queue time after calculation
-            this.logger.trace(`PerformanceClient.addQueueMeasurement: queue time provided for ${eventName} is ${queueTime}`);
-        }
-        else if (!queueTime) {
-            this.logger.trace(`PerformanceClient.addQueueMeasurement: no queue time provided for ${eventName}`);
-            return;
-        }
-        const queueMeasurement = {
-            eventName,
-            // Always default queue time to 0 for manually completed (improperly instrumented)
-            queueTime: manuallyCompleted ? 0 : queueTime,
-            manuallyCompleted,
-        };
-        // Adds to existing correlation Id if present in queueMeasurements
-        const existingMeasurements = this.queueMeasurements.get(correlationId);
-        if (existingMeasurements) {
-            existingMeasurements.push(queueMeasurement);
-            this.queueMeasurements.set(correlationId, existingMeasurements);
-        }
-        else {
-            // Sets new correlation Id if not present in queueMeasurements
-            this.logger.trace(`PerformanceClient.addQueueMeasurement: adding correlationId ${correlationId} to queue measurements`);
-            const measurementArray = [queueMeasurement];
-            this.queueMeasurements.set(correlationId, measurementArray);
-        }
-        // Delete processed pre-queue event.
-        this.preQueueTimeByCorrelationId.delete(correlationId);
-    }
-    /**
-     * Starts measuring performance for a given operation. Returns a function that should be used to end the measurement.
-     *
-     * @param {PerformanceEvents} measureName
-     * @param {?string} [correlationId]
-     * @returns {InProgressPerformanceEvent}
-     */
-    startMeasurement(measureName, correlationId) {
-        // Generate a placeholder correlation if the request does not provide one
-        const eventCorrelationId = correlationId || this.generateId();
-        if (!correlationId) {
-            this.logger.info(`PerformanceClient: No correlation id provided for ${measureName}, generating`, eventCorrelationId);
-        }
-        this.logger.trace(`PerformanceClient: Performance measurement started for ${measureName}`, eventCorrelationId);
-        const inProgressEvent = {
-            eventId: this.generateId(),
-            status: PerformanceEventStatus.InProgress,
-            authority: this.authority,
-            libraryName: this.libraryName,
-            libraryVersion: this.libraryVersion,
-            clientId: this.clientId,
-            name: measureName,
-            startTimeMs: Date.now(),
-            correlationId: eventCorrelationId,
-            appName: this.applicationTelemetry?.appName,
-            appVersion: this.applicationTelemetry?.appVersion,
-        };
-        // Store in progress events so they can be discarded if not ended properly
-        this.cacheEventByCorrelationId(inProgressEvent);
-        startContext(inProgressEvent, this.abbreviations, this.eventStack.get(eventCorrelationId));
-        // Return the event and functions the caller can use to properly end/flush the measurement
-        return {
-            end: (event, error) => {
-                return this.endMeasurement({
-                    // Initial set of event properties
-                    ...inProgressEvent,
-                    // Properties set when event ends
-                    ...event,
-                }, error);
-            },
-            discard: () => {
-                return this.discardMeasurements(inProgressEvent.correlationId);
-            },
-            add: (fields) => {
-                return this.addFields(fields, inProgressEvent.correlationId);
-            },
-            increment: (fields) => {
-                return this.incrementFields(fields, inProgressEvent.correlationId);
-            },
-            event: inProgressEvent,
-            measurement: new StubPerformanceMeasurement(),
-        };
-    }
-    /**
-     * Stops measuring the performance for an operation. Should only be called directly by PerformanceClient classes,
-     * as consumers should instead use the function returned by startMeasurement.
-     * Adds a new field named as "[event name]DurationMs" for sub-measurements, completes and emits an event
-     * otherwise.
-     *
-     * @param {PerformanceEvent} event
-     * @param {unknown} error
-     * @returns {(PerformanceEvent | null)}
-     */
-    endMeasurement(event, error) {
-        const rootEvent = this.eventsByCorrelationId.get(event.correlationId);
-        if (!rootEvent) {
-            this.logger.trace(`PerformanceClient: Measurement not found for ${event.eventId}`, event.correlationId);
-            return null;
-        }
-        const isRoot = event.eventId === rootEvent.eventId;
-        let queueInfo = {
-            totalQueueTime: 0,
-            totalQueueCount: 0,
-            manuallyCompletedCount: 0,
-        };
-        event.durationMs = Math.round(event.durationMs || this.getDurationMs(event.startTimeMs));
-        const context = JSON.stringify(endContext(event, this.abbreviations, this.eventStack.get(rootEvent.correlationId), error));
-        if (isRoot) {
-            queueInfo = this.getQueueInfo(event.correlationId);
-            this.discardMeasurements(rootEvent.correlationId);
-        }
-        else {
-            rootEvent.incompleteSubMeasurements?.delete(event.eventId);
-        }
-        this.logger.trace(`PerformanceClient: Performance measurement ended for ${event.name}: ${event.durationMs} ms`, event.correlationId);
-        // Add sub-measurement attribute to root event.
-        if (!isRoot) {
-            rootEvent[event.name + "DurationMs"] = Math.floor(event.durationMs);
-            return { ...rootEvent };
-        }
-        if (error) {
-            addError(error, this.logger, rootEvent);
-        }
-        let finalEvent = { ...rootEvent, ...event };
-        let incompleteSubsCount = 0;
-        // Incomplete sub-measurements are discarded. They are likely an instrumentation bug that should be fixed.
-        finalEvent.incompleteSubMeasurements?.forEach((subMeasurement) => {
-            this.logger.trace(`PerformanceClient: Incomplete submeasurement ${subMeasurement.name} found for ${event.name}`, finalEvent.correlationId);
-            incompleteSubsCount++;
-        });
-        finalEvent.incompleteSubMeasurements = undefined;
-        finalEvent = {
-            ...finalEvent,
-            queuedTimeMs: queueInfo.totalQueueTime,
-            queuedCount: queueInfo.totalQueueCount,
-            queuedManuallyCompletedCount: queueInfo.manuallyCompletedCount,
-            status: PerformanceEventStatus.Completed,
-            incompleteSubsCount,
-            context,
-        };
-        this.truncateIntegralFields(finalEvent);
-        this.emitEvents([finalEvent], event.correlationId);
-        return finalEvent;
-    }
-    /**
-     * Saves extra information to be emitted when the measurements are flushed
-     * @param fields
-     * @param correlationId
-     */
-    addFields(fields, correlationId) {
-        this.logger.trace("PerformanceClient: Updating static fields");
-        const event = this.eventsByCorrelationId.get(correlationId);
-        if (event) {
-            this.eventsByCorrelationId.set(correlationId, {
-                ...event,
-                ...fields,
+    const outgoingRequestString = `${httpMethod.toUpperCase()} ${destinationUrl.href} HTTP/1.1\r\n` +
+        `Host: ${destinationUrl.host}\r\n` +
+        "Connection: close\r\n" +
+        postRequestStringContent +
+        "\r\n";
+    return new Promise((resolve, reject) => {
+        const request = http.request(tunnelRequestOptions);
+        if (timeout) {
+            request.on("timeout", () => {
+                request.destroy();
+                reject(new Error("Request time out"));
             });
         }
-        else {
-            this.logger.trace("PerformanceClient: Event not found for", correlationId);
-        }
-    }
-    /**
-     * Increment counters to be emitted when the measurements are flushed
-     * @param fields {string[]}
-     * @param correlationId {string} correlation identifier
-     */
-    incrementFields(fields, correlationId) {
-        this.logger.trace("PerformanceClient: Updating counters");
-        const event = this.eventsByCorrelationId.get(correlationId);
-        if (event) {
-            for (const counter in fields) {
-                if (!event.hasOwnProperty(counter)) {
-                    event[counter] = 0;
-                }
-                else if (isNaN(Number(event[counter]))) {
-                    return;
-                }
-                event[counter] += fields[counter];
+        request.end();
+        // establish connection to the proxy
+        request.on("connect", (response, socket) => {
+            const proxyStatusCode = response?.statusCode || ProxyStatus.SERVER_ERROR;
+            if (proxyStatusCode < ProxyStatus.SUCCESS_RANGE_START ||
+                proxyStatusCode > ProxyStatus.SUCCESS_RANGE_END) {
+                request.destroy();
+                socket.destroy();
+                reject(new Error(`Error connecting to proxy. Http status code: ${response.statusCode}. Http status message: ${response?.statusMessage || "Unknown"}`));
             }
-        }
-        else {
-            this.logger.trace("PerformanceClient: Event not found for", correlationId);
-        }
-    }
-    /**
-     * Upserts event into event cache.
-     * First key is the correlation id, second key is the event id.
-     * Allows for events to be grouped by correlation id,
-     * and to easily allow for properties on them to be updated.
-     *
-     * @private
-     * @param {PerformanceEvent} event
-     */
-    cacheEventByCorrelationId(event) {
-        const rootEvent = this.eventsByCorrelationId.get(event.correlationId);
-        if (rootEvent) {
-            this.logger.trace(`PerformanceClient: Performance measurement for ${event.name} added/updated`, event.correlationId);
-            rootEvent.incompleteSubMeasurements =
-                rootEvent.incompleteSubMeasurements || new Map();
-            rootEvent.incompleteSubMeasurements.set(event.eventId, {
-                name: event.name,
-                startTimeMs: event.startTimeMs,
+            // make a request over an HTTP tunnel
+            socket.write(outgoingRequestString);
+            const data = [];
+            socket.on("data", (chunk) => {
+                data.push(chunk);
             });
-        }
-        else {
-            this.logger.trace(`PerformanceClient: Performance measurement for ${event.name} started`, event.correlationId);
-            this.eventsByCorrelationId.set(event.correlationId, { ...event });
-            this.eventStack.set(event.correlationId, []);
-        }
-    }
-    getQueueInfo(correlationId) {
-        const queueMeasurementForCorrelationId = this.queueMeasurements.get(correlationId);
-        if (!queueMeasurementForCorrelationId) {
-            this.logger.trace(`PerformanceClient: no queue measurements found for for correlationId: ${correlationId}`);
-        }
-        let totalQueueTime = 0;
-        let totalQueueCount = 0;
-        let manuallyCompletedCount = 0;
-        queueMeasurementForCorrelationId?.forEach((measurement) => {
-            totalQueueTime += measurement.queueTime;
-            totalQueueCount++;
-            manuallyCompletedCount += measurement.manuallyCompleted ? 1 : 0;
+            socket.on("end", () => {
+                // combine all received buffer streams into one buffer, and then into a string
+                const dataString = Buffer.concat([...data]).toString();
+                // separate each line into it's own entry in an arry
+                const dataStringArray = dataString.split("\r\n");
+                // the first entry will contain the statusCode and statusMessage
+                const httpStatusCode = parseInt(dataStringArray[0].split(" ")[1]);
+                // remove "HTTP/1.1" and the status code to get the status message
+                const statusMessage = dataStringArray[0]
+                    .split(" ")
+                    .slice(2)
+                    .join(" ");
+                // the last entry will contain the body
+                const body = dataStringArray[dataStringArray.length - 1];
+                // everything in between the first and last entries are the headers
+                const headersArray = dataStringArray.slice(1, dataStringArray.length - 2);
+                // build an object out of all the headers
+                const entries = new Map();
+                headersArray.forEach((header) => {
+                    /**
+                     * the header might look like "Content-Length: 1531", but that is just a string
+                     * it needs to be converted to a key/value pair
+                     * split the string at the first instance of ":"
+                     * there may be more than one ":" if the value of the header is supposed to be a JSON object
+                     */
+                    const headerKeyValue = header.split(new RegExp(/:\s(.*)/s));
+                    const headerKey = headerKeyValue[0];
+                    let headerValue = headerKeyValue[1];
+                    // check if the value of the header is supposed to be a JSON object
+                    try {
+                        const object = JSON.parse(headerValue);
+                        // if it is, then convert it from a string to a JSON object
+                        if (object && typeof object === "object") {
+                            headerValue = object;
+                        }
+                    }
+                    catch (e) {
+                        // otherwise, leave it as a string
+                    }
+                    entries.set(headerKey, headerValue);
+                });
+                const headers = Object.fromEntries(entries);
+                const parsedHeaders = headers;
+                const networkResponse = NetworkUtils.getNetworkResponse(parsedHeaders, parseBody(httpStatusCode, statusMessage, parsedHeaders, body), httpStatusCode);
+                if ((httpStatusCode < HttpStatus.SUCCESS_RANGE_START ||
+                    httpStatusCode > HttpStatus.SUCCESS_RANGE_END) &&
+                    // do not destroy the request for the device code flow
+                    networkResponse.body["error"] !==
+                        Constants.AUTHORIZATION_PENDING) {
+                    request.destroy();
+                }
+                resolve(networkResponse);
+            });
+            socket.on("error", (chunk) => {
+                request.destroy();
+                socket.destroy();
+                reject(new Error(chunk.toString()));
+            });
         });
-        return {
-            totalQueueTime,
-            totalQueueCount,
-            manuallyCompletedCount,
+        request.on("error", (chunk) => {
+            request.destroy();
+            reject(new Error(chunk.toString()));
+        });
+    });
+};
+const networkRequestViaHttps = (urlString, httpMethod, options, agentOptions, timeout) => {
+    const isPostRequest = httpMethod === HttpMethod.POST;
+    const body = options?.body || "";
+    const url = new URL(urlString);
+    const headers = options?.headers || {};
+    const customOptions = {
+        method: httpMethod,
+        headers: headers,
+        ...NetworkUtils.urlToHttpOptions(url),
+    };
+    if (agentOptions && Object.keys(agentOptions).length) {
+        customOptions.agent = new https.Agent(agentOptions);
+    }
+    if (isPostRequest) {
+        // needed for post request to work
+        customOptions.headers = {
+            ...customOptions.headers,
+            "Content-Length": body.length,
         };
     }
-    /**
-     * Removes measurements and aux data for a given correlation id.
-     *
-     * @param {string} correlationId
-     */
-    discardMeasurements(correlationId) {
-        this.logger.trace("PerformanceClient: Performance measurements discarded", correlationId);
-        this.eventsByCorrelationId.delete(correlationId);
-        this.logger.trace("PerformanceClient: QueueMeasurements discarded", correlationId);
-        this.queueMeasurements.delete(correlationId);
-        this.logger.trace("PerformanceClient: Pre-queue times discarded", correlationId);
-        this.preQueueTimeByCorrelationId.delete(correlationId);
-        this.logger.trace("PerformanceClient: Event stack discarded", correlationId);
-        this.eventStack.delete(correlationId);
-    }
-    /**
-     * Registers a callback function to receive performance events.
-     *
-     * @param {PerformanceCallbackFunction} callback
-     * @returns {string}
-     */
-    addPerformanceCallback(callback) {
-        for (const [id, cb] of this.callbacks) {
-            if (cb.toString() === callback.toString()) {
-                this.logger.warning(`PerformanceClient: Performance callback is already registered with id: ${id}`);
-                return id;
-            }
+    else {
+        // optional timeout is only for get requests (regionDiscovery, for example)
+        if (timeout) {
+            customOptions.timeout = timeout;
         }
-        const callbackId = this.generateId();
-        this.callbacks.set(callbackId, callback);
-        this.logger.verbose(`PerformanceClient: Performance callback registered with id: ${callbackId}`);
-        return callbackId;
     }
-    /**
-     * Removes a callback registered with addPerformanceCallback.
-     *
-     * @param {string} callbackId
-     * @returns {boolean}
-     */
-    removePerformanceCallback(callbackId) {
-        const result = this.callbacks.delete(callbackId);
-        if (result) {
-            this.logger.verbose(`PerformanceClient: Performance callback ${callbackId} removed.`);
+    return new Promise((resolve, reject) => {
+        let request;
+        // managed identity sources use http instead of https
+        if (customOptions.protocol === "http:") {
+            request = http.request(customOptions);
         }
         else {
-            this.logger.verbose(`PerformanceClient: Performance callback ${callbackId} not removed.`);
+            request = https.request(customOptions);
         }
-        return result;
-    }
-    /**
-     * Emits events to all registered callbacks.
-     *
-     * @param {PerformanceEvent[]} events
-     * @param {?string} [correlationId]
-     */
-    emitEvents(events, correlationId) {
-        this.logger.verbose("PerformanceClient: Emitting performance events", correlationId);
-        this.callbacks.forEach((callback, callbackId) => {
-            this.logger.trace(`PerformanceClient: Emitting event to callback ${callbackId}`, correlationId);
-            callback.apply(null, [events]);
+        if (isPostRequest) {
+            request.write(body);
+        }
+        if (timeout) {
+            request.on("timeout", () => {
+                request.destroy();
+                reject(new Error("Request time out"));
+            });
+        }
+        request.end();
+        request.on("response", (response) => {
+            const headers = response.headers;
+            const statusCode = response.statusCode;
+            const statusMessage = response.statusMessage;
+            const data = [];
+            response.on("data", (chunk) => {
+                data.push(chunk);
+            });
+            response.on("end", () => {
+                // combine all received buffer streams into one buffer, and then into a string
+                const body = Buffer.concat([...data]).toString();
+                const parsedHeaders = headers;
+                const networkResponse = NetworkUtils.getNetworkResponse(parsedHeaders, parseBody(statusCode, statusMessage, parsedHeaders, body), statusCode);
+                if ((statusCode < HttpStatus.SUCCESS_RANGE_START ||
+                    statusCode > HttpStatus.SUCCESS_RANGE_END) &&
+                    // do not destroy the request for the device code flow
+                    networkResponse.body["error"] !==
+                        Constants.AUTHORIZATION_PENDING) {
+                    request.destroy();
+                }
+                resolve(networkResponse);
+            });
         });
-    }
-    /**
-     * Enforce truncation of integral fields in performance event.
-     * @param {PerformanceEvent} event performance event to update.
+        request.on("error", (chunk) => {
+            request.destroy();
+            reject(new Error(chunk.toString()));
+        });
+    });
+};
+/**
+ * Check if extra parsing is needed on the repsonse from the server
+ * @param statusCode {number} the status code of the response from the server
+ * @param statusMessage {string | undefined} the status message of the response from the server
+ * @param headers {Record<string, string>} the headers of the response from the server
+ * @param body {string} the body from the response of the server
+ * @returns {Object} JSON parsed body or error object
+ */
+const parseBody = (statusCode, statusMessage, headers, body) => {
+    /*
+     * Informational responses (100 – 199)
+     * Successful responses (200 – 299)
+     * Redirection messages (300 – 399)
+     * Client error responses (400 – 499)
+     * Server error responses (500 – 599)
      */
-    truncateIntegralFields(event) {
-        this.intFields.forEach((key) => {
-            if (key in event && typeof event[key] === "number") {
-                event[key] = Math.floor(event[key]);
+    let parsedBody;
+    try {
+        parsedBody = JSON.parse(body);
+    }
+    catch (error) {
+        let errorType;
+        let errorDescriptionHelper;
+        if (statusCode >= HttpStatus.CLIENT_ERROR_RANGE_START &&
+            statusCode <= HttpStatus.CLIENT_ERROR_RANGE_END) {
+            errorType = "client_error";
+            errorDescriptionHelper = "A client";
+        }
+        else if (statusCode >= HttpStatus.SERVER_ERROR_RANGE_START &&
+            statusCode <= HttpStatus.SERVER_ERROR_RANGE_END) {
+            errorType = "server_error";
+            errorDescriptionHelper = "A server";
+        }
+        else {
+            errorType = "unknown_error";
+            errorDescriptionHelper = "An unknown";
+        }
+        parsedBody = {
+            error: errorType,
+            error_description: `${errorDescriptionHelper} error occured.\nHttp status code: ${statusCode}\nHttp status message: ${statusMessage || "Unknown"}\nHeaders: ${JSON.stringify(headers)}`,
+        };
+    }
+    return parsedBody;
+};
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const invalidFileExtension = "invalid_file_extension";
+const invalidFilePath = "invalid_file_path";
+const invalidManagedIdentityIdType = "invalid_managed_identity_id_type";
+const invalidSecret = "invalid_secret";
+const missingId = "missing_client_id";
+const networkUnavailable = "network_unavailable";
+const platformNotSupported = "platform_not_supported";
+const unableToCreateAzureArc = "unable_to_create_azure_arc";
+const unableToCreateCloudShell = "unable_to_create_cloud_shell";
+const unableToCreateSource = "unable_to_create_source";
+const unableToReadSecretFile = "unable_to_read_secret_file";
+const userAssignedNotAvailableAtRuntime = "user_assigned_not_available_at_runtime";
+const wwwAuthenticateHeaderMissing = "www_authenticate_header_missing";
+const wwwAuthenticateHeaderUnsupportedFormat = "www_authenticate_header_unsupported_format";
+const MsiEnvironmentVariableUrlMalformedErrorCodes = {
+    [ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST]: "azure_pod_identity_authority_host_url_malformed",
+    [ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT]: "identity_endpoint_url_malformed",
+    [ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT]: "imds_endpoint_url_malformed",
+    [ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT]: "msi_endpoint_url_malformed",
+};
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * ManagedIdentityErrorMessage class containing string constants used by error codes and messages.
+ */
+const ManagedIdentityErrorMessages = {
+    [invalidFileExtension]: "The file path in the WWW-Authenticate header does not contain a .key file.",
+    [invalidFilePath]: "The file path in the WWW-Authenticate header is not in a valid Windows or Linux Format.",
+    [invalidManagedIdentityIdType]: "More than one ManagedIdentityIdType was provided.",
+    [invalidSecret]: "The secret in the file on the file path in the WWW-Authenticate header is greater than 4096 bytes.",
+    [platformNotSupported]: "The platform is not supported by Azure Arc. Azure Arc only supports Windows and Linux.",
+    [missingId]: "A ManagedIdentityId id was not provided.",
+    [MsiEnvironmentVariableUrlMalformedErrorCodes
+        .AZURE_POD_IDENTITY_AUTHORITY_HOST]: `The Managed Identity's '${ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST}' environment variable is malformed.`,
+    [MsiEnvironmentVariableUrlMalformedErrorCodes
+        .IDENTITY_ENDPOINT]: `The Managed Identity's '${ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' environment variable is malformed.`,
+    [MsiEnvironmentVariableUrlMalformedErrorCodes
+        .IMDS_ENDPOINT]: `The Managed Identity's '${ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT}' environment variable is malformed.`,
+    [MsiEnvironmentVariableUrlMalformedErrorCodes
+        .MSI_ENDPOINT]: `The Managed Identity's '${ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT}' environment variable is malformed.`,
+    [networkUnavailable]: "Authentication unavailable. The request to the managed identity endpoint timed out.",
+    [unableToCreateAzureArc]: "Azure Arc Managed Identities can only be system assigned.",
+    [unableToCreateCloudShell]: "Cloud Shell Managed Identities can only be system assigned.",
+    [unableToCreateSource]: "Unable to create a Managed Identity source based on environment variables.",
+    [unableToReadSecretFile]: "Unable to read the secret file.",
+    [userAssignedNotAvailableAtRuntime]: "Service Fabric user assigned managed identity ClientId or ResourceId is not configurable at runtime.",
+    [wwwAuthenticateHeaderMissing]: "A 401 response was received form the Azure Arc Managed Identity, but the www-authenticate header is missing.",
+    [wwwAuthenticateHeaderUnsupportedFormat]: "A 401 response was received form the Azure Arc Managed Identity, but the www-authenticate header is in an unsupported format.",
+};
+class ManagedIdentityError extends AuthError {
+    constructor(errorCode) {
+        super(errorCode, ManagedIdentityErrorMessages[errorCode]);
+        this.name = "ManagedIdentityError";
+        Object.setPrototypeOf(this, ManagedIdentityError.prototype);
+    }
+}
+function createManagedIdentityError(errorCode) {
+    return new ManagedIdentityError(errorCode);
+}
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class ManagedIdentityId {
+    get id() {
+        return this._id;
+    }
+    set id(value) {
+        this._id = value;
+    }
+    get idType() {
+        return this._idType;
+    }
+    set idType(value) {
+        this._idType = value;
+    }
+    constructor(managedIdentityIdParams) {
+        const userAssignedClientId = managedIdentityIdParams?.userAssignedClientId;
+        const userAssignedResourceId = managedIdentityIdParams?.userAssignedResourceId;
+        const userAssignedObjectId = managedIdentityIdParams?.userAssignedObjectId;
+        if (userAssignedClientId) {
+            if (userAssignedResourceId || userAssignedObjectId) {
+                throw createManagedIdentityError(invalidManagedIdentityIdType);
             }
-        });
-    }
-    /**
-     * Returns event duration in milliseconds
-     * @param startTimeMs {number}
-     * @returns {number}
-     */
-    getDurationMs(startTimeMs) {
-        const durationMs = Date.now() - startTimeMs;
-        // Handle clock skew
-        return durationMs < 0 ? durationMs : 0;
+            this.id = userAssignedClientId;
+            this.idType = ManagedIdentityIdType.USER_ASSIGNED_CLIENT_ID;
+        }
+        else if (userAssignedResourceId) {
+            if (userAssignedClientId || userAssignedObjectId) {
+                throw createManagedIdentityError(invalidManagedIdentityIdType);
+            }
+            this.id = userAssignedResourceId;
+            this.idType = ManagedIdentityIdType.USER_ASSIGNED_RESOURCE_ID;
+        }
+        else if (userAssignedObjectId) {
+            if (userAssignedClientId || userAssignedResourceId) {
+                throw createManagedIdentityError(invalidManagedIdentityIdType);
+            }
+            this.id = userAssignedObjectId;
+            this.idType = ManagedIdentityIdType.USER_ASSIGNED_OBJECT_ID;
+        }
+        else {
+            this.id = DEFAULT_MANAGED_IDENTITY_ID;
+            this.idType = ManagedIdentityIdType.SYSTEM_ASSIGNED;
+        }
     }
 }
 
-exports.AADAuthorityConstants = AADAuthorityConstants;
-exports.AADServerParamKeys = AADServerParamKeys;
-exports.AccountEntity = AccountEntity;
-exports.AuthError = AuthError;
-exports.AuthErrorCodes = AuthErrorCodes;
-exports.AuthErrorMessage = AuthErrorMessage;
-exports.AuthToken = AuthToken;
-exports.AuthenticationHeaderParser = AuthenticationHeaderParser;
-exports.AuthenticationScheme = AuthenticationScheme;
-exports.Authority = Authority;
-exports.AuthorityFactory = AuthorityFactory;
-exports.AuthorityType = AuthorityType;
-exports.AuthorizationCodeClient = AuthorizationCodeClient;
-exports.AzureCloudInstance = AzureCloudInstance;
-exports.BaseClient = BaseClient;
-exports.CacheAccountType = CacheAccountType;
-exports.CacheError = CacheError;
-exports.CacheErrorCodes = CacheErrorCodes;
-exports.CacheHelpers = CacheHelpers;
-exports.CacheManager = CacheManager;
-exports.CacheOutcome = CacheOutcome;
-exports.CacheType = CacheType;
-exports.CcsCredentialType = CcsCredentialType;
-exports.ClaimsRequestKeys = ClaimsRequestKeys;
-exports.ClientAssertionUtils = ClientAssertionUtils;
-exports.ClientAuthError = ClientAuthError;
-exports.ClientAuthErrorCodes = ClientAuthErrorCodes;
-exports.ClientAuthErrorMessage = ClientAuthErrorMessage;
-exports.ClientConfigurationError = ClientConfigurationError;
-exports.ClientConfigurationErrorCodes = ClientConfigurationErrorCodes;
-exports.ClientConfigurationErrorMessage = ClientConfigurationErrorMessage;
-exports.CodeChallengeMethodValues = CodeChallengeMethodValues;
-exports.Constants = Constants;
-exports.CredentialType = CredentialType;
-exports.DEFAULT_CRYPTO_IMPLEMENTATION = DEFAULT_CRYPTO_IMPLEMENTATION;
-exports.DEFAULT_SYSTEM_OPTIONS = DEFAULT_SYSTEM_OPTIONS;
-exports.DEFAULT_TOKEN_RENEWAL_OFFSET_SEC = DEFAULT_TOKEN_RENEWAL_OFFSET_SEC;
-exports.DefaultStorageClass = DefaultStorageClass;
-exports.Errors = Errors;
-exports.GrantType = GrantType;
-exports.HeaderNames = HeaderNames;
-exports.HttpStatus = HttpStatus;
-exports.IntFields = IntFields;
-exports.InteractionRequiredAuthError = InteractionRequiredAuthError;
-exports.InteractionRequiredAuthErrorCodes = InteractionRequiredAuthErrorCodes;
-exports.InteractionRequiredAuthErrorMessage = InteractionRequiredAuthErrorMessage;
-exports.JoseHeader = JoseHeader;
-exports.JsonWebTokenTypes = JsonWebTokenTypes;
-exports.Logger = Logger;
-exports.NetworkManager = NetworkManager;
-exports.OIDC_DEFAULT_SCOPES = OIDC_DEFAULT_SCOPES;
-exports.ONE_DAY_IN_MS = ONE_DAY_IN_MS;
-exports.PasswordGrantConstants = PasswordGrantConstants;
-exports.PerformanceClient = PerformanceClient;
-exports.PerformanceEventStatus = PerformanceEventStatus;
-exports.PerformanceEvents = PerformanceEvents;
-exports.PersistentCacheKeys = PersistentCacheKeys;
-exports.PopTokenGenerator = PopTokenGenerator;
-exports.PromptValue = PromptValue;
-exports.ProtocolMode = ProtocolMode;
-exports.ProtocolUtils = ProtocolUtils;
-exports.RefreshTokenClient = RefreshTokenClient;
-exports.RequestParameterBuilder = RequestParameterBuilder;
-exports.ResponseHandler = ResponseHandler;
-exports.ResponseMode = ResponseMode;
-exports.ScopeSet = ScopeSet;
-exports.ServerError = ServerError;
-exports.ServerResponseType = ServerResponseType;
-exports.ServerTelemetryManager = ServerTelemetryManager;
-exports.SilentFlowClient = SilentFlowClient;
-exports.StringUtils = StringUtils;
-exports.StubPerformanceClient = StubPerformanceClient;
-exports.StubbedNetworkModule = StubbedNetworkModule;
-exports.THE_FAMILY_ID = THE_FAMILY_ID;
-exports.ThrottlingConstants = ThrottlingConstants;
-exports.ThrottlingUtils = ThrottlingUtils;
-exports.TimeUtils = TimeUtils;
-exports.TokenCacheContext = TokenCacheContext;
-exports.UrlString = UrlString;
-exports.UrlUtils = UrlUtils;
-exports.buildAccountToCache = buildAccountToCache;
-exports.buildClientInfo = buildClientInfo;
-exports.buildClientInfoFromHomeAccountId = buildClientInfoFromHomeAccountId;
-exports.buildStaticAuthorityOptions = buildStaticAuthorityOptions;
-exports.buildTenantProfile = buildTenantProfile;
-exports.createAuthError = createAuthError;
-exports.createClientAuthError = createClientAuthError;
-exports.createClientConfigurationError = createClientConfigurationError;
-exports.createInteractionRequiredAuthError = createInteractionRequiredAuthError;
-exports.formatAuthorityUri = formatAuthorityUri;
-exports.getClientAssertion = getClientAssertion;
-exports.getTenantIdFromIdTokenClaims = getTenantIdFromIdTokenClaims;
-exports.invoke = invoke;
-exports.invokeAsync = invokeAsync;
-exports.tenantIdMatchesHomeTenant = tenantIdMatchesHomeTenant;
-exports.updateAccountTenantProfileData = updateAccountTenantProfileData;
-exports.version = version;
-//# sourceMappingURL=index.cjs.map
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class LinearRetryPolicy {
+    constructor(maxRetries, retryDelay, httpStatusCodesToRetryOn) {
+        this.maxRetries = maxRetries;
+        this.retryDelay = retryDelay;
+        this.httpStatusCodesToRetryOn = httpStatusCodesToRetryOn;
+    }
+    retryAfterMillisecondsToSleep(retryHeader) {
+        if (!retryHeader) {
+            return 0;
+        }
+        // retry-after header is in seconds
+        let millisToSleep = Math.round(parseFloat(retryHeader) * 1000);
+        /*
+         * retry-after header is in HTTP Date format
+         * <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+         */
+        if (isNaN(millisToSleep)) {
+            millisToSleep = Math.max(0, 
+            // .valueOf() is needed to subtract dates in TypeScript
+            new Date(retryHeader).valueOf() - new Date().valueOf());
+        }
+        return millisToSleep;
+    }
+    async pauseForRetry(httpStatusCode, currentRetry, retryAfterHeader) {
+        if (this.httpStatusCodesToRetryOn.includes(httpStatusCode) &&
+            currentRetry < this.maxRetries) {
+            const retryAfterDelay = this.retryAfterMillisecondsToSleep(retryAfterHeader);
+            await new Promise((resolve) => {
+                // retryAfterHeader value of 0 evaluates to false, and this.retryDelay will be used
+                return setTimeout(resolve, retryAfterDelay || this.retryDelay);
+            });
+            return true;
+        }
+        return false;
+    }
+}
 
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class HttpClientWithRetries {
+    constructor(httpClientNoRetries, retryPolicy) {
+        this.httpClientNoRetries = httpClientNoRetries;
+        this.retryPolicy = retryPolicy;
+    }
+    async sendNetworkRequestAsyncHelper(httpMethod, url, options) {
+        if (httpMethod === HttpMethod.GET) {
+            return this.httpClientNoRetries.sendGetRequestAsync(url, options);
+        }
+        else {
+            return this.httpClientNoRetries.sendPostRequestAsync(url, options);
+        }
+    }
+    async sendNetworkRequestAsync(httpMethod, url, options) {
+        // the underlying network module (custom or HttpClient) will make the call
+        let response = await this.sendNetworkRequestAsyncHelper(httpMethod, url, options);
+        let currentRetry = 0;
+        while (await this.retryPolicy.pauseForRetry(response.status, currentRetry, response.headers[HeaderNames.RETRY_AFTER])) {
+            response = await this.sendNetworkRequestAsyncHelper(httpMethod, url, options);
+            currentRetry++;
+        }
+        return response;
+    }
+    async sendGetRequestAsync(url, options) {
+        return this.sendNetworkRequestAsync(HttpMethod.GET, url, options);
+    }
+    async sendPostRequestAsync(url, options) {
+        return this.sendNetworkRequestAsync(HttpMethod.POST, url, options);
+    }
+}
 
-/***/ }),
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * NodeAuthErrorMessage class containing string constants used by error codes and messages.
+ */
+const NodeAuthErrorMessage = {
+    invalidLoopbackAddressType: {
+        code: "invalid_loopback_server_address_type",
+        desc: "Loopback server address is not type string. This is unexpected.",
+    },
+    unableToLoadRedirectUri: {
+        code: "unable_to_load_redirectUrl",
+        desc: "Loopback server callback was invoked without a url. This is unexpected.",
+    },
+    noAuthCodeInResponse: {
+        code: "no_auth_code_in_response",
+        desc: "No auth code found in the server response. Please check your network trace to determine what happened.",
+    },
+    noLoopbackServerExists: {
+        code: "no_loopback_server_exists",
+        desc: "No loopback server exists yet.",
+    },
+    loopbackServerAlreadyExists: {
+        code: "loopback_server_already_exists",
+        desc: "Loopback server already exists. Cannot create another.",
+    },
+    loopbackServerTimeout: {
+        code: "loopback_server_timeout",
+        desc: "Timed out waiting for auth code listener to be registered.",
+    },
+    stateNotFoundError: {
+        code: "state_not_found",
+        desc: "State not found. Please verify that the request originated from msal.",
+    },
+    thumbprintMissing: {
+        code: "thumbprint_missing_from_client_certificate",
+        desc: "Client certificate does not contain a SHA-1 or SHA-256 thumbprint.",
+    },
+};
+class NodeAuthError extends AuthError {
+    constructor(errorCode, errorMessage) {
+        super(errorCode, errorMessage);
+        this.name = "NodeAuthError";
+    }
+    /**
+     * Creates an error thrown if loopback server address is of type string.
+     */
+    static createInvalidLoopbackAddressTypeError() {
+        return new NodeAuthError(NodeAuthErrorMessage.invalidLoopbackAddressType.code, `${NodeAuthErrorMessage.invalidLoopbackAddressType.desc}`);
+    }
+    /**
+     * Creates an error thrown if the loopback server is unable to get a url.
+     */
+    static createUnableToLoadRedirectUrlError() {
+        return new NodeAuthError(NodeAuthErrorMessage.unableToLoadRedirectUri.code, `${NodeAuthErrorMessage.unableToLoadRedirectUri.desc}`);
+    }
+    /**
+     * Creates an error thrown if the server response does not contain an auth code.
+     */
+    static createNoAuthCodeInResponseError() {
+        return new NodeAuthError(NodeAuthErrorMessage.noAuthCodeInResponse.code, `${NodeAuthErrorMessage.noAuthCodeInResponse.desc}`);
+    }
+    /**
+     * Creates an error thrown if the loopback server has not been spun up yet.
+     */
+    static createNoLoopbackServerExistsError() {
+        return new NodeAuthError(NodeAuthErrorMessage.noLoopbackServerExists.code, `${NodeAuthErrorMessage.noLoopbackServerExists.desc}`);
+    }
+    /**
+     * Creates an error thrown if a loopback server already exists when attempting to create another one.
+     */
+    static createLoopbackServerAlreadyExistsError() {
+        return new NodeAuthError(NodeAuthErrorMessage.loopbackServerAlreadyExists.code, `${NodeAuthErrorMessage.loopbackServerAlreadyExists.desc}`);
+    }
+    /**
+     * Creates an error thrown if the loopback server times out registering the auth code listener.
+     */
+    static createLoopbackServerTimeoutError() {
+        return new NodeAuthError(NodeAuthErrorMessage.loopbackServerTimeout.code, `${NodeAuthErrorMessage.loopbackServerTimeout.desc}`);
+    }
+    /**
+     * Creates an error thrown when the state is not present.
+     */
+    static createStateNotFoundError() {
+        return new NodeAuthError(NodeAuthErrorMessage.stateNotFoundError.code, NodeAuthErrorMessage.stateNotFoundError.desc);
+    }
+    /**
+     * Creates an error thrown when client certificate was provided, but neither the SHA-1 or SHA-256 thumbprints were provided
+     */
+    static createThumbprintMissingError() {
+        return new NodeAuthError(NodeAuthErrorMessage.thumbprintMissing.code, NodeAuthErrorMessage.thumbprintMissing.desc);
+    }
+}
 
-/***/ 1064:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+const DEFAULT_AUTH_OPTIONS = {
+    clientId: Constants$1.EMPTY_STRING,
+    authority: Constants$1.DEFAULT_AUTHORITY,
+    clientSecret: Constants$1.EMPTY_STRING,
+    clientAssertion: Constants$1.EMPTY_STRING,
+    clientCertificate: {
+        thumbprint: Constants$1.EMPTY_STRING,
+        thumbprintSha256: Constants$1.EMPTY_STRING,
+        privateKey: Constants$1.EMPTY_STRING,
+        x5c: Constants$1.EMPTY_STRING,
+    },
+    knownAuthorities: [],
+    cloudDiscoveryMetadata: Constants$1.EMPTY_STRING,
+    authorityMetadata: Constants$1.EMPTY_STRING,
+    clientCapabilities: [],
+    protocolMode: ProtocolMode.AAD,
+    azureCloudOptions: {
+        azureCloudInstance: AzureCloudInstance.None,
+        tenant: Constants$1.EMPTY_STRING,
+    },
+    skipAuthorityMetadataCache: false,
+};
+const DEFAULT_CACHE_OPTIONS = {
+    claimsBasedCachingEnabled: false,
+};
+const DEFAULT_LOGGER_OPTIONS = {
+    loggerCallback: () => {
+        // allow users to not set logger call back
+    },
+    piiLoggingEnabled: false,
+    logLevel: exports.LogLevel.Info,
+};
+const DEFAULT_SYSTEM_OPTIONS = {
+    loggerOptions: DEFAULT_LOGGER_OPTIONS,
+    networkClient: new HttpClient(),
+    proxyUrl: Constants$1.EMPTY_STRING,
+    customAgentOptions: {},
+    disableInternalRetries: false,
+};
+const DEFAULT_TELEMETRY_OPTIONS = {
+    application: {
+        appName: Constants$1.EMPTY_STRING,
+        appVersion: Constants$1.EMPTY_STRING,
+    },
+};
+/**
+ * Sets the default options when not explicitly configured from app developer
+ *
+ * @param auth - Authentication options
+ * @param cache - Cache options
+ * @param system - System options
+ * @param telemetry - Telemetry options
+ *
+ * @returns Configuration
+ * @internal
+ */
+function buildAppConfiguration({ auth, broker, cache, system, telemetry, }) {
+    const systemOptions = {
+        ...DEFAULT_SYSTEM_OPTIONS,
+        networkClient: new HttpClient(system?.proxyUrl, system?.customAgentOptions),
+        loggerOptions: system?.loggerOptions || DEFAULT_LOGGER_OPTIONS,
+        disableInternalRetries: system?.disableInternalRetries || false,
+    };
+    // if client certificate was provided, ensure that at least one of the SHA-1 or SHA-256 thumbprints were provided
+    if (!!auth.clientCertificate &&
+        !!!auth.clientCertificate.thumbprint &&
+        !!!auth.clientCertificate.thumbprintSha256) {
+        throw NodeAuthError.createStateNotFoundError();
+    }
+    return {
+        auth: { ...DEFAULT_AUTH_OPTIONS, ...auth },
+        broker: { ...broker },
+        cache: { ...DEFAULT_CACHE_OPTIONS, ...cache },
+        system: { ...systemOptions, ...system },
+        telemetry: { ...DEFAULT_TELEMETRY_OPTIONS, ...telemetry },
+    };
+}
+function buildManagedIdentityConfiguration({ managedIdentityIdParams, system, }) {
+    const managedIdentityId = new ManagedIdentityId(managedIdentityIdParams);
+    const loggerOptions = system?.loggerOptions || DEFAULT_LOGGER_OPTIONS;
+    let networkClient;
+    // use developer provided network client if passed in
+    if (system?.networkClient) {
+        networkClient = system.networkClient;
+        // otherwise, create a new one
+    }
+    else {
+        networkClient = new HttpClient(system?.proxyUrl, system?.customAgentOptions);
+    }
+    // wrap the network client with a retry policy if the developer has not disabled the option to do so
+    if (!system?.disableInternalRetries) {
+        const linearRetryPolicy = new LinearRetryPolicy(MANAGED_IDENTITY_MAX_RETRIES, MANAGED_IDENTITY_RETRY_DELAY, MANAGED_IDENTITY_HTTP_STATUS_CODES_TO_RETRY_ON);
+        networkClient = new HttpClientWithRetries(networkClient, linearRetryPolicy);
+    }
+    return {
+        managedIdentityId: managedIdentityId,
+        system: {
+            loggerOptions,
+            networkClient,
+        },
+    };
+}
 
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class GuidGenerator {
+    /**
+     *
+     * RFC4122: The version 4 UUID is meant for generating UUIDs from truly-random or pseudo-random numbers.
+     * uuidv4 generates guids from cryprtographically-string random
+     */
+    generateGuid() {
+        return uuid.v4();
+    }
+    /**
+     * verifies if a string is  GUID
+     * @param guid
+     */
+    isGuid(guid) {
+        const regexGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return regexGuid.test(guid);
+    }
+}
 
-'use strict';
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class EncodingUtils {
+    /**
+     * 'utf8': Multibyte encoded Unicode characters. Many web pages and other document formats use UTF-8.
+     * 'base64': Base64 encoding.
+     *
+     * @param str text
+     */
+    static base64Encode(str, encoding) {
+        return Buffer.from(str, encoding).toString("base64");
+    }
+    /**
+     * encode a URL
+     * @param str
+     */
+    static base64EncodeUrl(str, encoding) {
+        return EncodingUtils.base64Encode(str, encoding)
+            .replace(/=/g, Constants$1.EMPTY_STRING)
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_");
+    }
+    /**
+     * 'utf8': Multibyte encoded Unicode characters. Many web pages and other document formats use UTF-8.
+     * 'base64': Base64 encoding.
+     *
+     * @param base64Str Base64 encoded text
+     */
+    static base64Decode(base64Str) {
+        return Buffer.from(base64Str, "base64").toString("utf8");
+    }
+    /**
+     * @param base64Str Base64 encoded Url
+     */
+    static base64DecodeUrl(base64Str) {
+        let str = base64Str.replace(/-/g, "+").replace(/_/g, "/");
+        while (str.length % 4) {
+            str += "=";
+        }
+        return EncodingUtils.base64Decode(str);
+    }
+}
 
-var msalCommon = __nccwpck_require__(5405);
-var Deserializer = __nccwpck_require__(6341);
-var Serializer = __nccwpck_require__(5868);
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class HashUtils {
+    /**
+     * generate 'SHA256' hash
+     * @param buffer
+     */
+    sha256(buffer) {
+        return crypto.createHash(Hash.SHA256).update(buffer).digest();
+    }
+}
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * https://tools.ietf.org/html/rfc7636#page-8
+ */
+class PkceGenerator {
+    constructor() {
+        this.hashUtils = new HashUtils();
+    }
+    /**
+     * generates the codeVerfier and the challenge from the codeVerfier
+     * reference: https://tools.ietf.org/html/rfc7636#section-4.1 and https://tools.ietf.org/html/rfc7636#section-4.2
+     */
+    async generatePkceCodes() {
+        const verifier = this.generateCodeVerifier();
+        const challenge = this.generateCodeChallengeFromVerifier(verifier);
+        return { verifier, challenge };
+    }
+    /**
+     * generates the codeVerfier; reference: https://tools.ietf.org/html/rfc7636#section-4.1
+     */
+    generateCodeVerifier() {
+        const charArr = [];
+        const maxNumber = 256 - (256 % CharSet.CV_CHARSET.length);
+        while (charArr.length <= RANDOM_OCTET_SIZE) {
+            const byte = crypto.randomBytes(1)[0];
+            if (byte >= maxNumber) {
+                /*
+                 * Ignore this number to maintain randomness.
+                 * Including it would result in an unequal distribution of characters after doing the modulo
+                 */
+                continue;
+            }
+            const index = byte % CharSet.CV_CHARSET.length;
+            charArr.push(CharSet.CV_CHARSET[index]);
+        }
+        const verifier = charArr.join(Constants$1.EMPTY_STRING);
+        return EncodingUtils.base64EncodeUrl(verifier);
+    }
+    /**
+     * generate the challenge from the codeVerfier; reference: https://tools.ietf.org/html/rfc7636#section-4.2
+     * @param codeVerifier
+     */
+    generateCodeChallengeFromVerifier(codeVerifier) {
+        return EncodingUtils.base64EncodeUrl(this.hashUtils.sha256(codeVerifier).toString("base64"), "base64");
+    }
+}
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * This class implements MSAL node's crypto interface, which allows it to perform base64 encoding and decoding, generating cryptographically random GUIDs and
+ * implementing Proof Key for Code Exchange specs for the OAuth Authorization Code Flow using PKCE (rfc here: https://tools.ietf.org/html/rfc7636).
+ * @public
+ */
+class CryptoProvider {
+    constructor() {
+        // Browser crypto needs to be validated first before any other classes can be set.
+        this.pkceGenerator = new PkceGenerator();
+        this.guidGenerator = new GuidGenerator();
+        this.hashUtils = new HashUtils();
+    }
+    /**
+     * base64 URL safe encoded string
+     */
+    base64UrlEncode() {
+        throw new Error("Method not implemented.");
+    }
+    /**
+     * Stringifies and base64Url encodes input public key
+     * @param inputKid
+     * @returns Base64Url encoded public key
+     */
+    encodeKid() {
+        throw new Error("Method not implemented.");
+    }
+    /**
+     * Creates a new random GUID - used to populate state and nonce.
+     * @returns string (GUID)
+     */
+    createNewGuid() {
+        return this.guidGenerator.generateGuid();
+    }
+    /**
+     * Encodes input string to base64.
+     * @param input - string to be encoded
+     */
+    base64Encode(input) {
+        return EncodingUtils.base64Encode(input);
+    }
+    /**
+     * Decodes input string from base64.
+     * @param input - string to be decoded
+     */
+    base64Decode(input) {
+        return EncodingUtils.base64Decode(input);
+    }
+    /**
+     * Generates PKCE codes used in Authorization Code Flow.
+     */
+    generatePkceCodes() {
+        return this.pkceGenerator.generatePkceCodes();
+    }
+    /**
+     * Generates a keypair, stores it and returns a thumbprint - not yet implemented for node
+     */
+    getPublicKeyThumbprint() {
+        throw new Error("Method not implemented.");
+    }
+    /**
+     * Removes cryptographic keypair from key store matching the keyId passed in
+     * @param kid
+     */
+    removeTokenBindingKey() {
+        throw new Error("Method not implemented.");
+    }
+    /**
+     * Removes all cryptographic keys from Keystore
+     */
+    clearKeystore() {
+        throw new Error("Method not implemented.");
+    }
+    /**
+     * Signs the given object as a jwt payload with private key retrieved by given kid - currently not implemented for node
+     */
+    signJwt() {
+        throw new Error("Method not implemented.");
+    }
+    /**
+     * Returns the SHA-256 hash of an input string
+     */
+    async hashString(plainText) {
+        return EncodingUtils.base64EncodeUrl(this.hashUtils.sha256(plainText).toString("base64"), "base64");
+    }
+}
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -80073,7 +80263,7 @@ var Serializer = __nccwpck_require__(5868);
  * This class implements Storage for node, reading cache from user specified storage location or an  extension library
  * @public
  */
-class NodeStorage extends msalCommon.CacheManager {
+class NodeStorage extends CacheManager {
     constructor(logger, clientId, cryptoImpl, staticAuthorityOptions) {
         super(clientId, cryptoImpl, logger, staticAuthorityOptions);
         this.cache = {};
@@ -80110,19 +80300,19 @@ class NodeStorage extends msalCommon.CacheManager {
             if (typeof value !== "object") {
                 continue;
             }
-            if (value instanceof msalCommon.AccountEntity) {
+            if (value instanceof AccountEntity) {
                 inMemoryCache.accounts[key] = value;
             }
-            else if (msalCommon.CacheHelpers.isIdTokenEntity(value)) {
+            else if (isIdTokenEntity(value)) {
                 inMemoryCache.idTokens[key] = value;
             }
-            else if (msalCommon.CacheHelpers.isAccessTokenEntity(value)) {
+            else if (isAccessTokenEntity(value)) {
                 inMemoryCache.accessTokens[key] = value;
             }
-            else if (msalCommon.CacheHelpers.isRefreshTokenEntity(value)) {
+            else if (isRefreshTokenEntity(value)) {
                 inMemoryCache.refreshTokens[key] = value;
             }
-            else if (msalCommon.CacheHelpers.isAppMetadataEntity(key, value)) {
+            else if (isAppMetadataEntity(key, value)) {
                 inMemoryCache.appMetadata[key] = value;
             }
             else {
@@ -80229,7 +80419,7 @@ class NodeStorage extends msalCommon.CacheManager {
      */
     getAccount(accountKey) {
         const accountEntity = this.getCachedAccountEntity(accountKey);
-        if (accountEntity && msalCommon.AccountEntity.isAccountEntity(accountEntity)) {
+        if (accountEntity && AccountEntity.isAccountEntity(accountEntity)) {
             return this.updateOutdatedCachedAccount(accountKey, accountEntity);
         }
         return null;
@@ -80242,7 +80432,7 @@ class NodeStorage extends msalCommon.CacheManager {
     getCachedAccountEntity(accountKey) {
         const cachedAccount = this.getItem(accountKey);
         return cachedAccount
-            ? Object.assign(new msalCommon.AccountEntity(), this.getItem(accountKey))
+            ? Object.assign(new AccountEntity(), this.getItem(accountKey))
             : null;
     }
     /**
@@ -80259,7 +80449,7 @@ class NodeStorage extends msalCommon.CacheManager {
      */
     getIdTokenCredential(idTokenKey) {
         const idToken = this.getItem(idTokenKey);
-        if (msalCommon.CacheHelpers.isIdTokenEntity(idToken)) {
+        if (isIdTokenEntity(idToken)) {
             return idToken;
         }
         return null;
@@ -80269,7 +80459,7 @@ class NodeStorage extends msalCommon.CacheManager {
      * @param idToken - cache value to be set of type IdTokenEntity
      */
     setIdTokenCredential(idToken) {
-        const idTokenKey = msalCommon.CacheHelpers.generateCredentialKey(idToken);
+        const idTokenKey = generateCredentialKey(idToken);
         this.setItem(idTokenKey, idToken);
     }
     /**
@@ -80278,7 +80468,7 @@ class NodeStorage extends msalCommon.CacheManager {
      */
     getAccessTokenCredential(accessTokenKey) {
         const accessToken = this.getItem(accessTokenKey);
-        if (msalCommon.CacheHelpers.isAccessTokenEntity(accessToken)) {
+        if (isAccessTokenEntity(accessToken)) {
             return accessToken;
         }
         return null;
@@ -80288,7 +80478,7 @@ class NodeStorage extends msalCommon.CacheManager {
      * @param accessToken -  cache value to be set of type AccessTokenEntity
      */
     setAccessTokenCredential(accessToken) {
-        const accessTokenKey = msalCommon.CacheHelpers.generateCredentialKey(accessToken);
+        const accessTokenKey = generateCredentialKey(accessToken);
         this.setItem(accessTokenKey, accessToken);
     }
     /**
@@ -80297,7 +80487,7 @@ class NodeStorage extends msalCommon.CacheManager {
      */
     getRefreshTokenCredential(refreshTokenKey) {
         const refreshToken = this.getItem(refreshTokenKey);
-        if (msalCommon.CacheHelpers.isRefreshTokenEntity(refreshToken)) {
+        if (isRefreshTokenEntity(refreshToken)) {
             return refreshToken;
         }
         return null;
@@ -80307,7 +80497,7 @@ class NodeStorage extends msalCommon.CacheManager {
      * @param refreshToken - cache value to be set of type RefreshTokenEntity
      */
     setRefreshTokenCredential(refreshToken) {
-        const refreshTokenKey = msalCommon.CacheHelpers.generateCredentialKey(refreshToken);
+        const refreshTokenKey = generateCredentialKey(refreshToken);
         this.setItem(refreshTokenKey, refreshToken);
     }
     /**
@@ -80316,7 +80506,7 @@ class NodeStorage extends msalCommon.CacheManager {
      */
     getAppMetadata(appMetadataKey) {
         const appMetadata = this.getItem(appMetadataKey);
-        if (msalCommon.CacheHelpers.isAppMetadataEntity(appMetadataKey, appMetadata)) {
+        if (isAppMetadataEntity(appMetadataKey, appMetadata)) {
             return appMetadata;
         }
         return null;
@@ -80326,7 +80516,7 @@ class NodeStorage extends msalCommon.CacheManager {
      * @param appMetadata - cache value to be set of type AppMetadataEntity
      */
     setAppMetadata(appMetadata) {
-        const appMetadataKey = msalCommon.CacheHelpers.generateAppMetadataKey(appMetadata);
+        const appMetadataKey = generateAppMetadataKey(appMetadata);
         this.setItem(appMetadataKey, appMetadata);
     }
     /**
@@ -80336,7 +80526,7 @@ class NodeStorage extends msalCommon.CacheManager {
     getServerTelemetry(serverTelemetrykey) {
         const serverTelemetryEntity = this.getItem(serverTelemetrykey);
         if (serverTelemetryEntity &&
-            msalCommon.CacheHelpers.isServerTelemetryEntity(serverTelemetrykey, serverTelemetryEntity)) {
+            isServerTelemetryEntity(serverTelemetrykey, serverTelemetryEntity)) {
             return serverTelemetryEntity;
         }
         return null;
@@ -80356,7 +80546,7 @@ class NodeStorage extends msalCommon.CacheManager {
     getAuthorityMetadata(key) {
         const authorityMetadataEntity = this.getItem(key);
         if (authorityMetadataEntity &&
-            msalCommon.CacheHelpers.isAuthorityMetadataEntity(key, authorityMetadataEntity)) {
+            isAuthorityMetadataEntity(key, authorityMetadataEntity)) {
             return authorityMetadataEntity;
         }
         return null;
@@ -80384,7 +80574,7 @@ class NodeStorage extends msalCommon.CacheManager {
     getThrottlingCache(throttlingCacheKey) {
         const throttlingCache = this.getItem(throttlingCacheKey);
         if (throttlingCache &&
-            msalCommon.CacheHelpers.isThrottlingEntity(throttlingCacheKey, throttlingCache)) {
+            isThrottlingEntity(throttlingCacheKey, throttlingCache)) {
             return throttlingCache;
         }
         return null;
@@ -80459,20 +80649,20 @@ class NodeStorage extends msalCommon.CacheManager {
      * @param cache - blob formatted cache (JSON)
      */
     static generateInMemoryCache(cache) {
-        return Deserializer.Deserializer.deserializeAllCache(Deserializer.Deserializer.deserializeJSONBlob(cache));
+        return Deserializer.deserializeAllCache(Deserializer.deserializeJSONBlob(cache));
     }
     /**
      * retrieves the final JSON
      * @param inMemoryCache - itemised cache read from the JSON
      */
     static generateJsonCache(inMemoryCache) {
-        return Serializer.Serializer.serializeAllCache(inMemoryCache);
+        return Serializer.serializeAllCache(inMemoryCache);
     }
     /**
      * Updates a credential's cache key if the current cache key is outdated
      */
     updateCredentialCacheKey(currentCacheKey, credential) {
-        const updatedCacheKey = msalCommon.CacheHelpers.generateCredentialKey(credential);
+        const updatedCacheKey = generateCredentialKey(credential);
         if (currentCacheKey !== updatedCacheKey) {
             const cacheItem = this.getItem(currentCacheKey);
             if (cacheItem) {
@@ -80488,24 +80678,6 @@ class NodeStorage extends msalCommon.CacheManager {
         return currentCacheKey;
     }
 }
-
-exports.NodeStorage = NodeStorage;
-//# sourceMappingURL=NodeStorage.cjs.map
-
-
-/***/ }),
-
-/***/ 6590:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var Deserializer = __nccwpck_require__(6341);
-var Serializer = __nccwpck_require__(5868);
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -80543,7 +80715,7 @@ class TokenCache {
      */
     serialize() {
         this.logger.trace("Serializing in-memory cache");
-        let finalState = Serializer.Serializer.serializeAllCache(this.storage.getInMemoryCache());
+        let finalState = Serializer.serializeAllCache(this.storage.getInMemoryCache());
         // if cacheSnapshot not null or empty, merge
         if (this.cacheSnapshot) {
             this.logger.trace("Reading cache snapshot from disk");
@@ -80564,7 +80736,7 @@ class TokenCache {
         this.cacheSnapshot = cache;
         if (this.cacheSnapshot) {
             this.logger.trace("Reading cache snapshot from disk");
-            const deserializedCache = Deserializer.Deserializer.deserializeAllCache(this.overlayDefaults(JSON.parse(this.cacheSnapshot)));
+            const deserializedCache = Deserializer.deserializeAllCache(this.overlayDefaults(JSON.parse(this.cacheSnapshot)));
             this.storage.setInMemoryCache(deserializedCache);
         }
         else {
@@ -80585,7 +80757,7 @@ class TokenCache {
         let cacheContext;
         try {
             if (this.persistence) {
-                cacheContext = new msalCommon.TokenCacheContext(this, true);
+                cacheContext = new TokenCacheContext(this, true);
                 await this.persistence.beforeCacheAccess(cacheContext);
             }
             return this.storage.getAllAccounts();
@@ -80635,10 +80807,10 @@ class TokenCache {
         let cacheContext;
         try {
             if (this.persistence) {
-                cacheContext = new msalCommon.TokenCacheContext(this, true);
+                cacheContext = new TokenCacheContext(this, true);
                 await this.persistence.beforeCacheAccess(cacheContext);
             }
-            await this.storage.removeAccount(msalCommon.AccountEntity.generateAccountCacheKey(account));
+            await this.storage.removeAccount(AccountEntity.generateAccountCacheKey(account));
         }
         finally {
             if (this.persistence && cacheContext) {
@@ -80773,764 +80945,6 @@ class TokenCache {
     }
 }
 
-exports.TokenCache = TokenCache;
-//# sourceMappingURL=TokenCache.cjs.map
-
-
-/***/ }),
-
-/***/ 9641:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class DistributedCachePlugin {
-    constructor(client, partitionManager) {
-        this.client = client;
-        this.partitionManager = partitionManager;
-    }
-    async beforeCacheAccess(cacheContext) {
-        const partitionKey = await this.partitionManager.getKey();
-        const cacheData = await this.client.get(partitionKey);
-        cacheContext.tokenCache.deserialize(cacheData);
-    }
-    async afterCacheAccess(cacheContext) {
-        if (cacheContext.cacheHasChanged) {
-            const kvStore = cacheContext.tokenCache.getKVStore();
-            const accountEntities = Object.values(kvStore).filter((value) => msalCommon.AccountEntity.isAccountEntity(value));
-            if (accountEntities.length > 0) {
-                const accountEntity = accountEntities[0];
-                const partitionKey = await this.partitionManager.extractKey(accountEntity);
-                await this.client.set(partitionKey, cacheContext.tokenCache.serialize());
-            }
-        }
-    }
-}
-
-exports.DistributedCachePlugin = DistributedCachePlugin;
-//# sourceMappingURL=DistributedCachePlugin.cjs.map
-
-
-/***/ }),
-
-/***/ 6341:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * This class deserializes cache entities read from the file into in memory object types defined internally
- */
-class Deserializer {
-    /**
-     * Parse the JSON blob in memory and deserialize the content
-     * @param cachedJson
-     */
-    static deserializeJSONBlob(jsonFile) {
-        const deserializedCache = !jsonFile ? {} : JSON.parse(jsonFile);
-        return deserializedCache;
-    }
-    /**
-     * Deserializes accounts to AccountEntity objects
-     * @param accounts
-     */
-    static deserializeAccounts(accounts) {
-        const accountObjects = {};
-        if (accounts) {
-            Object.keys(accounts).map(function (key) {
-                const serializedAcc = accounts[key];
-                const mappedAcc = {
-                    homeAccountId: serializedAcc.home_account_id,
-                    environment: serializedAcc.environment,
-                    realm: serializedAcc.realm,
-                    localAccountId: serializedAcc.local_account_id,
-                    username: serializedAcc.username,
-                    authorityType: serializedAcc.authority_type,
-                    name: serializedAcc.name,
-                    clientInfo: serializedAcc.client_info,
-                    lastModificationTime: serializedAcc.last_modification_time,
-                    lastModificationApp: serializedAcc.last_modification_app,
-                    tenantProfiles: serializedAcc.tenantProfiles?.map((serializedTenantProfile) => {
-                        return JSON.parse(serializedTenantProfile);
-                    }),
-                };
-                const account = new msalCommon.AccountEntity();
-                msalCommon.CacheManager.toObject(account, mappedAcc);
-                accountObjects[key] = account;
-            });
-        }
-        return accountObjects;
-    }
-    /**
-     * Deserializes id tokens to IdTokenEntity objects
-     * @param idTokens
-     */
-    static deserializeIdTokens(idTokens) {
-        const idObjects = {};
-        if (idTokens) {
-            Object.keys(idTokens).map(function (key) {
-                const serializedIdT = idTokens[key];
-                const idToken = {
-                    homeAccountId: serializedIdT.home_account_id,
-                    environment: serializedIdT.environment,
-                    credentialType: serializedIdT.credential_type,
-                    clientId: serializedIdT.client_id,
-                    secret: serializedIdT.secret,
-                    realm: serializedIdT.realm,
-                };
-                idObjects[key] = idToken;
-            });
-        }
-        return idObjects;
-    }
-    /**
-     * Deserializes access tokens to AccessTokenEntity objects
-     * @param accessTokens
-     */
-    static deserializeAccessTokens(accessTokens) {
-        const atObjects = {};
-        if (accessTokens) {
-            Object.keys(accessTokens).map(function (key) {
-                const serializedAT = accessTokens[key];
-                const accessToken = {
-                    homeAccountId: serializedAT.home_account_id,
-                    environment: serializedAT.environment,
-                    credentialType: serializedAT.credential_type,
-                    clientId: serializedAT.client_id,
-                    secret: serializedAT.secret,
-                    realm: serializedAT.realm,
-                    target: serializedAT.target,
-                    cachedAt: serializedAT.cached_at,
-                    expiresOn: serializedAT.expires_on,
-                    extendedExpiresOn: serializedAT.extended_expires_on,
-                    refreshOn: serializedAT.refresh_on,
-                    keyId: serializedAT.key_id,
-                    tokenType: serializedAT.token_type,
-                    requestedClaims: serializedAT.requestedClaims,
-                    requestedClaimsHash: serializedAT.requestedClaimsHash,
-                    userAssertionHash: serializedAT.userAssertionHash,
-                };
-                atObjects[key] = accessToken;
-            });
-        }
-        return atObjects;
-    }
-    /**
-     * Deserializes refresh tokens to RefreshTokenEntity objects
-     * @param refreshTokens
-     */
-    static deserializeRefreshTokens(refreshTokens) {
-        const rtObjects = {};
-        if (refreshTokens) {
-            Object.keys(refreshTokens).map(function (key) {
-                const serializedRT = refreshTokens[key];
-                const refreshToken = {
-                    homeAccountId: serializedRT.home_account_id,
-                    environment: serializedRT.environment,
-                    credentialType: serializedRT.credential_type,
-                    clientId: serializedRT.client_id,
-                    secret: serializedRT.secret,
-                    familyId: serializedRT.family_id,
-                    target: serializedRT.target,
-                    realm: serializedRT.realm,
-                };
-                rtObjects[key] = refreshToken;
-            });
-        }
-        return rtObjects;
-    }
-    /**
-     * Deserializes appMetadata to AppMetaData objects
-     * @param appMetadata
-     */
-    static deserializeAppMetadata(appMetadata) {
-        const appMetadataObjects = {};
-        if (appMetadata) {
-            Object.keys(appMetadata).map(function (key) {
-                const serializedAmdt = appMetadata[key];
-                appMetadataObjects[key] = {
-                    clientId: serializedAmdt.client_id,
-                    environment: serializedAmdt.environment,
-                    familyId: serializedAmdt.family_id,
-                };
-            });
-        }
-        return appMetadataObjects;
-    }
-    /**
-     * Deserialize an inMemory Cache
-     * @param jsonCache
-     */
-    static deserializeAllCache(jsonCache) {
-        return {
-            accounts: jsonCache.Account
-                ? this.deserializeAccounts(jsonCache.Account)
-                : {},
-            idTokens: jsonCache.IdToken
-                ? this.deserializeIdTokens(jsonCache.IdToken)
-                : {},
-            accessTokens: jsonCache.AccessToken
-                ? this.deserializeAccessTokens(jsonCache.AccessToken)
-                : {},
-            refreshTokens: jsonCache.RefreshToken
-                ? this.deserializeRefreshTokens(jsonCache.RefreshToken)
-                : {},
-            appMetadata: jsonCache.AppMetadata
-                ? this.deserializeAppMetadata(jsonCache.AppMetadata)
-                : {},
-        };
-    }
-}
-
-exports.Deserializer = Deserializer;
-//# sourceMappingURL=Deserializer.cjs.map
-
-
-/***/ }),
-
-/***/ 5868:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class Serializer {
-    /**
-     * serialize the JSON blob
-     * @param data
-     */
-    static serializeJSONBlob(data) {
-        return JSON.stringify(data);
-    }
-    /**
-     * Serialize Accounts
-     * @param accCache
-     */
-    static serializeAccounts(accCache) {
-        const accounts = {};
-        Object.keys(accCache).map(function (key) {
-            const accountEntity = accCache[key];
-            accounts[key] = {
-                home_account_id: accountEntity.homeAccountId,
-                environment: accountEntity.environment,
-                realm: accountEntity.realm,
-                local_account_id: accountEntity.localAccountId,
-                username: accountEntity.username,
-                authority_type: accountEntity.authorityType,
-                name: accountEntity.name,
-                client_info: accountEntity.clientInfo,
-                last_modification_time: accountEntity.lastModificationTime,
-                last_modification_app: accountEntity.lastModificationApp,
-                tenantProfiles: accountEntity.tenantProfiles?.map((tenantProfile) => {
-                    return JSON.stringify(tenantProfile);
-                }),
-            };
-        });
-        return accounts;
-    }
-    /**
-     * Serialize IdTokens
-     * @param idTCache
-     */
-    static serializeIdTokens(idTCache) {
-        const idTokens = {};
-        Object.keys(idTCache).map(function (key) {
-            const idTEntity = idTCache[key];
-            idTokens[key] = {
-                home_account_id: idTEntity.homeAccountId,
-                environment: idTEntity.environment,
-                credential_type: idTEntity.credentialType,
-                client_id: idTEntity.clientId,
-                secret: idTEntity.secret,
-                realm: idTEntity.realm,
-            };
-        });
-        return idTokens;
-    }
-    /**
-     * Serializes AccessTokens
-     * @param atCache
-     */
-    static serializeAccessTokens(atCache) {
-        const accessTokens = {};
-        Object.keys(atCache).map(function (key) {
-            const atEntity = atCache[key];
-            accessTokens[key] = {
-                home_account_id: atEntity.homeAccountId,
-                environment: atEntity.environment,
-                credential_type: atEntity.credentialType,
-                client_id: atEntity.clientId,
-                secret: atEntity.secret,
-                realm: atEntity.realm,
-                target: atEntity.target,
-                cached_at: atEntity.cachedAt,
-                expires_on: atEntity.expiresOn,
-                extended_expires_on: atEntity.extendedExpiresOn,
-                refresh_on: atEntity.refreshOn,
-                key_id: atEntity.keyId,
-                token_type: atEntity.tokenType,
-                requestedClaims: atEntity.requestedClaims,
-                requestedClaimsHash: atEntity.requestedClaimsHash,
-                userAssertionHash: atEntity.userAssertionHash,
-            };
-        });
-        return accessTokens;
-    }
-    /**
-     * Serialize refreshTokens
-     * @param rtCache
-     */
-    static serializeRefreshTokens(rtCache) {
-        const refreshTokens = {};
-        Object.keys(rtCache).map(function (key) {
-            const rtEntity = rtCache[key];
-            refreshTokens[key] = {
-                home_account_id: rtEntity.homeAccountId,
-                environment: rtEntity.environment,
-                credential_type: rtEntity.credentialType,
-                client_id: rtEntity.clientId,
-                secret: rtEntity.secret,
-                family_id: rtEntity.familyId,
-                target: rtEntity.target,
-                realm: rtEntity.realm,
-            };
-        });
-        return refreshTokens;
-    }
-    /**
-     * Serialize amdtCache
-     * @param amdtCache
-     */
-    static serializeAppMetadata(amdtCache) {
-        const appMetadata = {};
-        Object.keys(amdtCache).map(function (key) {
-            const amdtEntity = amdtCache[key];
-            appMetadata[key] = {
-                client_id: amdtEntity.clientId,
-                environment: amdtEntity.environment,
-                family_id: amdtEntity.familyId,
-            };
-        });
-        return appMetadata;
-    }
-    /**
-     * Serialize the cache
-     * @param jsonContent
-     */
-    static serializeAllCache(inMemCache) {
-        return {
-            Account: this.serializeAccounts(inMemCache.accounts),
-            IdToken: this.serializeIdTokens(inMemCache.idTokens),
-            AccessToken: this.serializeAccessTokens(inMemCache.accessTokens),
-            RefreshToken: this.serializeRefreshTokens(inMemCache.refreshTokens),
-            AppMetadata: this.serializeAppMetadata(inMemCache.appMetadata),
-        };
-    }
-}
-
-exports.Serializer = Serializer;
-//# sourceMappingURL=Serializer.cjs.map
-
-
-/***/ }),
-
-/***/ 6801:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var Configuration = __nccwpck_require__(677);
-var CryptoProvider = __nccwpck_require__(6174);
-var NodeStorage = __nccwpck_require__(1064);
-var Constants = __nccwpck_require__(7753);
-var TokenCache = __nccwpck_require__(6590);
-var ClientAssertion = __nccwpck_require__(879);
-var packageMetadata = __nccwpck_require__(6507);
-var NodeAuthError = __nccwpck_require__(7303);
-var UsernamePasswordClient = __nccwpck_require__(9250);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Base abstract class for all ClientApplications - public and confidential
- * @public
- */
-class ClientApplication {
-    /**
-     * Constructor for the ClientApplication
-     */
-    constructor(configuration) {
-        this.config = Configuration.buildAppConfiguration(configuration);
-        this.cryptoProvider = new CryptoProvider.CryptoProvider();
-        this.logger = new msalCommon.Logger(this.config.system.loggerOptions, packageMetadata.name, packageMetadata.version);
-        this.storage = new NodeStorage.NodeStorage(this.logger, this.config.auth.clientId, this.cryptoProvider, msalCommon.buildStaticAuthorityOptions(this.config.auth));
-        this.tokenCache = new TokenCache.TokenCache(this.storage, this.logger, this.config.cache.cachePlugin);
-    }
-    /**
-     * Creates the URL of the authorization request, letting the user input credentials and consent to the
-     * application. The URL targets the /authorize endpoint of the authority configured in the
-     * application object.
-     *
-     * Once the user inputs their credentials and consents, the authority will send a response to the redirect URI
-     * sent in the request and should contain an authorization code, which can then be used to acquire tokens via
-     * `acquireTokenByCode(AuthorizationCodeRequest)`.
-     */
-    async getAuthCodeUrl(request) {
-        this.logger.info("getAuthCodeUrl called", request.correlationId);
-        const validRequest = {
-            ...request,
-            ...(await this.initializeBaseRequest(request)),
-            responseMode: request.responseMode || msalCommon.ResponseMode.QUERY,
-            authenticationScheme: msalCommon.AuthenticationScheme.BEARER,
-        };
-        const authClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, undefined, undefined, request.azureCloudOptions);
-        const authorizationCodeClient = new msalCommon.AuthorizationCodeClient(authClientConfig);
-        this.logger.verbose("Auth code client created", validRequest.correlationId);
-        return authorizationCodeClient.getAuthCodeUrl(validRequest);
-    }
-    /**
-     * Acquires a token by exchanging the Authorization Code received from the first step of OAuth2.0
-     * Authorization Code flow.
-     *
-     * `getAuthCodeUrl(AuthorizationCodeUrlRequest)` can be used to create the URL for the first step of OAuth2.0
-     * Authorization Code flow. Ensure that values for redirectUri and scopes in AuthorizationCodeUrlRequest and
-     * AuthorizationCodeRequest are the same.
-     */
-    async acquireTokenByCode(request, authCodePayLoad) {
-        this.logger.info("acquireTokenByCode called");
-        if (request.state && authCodePayLoad) {
-            this.logger.info("acquireTokenByCode - validating state");
-            this.validateState(request.state, authCodePayLoad.state || "");
-            // eslint-disable-next-line no-param-reassign
-            authCodePayLoad = { ...authCodePayLoad, state: "" };
-        }
-        const validRequest = {
-            ...request,
-            ...(await this.initializeBaseRequest(request)),
-            authenticationScheme: msalCommon.AuthenticationScheme.BEARER,
-        };
-        const serverTelemetryManager = this.initializeServerTelemetryManager(Constants.ApiId.acquireTokenByCode, validRequest.correlationId);
-        try {
-            const authClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
-            const authorizationCodeClient = new msalCommon.AuthorizationCodeClient(authClientConfig);
-            this.logger.verbose("Auth code client created", validRequest.correlationId);
-            return await authorizationCodeClient.acquireToken(validRequest, authCodePayLoad);
-        }
-        catch (e) {
-            if (e instanceof msalCommon.AuthError) {
-                e.setCorrelationId(validRequest.correlationId);
-            }
-            serverTelemetryManager.cacheFailedRequest(e);
-            throw e;
-        }
-    }
-    /**
-     * Acquires a token by exchanging the refresh token provided for a new set of tokens.
-     *
-     * This API is provided only for scenarios where you would like to migrate from ADAL to MSAL. Otherwise, it is
-     * recommended that you use `acquireTokenSilent()` for silent scenarios. When using `acquireTokenSilent()`, MSAL will
-     * handle the caching and refreshing of tokens automatically.
-     */
-    async acquireTokenByRefreshToken(request) {
-        this.logger.info("acquireTokenByRefreshToken called", request.correlationId);
-        const validRequest = {
-            ...request,
-            ...(await this.initializeBaseRequest(request)),
-            authenticationScheme: msalCommon.AuthenticationScheme.BEARER,
-        };
-        const serverTelemetryManager = this.initializeServerTelemetryManager(Constants.ApiId.acquireTokenByRefreshToken, validRequest.correlationId);
-        try {
-            const refreshTokenClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
-            const refreshTokenClient = new msalCommon.RefreshTokenClient(refreshTokenClientConfig);
-            this.logger.verbose("Refresh token client created", validRequest.correlationId);
-            return await refreshTokenClient.acquireToken(validRequest);
-        }
-        catch (e) {
-            if (e instanceof msalCommon.AuthError) {
-                e.setCorrelationId(validRequest.correlationId);
-            }
-            serverTelemetryManager.cacheFailedRequest(e);
-            throw e;
-        }
-    }
-    /**
-     * Acquires a token silently when a user specifies the account the token is requested for.
-     *
-     * This API expects the user to provide an account object and looks into the cache to retrieve the token if present.
-     * There is also an optional "forceRefresh" boolean the user can send to bypass the cache for access_token and id_token.
-     * In case the refresh_token is expired or not found, an error is thrown
-     * and the guidance is for the user to call any interactive token acquisition API (eg: `acquireTokenByCode()`).
-     */
-    async acquireTokenSilent(request) {
-        const validRequest = {
-            ...request,
-            ...(await this.initializeBaseRequest(request)),
-            forceRefresh: request.forceRefresh || false,
-        };
-        const serverTelemetryManager = this.initializeServerTelemetryManager(Constants.ApiId.acquireTokenSilent, validRequest.correlationId, validRequest.forceRefresh);
-        try {
-            const silentFlowClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
-            const silentFlowClient = new msalCommon.SilentFlowClient(silentFlowClientConfig);
-            this.logger.verbose("Silent flow client created", validRequest.correlationId);
-            return await silentFlowClient.acquireToken(validRequest);
-        }
-        catch (e) {
-            if (e instanceof msalCommon.AuthError) {
-                e.setCorrelationId(validRequest.correlationId);
-            }
-            serverTelemetryManager.cacheFailedRequest(e);
-            throw e;
-        }
-    }
-    /**
-     * Acquires tokens with password grant by exchanging client applications username and password for credentials
-     *
-     * The latest OAuth 2.0 Security Best Current Practice disallows the password grant entirely.
-     * More details on this recommendation at https://tools.ietf.org/html/draft-ietf-oauth-security-topics-13#section-3.4
-     * Microsoft's documentation and recommendations are at:
-     * https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-authentication-flows#usernamepassword
-     *
-     * @param request - UsenamePasswordRequest
-     */
-    async acquireTokenByUsernamePassword(request) {
-        this.logger.info("acquireTokenByUsernamePassword called", request.correlationId);
-        const validRequest = {
-            ...request,
-            ...(await this.initializeBaseRequest(request)),
-        };
-        const serverTelemetryManager = this.initializeServerTelemetryManager(Constants.ApiId.acquireTokenByUsernamePassword, validRequest.correlationId);
-        try {
-            const usernamePasswordClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
-            const usernamePasswordClient = new UsernamePasswordClient.UsernamePasswordClient(usernamePasswordClientConfig);
-            this.logger.verbose("Username password client created", validRequest.correlationId);
-            return await usernamePasswordClient.acquireToken(validRequest);
-        }
-        catch (e) {
-            if (e instanceof msalCommon.AuthError) {
-                e.setCorrelationId(validRequest.correlationId);
-            }
-            serverTelemetryManager.cacheFailedRequest(e);
-            throw e;
-        }
-    }
-    /**
-     * Gets the token cache for the application.
-     */
-    getTokenCache() {
-        this.logger.info("getTokenCache called");
-        return this.tokenCache;
-    }
-    /**
-     * Validates OIDC state by comparing the user cached state with the state received from the server.
-     *
-     * This API is provided for scenarios where you would use OAuth2.0 state parameter to mitigate against
-     * CSRF attacks.
-     * For more information about state, visit https://datatracker.ietf.org/doc/html/rfc6819#section-3.6.
-     * @param state
-     * @param cachedState
-     */
-    validateState(state, cachedState) {
-        if (!state) {
-            throw NodeAuthError.NodeAuthError.createStateNotFoundError();
-        }
-        if (state !== cachedState) {
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.stateMismatch);
-        }
-    }
-    /**
-     * Returns the logger instance
-     */
-    getLogger() {
-        return this.logger;
-    }
-    /**
-     * Replaces the default logger set in configurations with new Logger with new configurations
-     * @param logger - Logger instance
-     */
-    setLogger(logger) {
-        this.logger = logger;
-    }
-    /**
-     * Builds the common configuration to be passed to the common component based on the platform configurarion
-     * @param authority - user passed authority in configuration
-     * @param serverTelemetryManager - initializes servertelemetry if passed
-     */
-    async buildOauthClientConfiguration(authority, requestCorrelationId, serverTelemetryManager, azureRegionConfiguration, azureCloudOptions) {
-        this.logger.verbose("buildOauthClientConfiguration called", requestCorrelationId);
-        // precedence - azureCloudInstance + tenant >> authority and request  >> config
-        const userAzureCloudOptions = azureCloudOptions
-            ? azureCloudOptions
-            : this.config.auth.azureCloudOptions;
-        // using null assertion operator as we ensure that all config values have default values in buildConfiguration()
-        const discoveredAuthority = await this.createAuthority(authority, requestCorrelationId, azureRegionConfiguration, userAzureCloudOptions);
-        this.logger.info(`Building oauth client configuration with the following authority: ${discoveredAuthority.tokenEndpoint}.`, requestCorrelationId);
-        serverTelemetryManager?.updateRegionDiscoveryMetadata(discoveredAuthority.regionDiscoveryMetadata);
-        const clientConfiguration = {
-            authOptions: {
-                clientId: this.config.auth.clientId,
-                authority: discoveredAuthority,
-                clientCapabilities: this.config.auth.clientCapabilities,
-            },
-            loggerOptions: {
-                logLevel: this.config.system.loggerOptions.logLevel,
-                loggerCallback: this.config.system.loggerOptions.loggerCallback,
-                piiLoggingEnabled: this.config.system.loggerOptions.piiLoggingEnabled,
-                correlationId: requestCorrelationId,
-            },
-            cacheOptions: {
-                claimsBasedCachingEnabled: this.config.cache.claimsBasedCachingEnabled,
-            },
-            cryptoInterface: this.cryptoProvider,
-            networkInterface: this.config.system.networkClient,
-            storageInterface: this.storage,
-            serverTelemetryManager: serverTelemetryManager,
-            clientCredentials: {
-                clientSecret: this.clientSecret,
-                clientAssertion: await this.getClientAssertion(discoveredAuthority),
-            },
-            libraryInfo: {
-                sku: Constants.Constants.MSAL_SKU,
-                version: packageMetadata.version,
-                cpu: process.arch || msalCommon.Constants.EMPTY_STRING,
-                os: process.platform || msalCommon.Constants.EMPTY_STRING,
-            },
-            telemetry: this.config.telemetry,
-            persistencePlugin: this.config.cache.cachePlugin,
-            serializableCache: this.tokenCache,
-        };
-        return clientConfiguration;
-    }
-    async getClientAssertion(authority) {
-        if (this.developerProvidedClientAssertion) {
-            this.clientAssertion = ClientAssertion.ClientAssertion.fromAssertion(await msalCommon.getClientAssertion(this.developerProvidedClientAssertion, this.config.auth.clientId, authority.tokenEndpoint));
-        }
-        return (this.clientAssertion && {
-            assertion: this.clientAssertion.getJwt(this.cryptoProvider, this.config.auth.clientId, authority.tokenEndpoint),
-            assertionType: Constants.Constants.JWT_BEARER_ASSERTION_TYPE,
-        });
-    }
-    /**
-     * Generates a request with the default scopes & generates a correlationId.
-     * @param authRequest - BaseAuthRequest for initialization
-     */
-    async initializeBaseRequest(authRequest) {
-        this.logger.verbose("initializeRequestScopes called", authRequest.correlationId);
-        // Default authenticationScheme to Bearer, log that POP isn't supported yet
-        if (authRequest.authenticationScheme &&
-            authRequest.authenticationScheme === msalCommon.AuthenticationScheme.POP) {
-            this.logger.verbose("Authentication Scheme 'pop' is not supported yet, setting Authentication Scheme to 'Bearer' for request", authRequest.correlationId);
-        }
-        authRequest.authenticationScheme = msalCommon.AuthenticationScheme.BEARER;
-        // Set requested claims hash if claims-based caching is enabled and claims were requested
-        if (this.config.cache.claimsBasedCachingEnabled &&
-            authRequest.claims &&
-            // Checks for empty stringified object "{}" which doesn't qualify as requested claims
-            !msalCommon.StringUtils.isEmptyObj(authRequest.claims)) {
-            authRequest.requestedClaimsHash =
-                await this.cryptoProvider.hashString(authRequest.claims);
-        }
-        return {
-            ...authRequest,
-            scopes: [
-                ...((authRequest && authRequest.scopes) || []),
-                ...msalCommon.OIDC_DEFAULT_SCOPES,
-            ],
-            correlationId: (authRequest && authRequest.correlationId) ||
-                this.cryptoProvider.createNewGuid(),
-            authority: authRequest.authority || this.config.auth.authority,
-        };
-    }
-    /**
-     * Initializes the server telemetry payload
-     * @param apiId - Id for a specific request
-     * @param correlationId - GUID
-     * @param forceRefresh - boolean to indicate network call
-     */
-    initializeServerTelemetryManager(apiId, correlationId, forceRefresh) {
-        const telemetryPayload = {
-            clientId: this.config.auth.clientId,
-            correlationId: correlationId,
-            apiId: apiId,
-            forceRefresh: forceRefresh || false,
-        };
-        return new msalCommon.ServerTelemetryManager(telemetryPayload, this.storage);
-    }
-    /**
-     * Create authority instance. If authority not passed in request, default to authority set on the application
-     * object. If no authority set in application object, then default to common authority.
-     * @param authorityString - authority from user configuration
-     */
-    async createAuthority(authorityString, requestCorrelationId, azureRegionConfiguration, azureCloudOptions) {
-        this.logger.verbose("createAuthority called", requestCorrelationId);
-        // build authority string based on auth params - azureCloudInstance is prioritized if provided
-        const authorityUrl = msalCommon.Authority.generateAuthority(authorityString, azureCloudOptions);
-        const authorityOptions = {
-            protocolMode: this.config.auth.protocolMode,
-            knownAuthorities: this.config.auth.knownAuthorities,
-            cloudDiscoveryMetadata: this.config.auth.cloudDiscoveryMetadata,
-            authorityMetadata: this.config.auth.authorityMetadata,
-            azureRegionConfiguration,
-            skipAuthorityMetadataCache: this.config.auth.skipAuthorityMetadataCache,
-        };
-        return msalCommon.AuthorityFactory.createDiscoveredInstance(authorityUrl, this.config.system.networkClient, this.storage, authorityOptions, this.logger, requestCorrelationId);
-    }
-    /**
-     * Clear the cache
-     */
-    clearCache() {
-        void this.storage.clear();
-    }
-}
-
-exports.ClientApplication = ClientApplication;
-//# sourceMappingURL=ClientApplication.cjs.map
-
-
-/***/ }),
-
-/***/ 879:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var jwt = __nccwpck_require__(9653);
-var msalCommon = __nccwpck_require__(5405);
-var EncodingUtils = __nccwpck_require__(2092);
-var Constants = __nccwpck_require__(7753);
-
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
@@ -81608,7 +81022,7 @@ class ClientAssertion {
         if (this.jwt) {
             return this.jwt;
         }
-        throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.invalidAssertion);
+        throw createClientAuthError(invalidAssertion);
     }
     /**
      * JWT format and required claims specified: https://tools.ietf.org/html/rfc7523#section-3
@@ -81616,32 +81030,32 @@ class ClientAssertion {
     createJwt(cryptoProvider, issuer, jwtAudience) {
         this.issuer = issuer;
         this.jwtAudience = jwtAudience;
-        const issuedAt = msalCommon.TimeUtils.nowSeconds();
+        const issuedAt = nowSeconds();
         this.expirationTime = issuedAt + 600;
         const algorithm = this.useSha256
-            ? Constants.JwtConstants.PSS_256
-            : Constants.JwtConstants.RSA_256;
+            ? JwtConstants.PSS_256
+            : JwtConstants.RSA_256;
         const header = {
             alg: algorithm,
         };
         const thumbprintHeader = this.useSha256
-            ? Constants.JwtConstants.X5T_256
-            : Constants.JwtConstants.X5T;
+            ? JwtConstants.X5T_256
+            : JwtConstants.X5T;
         Object.assign(header, {
-            [thumbprintHeader]: EncodingUtils.EncodingUtils.base64EncodeUrl(this.thumbprint, "hex"),
+            [thumbprintHeader]: EncodingUtils.base64EncodeUrl(this.thumbprint, "hex"),
         });
         if (this.publicCertificate) {
             Object.assign(header, {
-                [Constants.JwtConstants.X5C]: this.publicCertificate,
+                [JwtConstants.X5C]: this.publicCertificate,
             });
         }
         const payload = {
-            [Constants.JwtConstants.AUDIENCE]: this.jwtAudience,
-            [Constants.JwtConstants.EXPIRATION_TIME]: this.expirationTime,
-            [Constants.JwtConstants.ISSUER]: this.issuer,
-            [Constants.JwtConstants.SUBJECT]: this.issuer,
-            [Constants.JwtConstants.NOT_BEFORE]: issuedAt,
-            [Constants.JwtConstants.JWT_ID]: cryptoProvider.createNewGuid(),
+            [JwtConstants.AUDIENCE]: this.jwtAudience,
+            [JwtConstants.EXPIRATION_TIME]: this.expirationTime,
+            [JwtConstants.ISSUER]: this.issuer,
+            [JwtConstants.SUBJECT]: this.issuer,
+            [JwtConstants.NOT_BEFORE]: issuedAt,
+            [JwtConstants.JWT_ID]: cryptoProvider.createNewGuid(),
         };
         this.jwt = jwt.sign(payload, this.privateKey, { header });
         return this.jwt;
@@ -81650,7 +81064,7 @@ class ClientAssertion {
      * Utility API to check expiration
      */
     isExpired() {
-        return this.expirationTime < msalCommon.TimeUtils.nowSeconds();
+        return this.expirationTime < nowSeconds();
     }
     /**
      * Extracts the raw certs from a given certificate string and returns them in an array.
@@ -81669,195 +81083,82 @@ class ClientAssertion {
         let matches;
         while ((matches = regexToFindCerts.exec(publicCertificate)) !== null) {
             // matches[1] represents the first parens capture group in the regex.
-            certs.push(matches[1].replace(/\r*\n/g, msalCommon.Constants.EMPTY_STRING));
+            certs.push(matches[1].replace(/\r*\n/g, Constants$1.EMPTY_STRING));
         }
         return certs;
     }
 }
 
-exports.ClientAssertion = ClientAssertion;
-//# sourceMappingURL=ClientAssertion.cjs.map
-
-
-/***/ }),
-
-/***/ 6091:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
+/* eslint-disable header/header */
+const name = "@azure/msal-node";
+const version = "2.15.0";
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
 /**
- * OAuth2.0 client credential grant
+ * Oauth2.0 Password grant client
+ * Note: We are only supporting public clients for password grant and for purely testing purposes
  */
-class ClientCredentialClient extends msalCommon.BaseClient {
-    constructor(configuration, appTokenProvider) {
+class UsernamePasswordClient extends BaseClient {
+    constructor(configuration) {
         super(configuration);
-        this.appTokenProvider = appTokenProvider;
     }
     /**
-     * Public API to acquire a token with ClientCredential Flow for Confidential clients
+     * API to acquire a token by passing the username and password to the service in exchage of credentials
+     * password_grant
      * @param request
      */
     async acquireToken(request) {
-        if (request.skipCache || request.claims) {
-            return this.executeTokenRequest(request, this.authority);
-        }
-        const [cachedAuthenticationResult, lastCacheOutcome] = await this.getCachedAuthenticationResult(request, this.config, this.cryptoUtils, this.authority, this.cacheManager, this.serverTelemetryManager);
-        if (cachedAuthenticationResult) {
-            // if the token is not expired but must be refreshed; get a new one in the background
-            if (lastCacheOutcome === msalCommon.CacheOutcome.PROACTIVELY_REFRESHED) {
-                this.logger.info("ClientCredentialClient:getCachedAuthenticationResult - Cached access token's refreshOn property has been exceeded'. It's not expired, but must be refreshed.");
-                // refresh the access token in the background
-                const refreshAccessToken = true;
-                await this.executeTokenRequest(request, this.authority, refreshAccessToken);
-            }
-            // return the cached token
-            return cachedAuthenticationResult;
-        }
-        else {
-            return this.executeTokenRequest(request, this.authority);
-        }
-    }
-    /**
-     * looks up cache if the tokens are cached already
-     */
-    async getCachedAuthenticationResult(request, config, cryptoUtils, authority, cacheManager, serverTelemetryManager) {
-        const clientConfiguration = config;
-        const managedIdentityConfiguration = config;
-        let lastCacheOutcome = msalCommon.CacheOutcome.NOT_APPLICABLE;
-        // read the user-supplied cache into memory, if applicable
-        let cacheContext;
-        if (clientConfiguration.serializableCache &&
-            clientConfiguration.persistencePlugin) {
-            cacheContext = new msalCommon.TokenCacheContext(clientConfiguration.serializableCache, false);
-            await clientConfiguration.persistencePlugin.beforeCacheAccess(cacheContext);
-        }
-        const cachedAccessToken = this.readAccessTokenFromCache(authority, managedIdentityConfiguration.managedIdentityId?.id ||
-            clientConfiguration.authOptions.clientId, new msalCommon.ScopeSet(request.scopes || []), cacheManager);
-        if (clientConfiguration.serializableCache &&
-            clientConfiguration.persistencePlugin &&
-            cacheContext) {
-            await clientConfiguration.persistencePlugin.afterCacheAccess(cacheContext);
-        }
-        // must refresh due to non-existent access_token
-        if (!cachedAccessToken) {
-            serverTelemetryManager?.setCacheOutcome(msalCommon.CacheOutcome.NO_CACHED_ACCESS_TOKEN);
-            return [null, msalCommon.CacheOutcome.NO_CACHED_ACCESS_TOKEN];
-        }
-        // must refresh due to the expires_in value
-        if (msalCommon.TimeUtils.isTokenExpired(cachedAccessToken.expiresOn, clientConfiguration.systemOptions?.tokenRenewalOffsetSeconds ||
-            msalCommon.DEFAULT_TOKEN_RENEWAL_OFFSET_SEC)) {
-            serverTelemetryManager?.setCacheOutcome(msalCommon.CacheOutcome.CACHED_ACCESS_TOKEN_EXPIRED);
-            return [null, msalCommon.CacheOutcome.CACHED_ACCESS_TOKEN_EXPIRED];
-        }
-        // must refresh (in the background) due to the refresh_in value
-        if (cachedAccessToken.refreshOn &&
-            msalCommon.TimeUtils.isTokenExpired(cachedAccessToken.refreshOn.toString(), 0)) {
-            lastCacheOutcome = msalCommon.CacheOutcome.PROACTIVELY_REFRESHED;
-            serverTelemetryManager?.setCacheOutcome(msalCommon.CacheOutcome.PROACTIVELY_REFRESHED);
-        }
-        return [
-            await msalCommon.ResponseHandler.generateAuthenticationResult(cryptoUtils, authority, {
-                account: null,
-                idToken: null,
-                accessToken: cachedAccessToken,
-                refreshToken: null,
-                appMetadata: null,
-            }, true, request),
-            lastCacheOutcome,
-        ];
-    }
-    /**
-     * Reads access token from the cache
-     */
-    readAccessTokenFromCache(authority, id, scopeSet, cacheManager) {
-        const accessTokenFilter = {
-            homeAccountId: msalCommon.Constants.EMPTY_STRING,
-            environment: authority.canonicalAuthorityUrlComponents.HostNameAndPort,
-            credentialType: msalCommon.CredentialType.ACCESS_TOKEN,
-            clientId: id,
-            realm: authority.tenant,
-            target: msalCommon.ScopeSet.createSearchScopes(scopeSet.asArray()),
-        };
-        const accessTokens = cacheManager.getAccessTokensByFilter(accessTokenFilter);
-        if (accessTokens.length < 1) {
-            return null;
-        }
-        else if (accessTokens.length > 1) {
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.multipleMatchingTokens);
-        }
-        return accessTokens[0];
-    }
-    /**
-     * Makes a network call to request the token from the service
-     * @param request
-     * @param authority
-     */
-    async executeTokenRequest(request, authority, refreshAccessToken) {
-        let serverTokenResponse;
-        let reqTimestamp;
-        if (this.appTokenProvider) {
-            this.logger.info("Using appTokenProvider extensibility.");
-            const appTokenPropviderParameters = {
-                correlationId: request.correlationId,
-                tenantId: this.config.authOptions.authority.tenant,
-                scopes: request.scopes,
-                claims: request.claims,
-            };
-            reqTimestamp = msalCommon.TimeUtils.nowSeconds();
-            const appTokenProviderResult = await this.appTokenProvider(appTokenPropviderParameters);
-            serverTokenResponse = {
-                access_token: appTokenProviderResult.accessToken,
-                expires_in: appTokenProviderResult.expiresInSeconds,
-                refresh_in: appTokenProviderResult.refreshInSeconds,
-                token_type: msalCommon.AuthenticationScheme.BEARER,
-            };
-        }
-        else {
-            const queryParametersString = this.createTokenQueryParameters(request);
-            const endpoint = msalCommon.UrlString.appendQueryString(authority.tokenEndpoint, queryParametersString);
-            const requestBody = await this.createTokenRequestBody(request);
-            const headers = this.createTokenRequestHeaders();
-            const thumbprint = {
-                clientId: this.config.authOptions.clientId,
-                authority: request.authority,
-                scopes: request.scopes,
-                claims: request.claims,
-                authenticationScheme: request.authenticationScheme,
-                resourceRequestMethod: request.resourceRequestMethod,
-                resourceRequestUri: request.resourceRequestUri,
-                shrClaims: request.shrClaims,
-                sshKid: request.sshKid,
-            };
-            this.logger.info("Sending token request to endpoint: " + authority.tokenEndpoint);
-            reqTimestamp = msalCommon.TimeUtils.nowSeconds();
-            const response = await this.executePostToTokenEndpoint(endpoint, requestBody, headers, thumbprint, request.correlationId);
-            serverTokenResponse = response.body;
-            serverTokenResponse.status = response.status;
-        }
-        const responseHandler = new msalCommon.ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
-        responseHandler.validateTokenResponse(serverTokenResponse, refreshAccessToken);
-        const tokenResponse = await responseHandler.handleServerTokenResponse(serverTokenResponse, this.authority, reqTimestamp, request);
+        this.logger.info("in acquireToken call in username-password client");
+        const reqTimestamp = nowSeconds();
+        const response = await this.executeTokenRequest(this.authority, request);
+        const responseHandler = new ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
+        // Validate response. This function throws a server error if an error is returned by the server.
+        responseHandler.validateTokenResponse(response.body);
+        const tokenResponse = responseHandler.handleServerTokenResponse(response.body, this.authority, reqTimestamp, request);
         return tokenResponse;
     }
     /**
-     * generate the request to the server in the acceptable format
+     * Executes POST request to token endpoint
+     * @param authority
+     * @param request
+     */
+    async executeTokenRequest(authority, request) {
+        const queryParametersString = this.createTokenQueryParameters(request);
+        const endpoint = UrlString.appendQueryString(authority.tokenEndpoint, queryParametersString);
+        const requestBody = await this.createTokenRequestBody(request);
+        const headers = this.createTokenRequestHeaders({
+            credential: request.username,
+            type: CcsCredentialType.UPN,
+        });
+        const thumbprint = {
+            clientId: this.config.authOptions.clientId,
+            authority: authority.canonicalAuthority,
+            scopes: request.scopes,
+            claims: request.claims,
+            authenticationScheme: request.authenticationScheme,
+            resourceRequestMethod: request.resourceRequestMethod,
+            resourceRequestUri: request.resourceRequestUri,
+            shrClaims: request.shrClaims,
+            sshKid: request.sshKid,
+        };
+        return this.executePostToTokenEndpoint(endpoint, requestBody, headers, thumbprint, request.correlationId);
+    }
+    /**
+     * Generates a map for all the params to be sent to the service
      * @param request
      */
     async createTokenRequestBody(request) {
-        const parameterBuilder = new msalCommon.RequestParameterBuilder();
+        const parameterBuilder = new RequestParameterBuilder();
         parameterBuilder.addClientId(this.config.authOptions.clientId);
-        parameterBuilder.addScopes(request.scopes, false);
-        parameterBuilder.addGrantType(msalCommon.GrantType.CLIENT_CREDENTIALS_GRANT);
+        parameterBuilder.addUsername(request.username);
+        parameterBuilder.addPassword(request.password);
+        parameterBuilder.addScopes(request.scopes);
+        parameterBuilder.addResponseTypeForTokenAndIdToken();
+        parameterBuilder.addGrantType(GrantType.RESOURCE_OWNER_PASSWORD_GRANT);
+        parameterBuilder.addClientInfo();
         parameterBuilder.addLibraryInfo(this.config.libraryInfo);
         parameterBuilder.addApplicationTelemetry(this.config.telemetry.application);
         parameterBuilder.addThrottling();
@@ -81870,135 +81171,95 @@ class ClientCredentialClient extends msalCommon.BaseClient {
         if (this.config.clientCredentials.clientSecret) {
             parameterBuilder.addClientSecret(this.config.clientCredentials.clientSecret);
         }
-        // Use clientAssertion from request, fallback to client assertion in base configuration
-        const clientAssertion = request.clientAssertion ||
-            this.config.clientCredentials.clientAssertion;
+        const clientAssertion = this.config.clientCredentials.clientAssertion;
         if (clientAssertion) {
-            parameterBuilder.addClientAssertion(await msalCommon.getClientAssertion(clientAssertion.assertion, this.config.authOptions.clientId, request.resourceRequestUri));
+            parameterBuilder.addClientAssertion(await getClientAssertion(clientAssertion.assertion, this.config.authOptions.clientId, request.resourceRequestUri));
             parameterBuilder.addClientAssertionType(clientAssertion.assertionType);
         }
-        if (!msalCommon.StringUtils.isEmptyObj(request.claims) ||
+        if (!StringUtils.isEmptyObj(request.claims) ||
             (this.config.authOptions.clientCapabilities &&
                 this.config.authOptions.clientCapabilities.length > 0)) {
             parameterBuilder.addClaims(request.claims, this.config.authOptions.clientCapabilities);
+        }
+        if (this.config.systemOptions.preventCorsPreflight &&
+            request.username) {
+            parameterBuilder.addCcsUpn(request.username);
         }
         return parameterBuilder.createQueryString();
     }
 }
 
-exports.ClientCredentialClient = ClientCredentialClient;
-//# sourceMappingURL=ClientCredentialClient.cjs.map
-
-
-/***/ }),
-
-/***/ 2891:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var ClientApplication = __nccwpck_require__(6801);
-var ClientAssertion = __nccwpck_require__(879);
-var Constants = __nccwpck_require__(7753);
-var msalCommon = __nccwpck_require__(5405);
-var ClientCredentialClient = __nccwpck_require__(6091);
-var OnBehalfOfClient = __nccwpck_require__(9393);
-
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-// AADAuthorityConstants
 /**
- *  This class is to be used to acquire tokens for confidential client applications (webApp, webAPI). Confidential client applications
- *  will configure application secrets, client certificates/assertions as applicable
+ * Base abstract class for all ClientApplications - public and confidential
  * @public
  */
-class ConfidentialClientApplication extends ClientApplication.ClientApplication {
+class ClientApplication {
     /**
-     * Constructor for the ConfidentialClientApplication
-     *
-     * Required attributes in the Configuration object are:
-     * - clientID: the application ID of your application. You can obtain one by registering your application with our application registration portal
-     * - authority: the authority URL for your application.
-     * - client credential: Must set either client secret, certificate, or assertion for confidential clients. You can obtain a client secret from the application registration portal.
-     *
-     * In Azure AD, authority is a URL indicating of the form https://login.microsoftonline.com/\{Enter_the_Tenant_Info_Here\}.
-     * If your application supports Accounts in one organizational directory, replace "Enter_the_Tenant_Info_Here" value with the Tenant Id or Tenant name (for example, contoso.microsoft.com).
-     * If your application supports Accounts in any organizational directory, replace "Enter_the_Tenant_Info_Here" value with organizations.
-     * If your application supports Accounts in any organizational directory and personal Microsoft accounts, replace "Enter_the_Tenant_Info_Here" value with common.
-     * To restrict support to Personal Microsoft accounts only, replace "Enter_the_Tenant_Info_Here" value with consumers.
-     *
-     * In Azure B2C, authority is of the form https://\{instance\}/tfp/\{tenant\}/\{policyName\}/
-     * Full B2C functionality will be available in this library in future versions.
-     *
-     * @param Configuration - configuration object for the MSAL ConfidentialClientApplication instance
+     * Constructor for the ClientApplication
      */
     constructor(configuration) {
-        super(configuration);
-        this.setClientCredential();
-        this.appTokenProvider = undefined;
+        this.config = buildAppConfiguration(configuration);
+        this.cryptoProvider = new CryptoProvider();
+        this.logger = new Logger(this.config.system.loggerOptions, name, version);
+        this.storage = new NodeStorage(this.logger, this.config.auth.clientId, this.cryptoProvider, buildStaticAuthorityOptions(this.config.auth));
+        this.tokenCache = new TokenCache(this.storage, this.logger, this.config.cache.cachePlugin);
     }
     /**
-     * This extensibility point only works for the client_credential flow, i.e. acquireTokenByClientCredential and
-     * is meant for Azure SDK to enhance Managed Identity support.
+     * Creates the URL of the authorization request, letting the user input credentials and consent to the
+     * application. The URL targets the /authorize endpoint of the authority configured in the
+     * application object.
      *
-     * @param IAppTokenProvider  - Extensibility interface, which allows the app developer to return a token from a custom source.
+     * Once the user inputs their credentials and consents, the authority will send a response to the redirect URI
+     * sent in the request and should contain an authorization code, which can then be used to acquire tokens via
+     * `acquireTokenByCode(AuthorizationCodeRequest)`.
      */
-    SetAppTokenProvider(provider) {
-        this.appTokenProvider = provider;
-    }
-    /**
-     * Acquires tokens from the authority for the application (not for an end user).
-     */
-    async acquireTokenByClientCredential(request) {
-        this.logger.info("acquireTokenByClientCredential called", request.correlationId);
-        // If there is a client assertion present in the request, it overrides the one present in the client configuration
-        let clientAssertion;
-        if (request.clientAssertion) {
-            clientAssertion = {
-                assertion: await msalCommon.getClientAssertion(request.clientAssertion, this.config.auth.clientId
-                // tokenEndpoint will be undefined. resourceRequestUri is omitted in ClientCredentialRequest
-                ),
-                assertionType: Constants.Constants.JWT_BEARER_ASSERTION_TYPE,
-            };
-        }
-        const baseRequest = await this.initializeBaseRequest(request);
-        // valid base request should not contain oidc scopes in this grant type
-        const validBaseRequest = {
-            ...baseRequest,
-            scopes: baseRequest.scopes.filter((scope) => !msalCommon.OIDC_DEFAULT_SCOPES.includes(scope)),
-        };
+    async getAuthCodeUrl(request) {
+        this.logger.info("getAuthCodeUrl called", request.correlationId);
         const validRequest = {
             ...request,
-            ...validBaseRequest,
-            clientAssertion,
+            ...(await this.initializeBaseRequest(request)),
+            responseMode: request.responseMode || ResponseMode.QUERY,
+            authenticationScheme: AuthenticationScheme.BEARER,
         };
-        /*
-         * valid request should not have "common" or "organizations" in lieu of the tenant_id in the authority in the auth configuration
-         * example authority: "https://login.microsoftonline.com/TenantId",
-         */
-        const authority = new msalCommon.UrlString(validRequest.authority);
-        const tenantId = authority.getUrlComponents().PathSegments[0];
-        if (Object.values(msalCommon.AADAuthorityConstants).includes(tenantId)) {
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.missingTenantIdError);
+        const authClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, undefined, undefined, request.azureCloudOptions);
+        const authorizationCodeClient = new AuthorizationCodeClient(authClientConfig);
+        this.logger.verbose("Auth code client created", validRequest.correlationId);
+        return authorizationCodeClient.getAuthCodeUrl(validRequest);
+    }
+    /**
+     * Acquires a token by exchanging the Authorization Code received from the first step of OAuth2.0
+     * Authorization Code flow.
+     *
+     * `getAuthCodeUrl(AuthorizationCodeUrlRequest)` can be used to create the URL for the first step of OAuth2.0
+     * Authorization Code flow. Ensure that values for redirectUri and scopes in AuthorizationCodeUrlRequest and
+     * AuthorizationCodeRequest are the same.
+     */
+    async acquireTokenByCode(request, authCodePayLoad) {
+        this.logger.info("acquireTokenByCode called");
+        if (request.state && authCodePayLoad) {
+            this.logger.info("acquireTokenByCode - validating state");
+            this.validateState(request.state, authCodePayLoad.state || "");
+            // eslint-disable-next-line no-param-reassign
+            authCodePayLoad = { ...authCodePayLoad, state: "" };
         }
-        const azureRegionConfiguration = {
-            azureRegion: validRequest.azureRegion,
-            environmentRegion: process.env[Constants.REGION_ENVIRONMENT_VARIABLE],
+        const validRequest = {
+            ...request,
+            ...(await this.initializeBaseRequest(request)),
+            authenticationScheme: AuthenticationScheme.BEARER,
         };
-        const serverTelemetryManager = this.initializeServerTelemetryManager(Constants.ApiId.acquireTokenByClientCredential, validRequest.correlationId, validRequest.skipCache);
+        const serverTelemetryManager = this.initializeServerTelemetryManager(ApiId.acquireTokenByCode, validRequest.correlationId);
         try {
-            const clientCredentialConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, azureRegionConfiguration, request.azureCloudOptions);
-            const clientCredentialClient = new ClientCredentialClient.ClientCredentialClient(clientCredentialConfig, this.appTokenProvider);
-            this.logger.verbose("Client credential client created", validRequest.correlationId);
-            return await clientCredentialClient.acquireToken(validRequest);
+            const authClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
+            const authorizationCodeClient = new AuthorizationCodeClient(authClientConfig);
+            this.logger.verbose("Auth code client created", validRequest.correlationId);
+            return await authorizationCodeClient.acquireToken(validRequest, authCodePayLoad);
         }
         catch (e) {
-            if (e instanceof msalCommon.AuthError) {
+            if (e instanceof AuthError) {
                 e.setCorrelationId(validRequest.correlationId);
             }
             serverTelemetryManager.cacheFailedRequest(e);
@@ -82006,92 +81267,344 @@ class ConfidentialClientApplication extends ClientApplication.ClientApplication 
         }
     }
     /**
-     * Acquires tokens from the authority for the application.
+     * Acquires a token by exchanging the refresh token provided for a new set of tokens.
      *
-     * Used in scenarios where the current app is a middle-tier service which was called with a token
-     * representing an end user. The current app can use the token (oboAssertion) to request another
-     * token to access downstream web API, on behalf of that user.
-     *
-     * The current middle-tier app has no user interaction to obtain consent.
-     * See how to gain consent upfront for your middle-tier app from this article.
-     * https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-on-behalf-of-flow#gaining-consent-for-the-middle-tier-application
+     * This API is provided only for scenarios where you would like to migrate from ADAL to MSAL. Otherwise, it is
+     * recommended that you use `acquireTokenSilent()` for silent scenarios. When using `acquireTokenSilent()`, MSAL will
+     * handle the caching and refreshing of tokens automatically.
      */
-    async acquireTokenOnBehalfOf(request) {
-        this.logger.info("acquireTokenOnBehalfOf called", request.correlationId);
+    async acquireTokenByRefreshToken(request) {
+        this.logger.info("acquireTokenByRefreshToken called", request.correlationId);
+        const validRequest = {
+            ...request,
+            ...(await this.initializeBaseRequest(request)),
+            authenticationScheme: AuthenticationScheme.BEARER,
+        };
+        const serverTelemetryManager = this.initializeServerTelemetryManager(ApiId.acquireTokenByRefreshToken, validRequest.correlationId);
+        try {
+            const refreshTokenClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
+            const refreshTokenClient = new RefreshTokenClient(refreshTokenClientConfig);
+            this.logger.verbose("Refresh token client created", validRequest.correlationId);
+            return await refreshTokenClient.acquireToken(validRequest);
+        }
+        catch (e) {
+            if (e instanceof AuthError) {
+                e.setCorrelationId(validRequest.correlationId);
+            }
+            serverTelemetryManager.cacheFailedRequest(e);
+            throw e;
+        }
+    }
+    /**
+     * Acquires a token silently when a user specifies the account the token is requested for.
+     *
+     * This API expects the user to provide an account object and looks into the cache to retrieve the token if present.
+     * There is also an optional "forceRefresh" boolean the user can send to bypass the cache for access_token and id_token.
+     * In case the refresh_token is expired or not found, an error is thrown
+     * and the guidance is for the user to call any interactive token acquisition API (eg: `acquireTokenByCode()`).
+     */
+    async acquireTokenSilent(request) {
+        const validRequest = {
+            ...request,
+            ...(await this.initializeBaseRequest(request)),
+            forceRefresh: request.forceRefresh || false,
+        };
+        const serverTelemetryManager = this.initializeServerTelemetryManager(ApiId.acquireTokenSilent, validRequest.correlationId, validRequest.forceRefresh);
+        try {
+            const silentFlowClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
+            const silentFlowClient = new SilentFlowClient(silentFlowClientConfig);
+            this.logger.verbose("Silent flow client created", validRequest.correlationId);
+            return await silentFlowClient.acquireToken(validRequest);
+        }
+        catch (e) {
+            if (e instanceof AuthError) {
+                e.setCorrelationId(validRequest.correlationId);
+            }
+            serverTelemetryManager.cacheFailedRequest(e);
+            throw e;
+        }
+    }
+    /**
+     * Acquires tokens with password grant by exchanging client applications username and password for credentials
+     *
+     * The latest OAuth 2.0 Security Best Current Practice disallows the password grant entirely.
+     * More details on this recommendation at https://tools.ietf.org/html/draft-ietf-oauth-security-topics-13#section-3.4
+     * Microsoft's documentation and recommendations are at:
+     * https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-authentication-flows#usernamepassword
+     *
+     * @param request - UsenamePasswordRequest
+     */
+    async acquireTokenByUsernamePassword(request) {
+        this.logger.info("acquireTokenByUsernamePassword called", request.correlationId);
         const validRequest = {
             ...request,
             ...(await this.initializeBaseRequest(request)),
         };
+        const serverTelemetryManager = this.initializeServerTelemetryManager(ApiId.acquireTokenByUsernamePassword, validRequest.correlationId);
         try {
-            const onBehalfOfConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, undefined, undefined, request.azureCloudOptions);
-            const oboClient = new OnBehalfOfClient.OnBehalfOfClient(onBehalfOfConfig);
-            this.logger.verbose("On behalf of client created", validRequest.correlationId);
-            return await oboClient.acquireToken(validRequest);
+            const usernamePasswordClientConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
+            const usernamePasswordClient = new UsernamePasswordClient(usernamePasswordClientConfig);
+            this.logger.verbose("Username password client created", validRequest.correlationId);
+            return await usernamePasswordClient.acquireToken(validRequest);
         }
         catch (e) {
-            if (e instanceof msalCommon.AuthError) {
+            if (e instanceof AuthError) {
                 e.setCorrelationId(validRequest.correlationId);
             }
+            serverTelemetryManager.cacheFailedRequest(e);
             throw e;
         }
     }
-    setClientCredential() {
-        const clientSecretNotEmpty = !!this.config.auth.clientSecret;
-        const clientAssertionNotEmpty = !!this.config.auth.clientAssertion;
-        const certificateNotEmpty = (!!this.config.auth.clientCertificate?.thumbprint ||
-            !!this.config.auth.clientCertificate?.thumbprintSha256) &&
-            !!this.config.auth.clientCertificate?.privateKey;
-        /*
-         * If app developer configures this callback, they don't need a credential
-         * i.e. AzureSDK can get token from Managed Identity without a cert / secret
-         */
-        if (this.appTokenProvider) {
-            return;
+    /**
+     * Gets the token cache for the application.
+     */
+    getTokenCache() {
+        this.logger.info("getTokenCache called");
+        return this.tokenCache;
+    }
+    /**
+     * Validates OIDC state by comparing the user cached state with the state received from the server.
+     *
+     * This API is provided for scenarios where you would use OAuth2.0 state parameter to mitigate against
+     * CSRF attacks.
+     * For more information about state, visit https://datatracker.ietf.org/doc/html/rfc6819#section-3.6.
+     * @param state
+     * @param cachedState
+     */
+    validateState(state, cachedState) {
+        if (!state) {
+            throw NodeAuthError.createStateNotFoundError();
         }
-        // Check that at most one credential is set on the application
-        if ((clientSecretNotEmpty && clientAssertionNotEmpty) ||
-            (clientAssertionNotEmpty && certificateNotEmpty) ||
-            (clientSecretNotEmpty && certificateNotEmpty)) {
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.invalidClientCredential);
+        if (state !== cachedState) {
+            throw createClientAuthError(stateMismatch);
         }
-        if (this.config.auth.clientSecret) {
-            this.clientSecret = this.config.auth.clientSecret;
-            return;
+    }
+    /**
+     * Returns the logger instance
+     */
+    getLogger() {
+        return this.logger;
+    }
+    /**
+     * Replaces the default logger set in configurations with new Logger with new configurations
+     * @param logger - Logger instance
+     */
+    setLogger(logger) {
+        this.logger = logger;
+    }
+    /**
+     * Builds the common configuration to be passed to the common component based on the platform configurarion
+     * @param authority - user passed authority in configuration
+     * @param serverTelemetryManager - initializes servertelemetry if passed
+     */
+    async buildOauthClientConfiguration(authority, requestCorrelationId, serverTelemetryManager, azureRegionConfiguration, azureCloudOptions) {
+        this.logger.verbose("buildOauthClientConfiguration called", requestCorrelationId);
+        // precedence - azureCloudInstance + tenant >> authority and request  >> config
+        const userAzureCloudOptions = azureCloudOptions
+            ? azureCloudOptions
+            : this.config.auth.azureCloudOptions;
+        // using null assertion operator as we ensure that all config values have default values in buildConfiguration()
+        const discoveredAuthority = await this.createAuthority(authority, requestCorrelationId, azureRegionConfiguration, userAzureCloudOptions);
+        this.logger.info(`Building oauth client configuration with the following authority: ${discoveredAuthority.tokenEndpoint}.`, requestCorrelationId);
+        serverTelemetryManager?.updateRegionDiscoveryMetadata(discoveredAuthority.regionDiscoveryMetadata);
+        const clientConfiguration = {
+            authOptions: {
+                clientId: this.config.auth.clientId,
+                authority: discoveredAuthority,
+                clientCapabilities: this.config.auth.clientCapabilities,
+            },
+            loggerOptions: {
+                logLevel: this.config.system.loggerOptions.logLevel,
+                loggerCallback: this.config.system.loggerOptions.loggerCallback,
+                piiLoggingEnabled: this.config.system.loggerOptions.piiLoggingEnabled,
+                correlationId: requestCorrelationId,
+            },
+            cacheOptions: {
+                claimsBasedCachingEnabled: this.config.cache.claimsBasedCachingEnabled,
+            },
+            cryptoInterface: this.cryptoProvider,
+            networkInterface: this.config.system.networkClient,
+            storageInterface: this.storage,
+            serverTelemetryManager: serverTelemetryManager,
+            clientCredentials: {
+                clientSecret: this.clientSecret,
+                clientAssertion: await this.getClientAssertion(discoveredAuthority),
+            },
+            libraryInfo: {
+                sku: Constants.MSAL_SKU,
+                version: version,
+                cpu: process.arch || Constants$1.EMPTY_STRING,
+                os: process.platform || Constants$1.EMPTY_STRING,
+            },
+            telemetry: this.config.telemetry,
+            persistencePlugin: this.config.cache.cachePlugin,
+            serializableCache: this.tokenCache,
+        };
+        return clientConfiguration;
+    }
+    async getClientAssertion(authority) {
+        if (this.developerProvidedClientAssertion) {
+            this.clientAssertion = ClientAssertion.fromAssertion(await getClientAssertion(this.developerProvidedClientAssertion, this.config.auth.clientId, authority.tokenEndpoint));
         }
-        if (this.config.auth.clientAssertion) {
-            this.developerProvidedClientAssertion =
-                this.config.auth.clientAssertion;
-            return;
+        return (this.clientAssertion && {
+            assertion: this.clientAssertion.getJwt(this.cryptoProvider, this.config.auth.clientId, authority.tokenEndpoint),
+            assertionType: Constants.JWT_BEARER_ASSERTION_TYPE,
+        });
+    }
+    /**
+     * Generates a request with the default scopes & generates a correlationId.
+     * @param authRequest - BaseAuthRequest for initialization
+     */
+    async initializeBaseRequest(authRequest) {
+        this.logger.verbose("initializeRequestScopes called", authRequest.correlationId);
+        // Default authenticationScheme to Bearer, log that POP isn't supported yet
+        if (authRequest.authenticationScheme &&
+            authRequest.authenticationScheme === AuthenticationScheme.POP) {
+            this.logger.verbose("Authentication Scheme 'pop' is not supported yet, setting Authentication Scheme to 'Bearer' for request", authRequest.correlationId);
         }
-        if (!certificateNotEmpty) {
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.invalidClientCredential);
+        authRequest.authenticationScheme = AuthenticationScheme.BEARER;
+        // Set requested claims hash if claims-based caching is enabled and claims were requested
+        if (this.config.cache.claimsBasedCachingEnabled &&
+            authRequest.claims &&
+            // Checks for empty stringified object "{}" which doesn't qualify as requested claims
+            !StringUtils.isEmptyObj(authRequest.claims)) {
+            authRequest.requestedClaimsHash =
+                await this.cryptoProvider.hashString(authRequest.claims);
         }
-        else {
-            this.clientAssertion = !!this.config.auth.clientCertificate
-                .thumbprintSha256
-                ? ClientAssertion.ClientAssertion.fromCertificateWithSha256Thumbprint(this.config.auth.clientCertificate.thumbprintSha256, this.config.auth.clientCertificate.privateKey, this.config.auth.clientCertificate.x5c)
-                : ClientAssertion.ClientAssertion.fromCertificate(
-                // guaranteed to be a string, due to prior error checking in this function
-                this.config.auth.clientCertificate.thumbprint, this.config.auth.clientCertificate.privateKey, this.config.auth.clientCertificate.x5c);
-        }
+        return {
+            ...authRequest,
+            scopes: [
+                ...((authRequest && authRequest.scopes) || []),
+                ...OIDC_DEFAULT_SCOPES,
+            ],
+            correlationId: (authRequest && authRequest.correlationId) ||
+                this.cryptoProvider.createNewGuid(),
+            authority: authRequest.authority || this.config.auth.authority,
+        };
+    }
+    /**
+     * Initializes the server telemetry payload
+     * @param apiId - Id for a specific request
+     * @param correlationId - GUID
+     * @param forceRefresh - boolean to indicate network call
+     */
+    initializeServerTelemetryManager(apiId, correlationId, forceRefresh) {
+        const telemetryPayload = {
+            clientId: this.config.auth.clientId,
+            correlationId: correlationId,
+            apiId: apiId,
+            forceRefresh: forceRefresh || false,
+        };
+        return new ServerTelemetryManager(telemetryPayload, this.storage);
+    }
+    /**
+     * Create authority instance. If authority not passed in request, default to authority set on the application
+     * object. If no authority set in application object, then default to common authority.
+     * @param authorityString - authority from user configuration
+     */
+    async createAuthority(authorityString, requestCorrelationId, azureRegionConfiguration, azureCloudOptions) {
+        this.logger.verbose("createAuthority called", requestCorrelationId);
+        // build authority string based on auth params - azureCloudInstance is prioritized if provided
+        const authorityUrl = Authority.generateAuthority(authorityString, azureCloudOptions);
+        const authorityOptions = {
+            protocolMode: this.config.auth.protocolMode,
+            knownAuthorities: this.config.auth.knownAuthorities,
+            cloudDiscoveryMetadata: this.config.auth.cloudDiscoveryMetadata,
+            authorityMetadata: this.config.auth.authorityMetadata,
+            azureRegionConfiguration,
+            skipAuthorityMetadataCache: this.config.auth.skipAuthorityMetadataCache,
+        };
+        return createDiscoveredInstance(authorityUrl, this.config.system.networkClient, this.storage, authorityOptions, this.logger, requestCorrelationId);
+    }
+    /**
+     * Clear the cache
+     */
+    clearCache() {
+        void this.storage.clear();
     }
 }
 
-exports.ConfidentialClientApplication = ConfidentialClientApplication;
-//# sourceMappingURL=ConfidentialClientApplication.cjs.map
-
-
-/***/ }),
-
-/***/ 2412:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class LoopbackClient {
+    /**
+     * Spins up a loopback server which returns the server response when the localhost redirectUri is hit
+     * @param successTemplate
+     * @param errorTemplate
+     * @returns
+     */
+    async listenForAuthCode(successTemplate, errorTemplate) {
+        if (this.server) {
+            throw NodeAuthError.createLoopbackServerAlreadyExistsError();
+        }
+        return new Promise((resolve, reject) => {
+            this.server = http.createServer((req, res) => {
+                const url = req.url;
+                if (!url) {
+                    res.end(errorTemplate ||
+                        "Error occurred loading redirectUrl");
+                    reject(NodeAuthError.createUnableToLoadRedirectUrlError());
+                    return;
+                }
+                else if (url === Constants$1.FORWARD_SLASH) {
+                    res.end(successTemplate ||
+                        "Auth code was successfully acquired. You can close this window now.");
+                    return;
+                }
+                const redirectUri = this.getRedirectUri();
+                const parsedUrl = new URL(url, redirectUri);
+                const authCodeResponse = getDeserializedResponse(parsedUrl.search) || {};
+                if (authCodeResponse.code) {
+                    res.writeHead(HttpStatus.REDIRECT, {
+                        location: redirectUri,
+                    }); // Prevent auth code from being saved in the browser history
+                    res.end();
+                }
+                if (authCodeResponse.error) {
+                    res.end(errorTemplate ||
+                        `Error occurred: ${authCodeResponse.error}`);
+                }
+                resolve(authCodeResponse);
+            });
+            this.server.listen(0, "127.0.0.1"); // Listen on any available port
+        });
+    }
+    /**
+     * Get the port that the loopback server is running on
+     * @returns
+     */
+    getRedirectUri() {
+        if (!this.server || !this.server.listening) {
+            throw NodeAuthError.createNoLoopbackServerExistsError();
+        }
+        const address = this.server.address();
+        if (!address || typeof address === "string" || !address.port) {
+            this.closeServer();
+            throw NodeAuthError.createInvalidLoopbackAddressTypeError();
+        }
+        const port = address && address.port;
+        return `${Constants.HTTP_PROTOCOL}${Constants.LOCALHOST}:${port}`;
+    }
+    /**
+     * Close the loopback server
+     */
+    closeServer() {
+        if (this.server) {
+            // Only stops accepting new connections, server will close once open/idle connections are closed.
+            this.server.close();
+            if (typeof this.server.closeAllConnections === "function") {
+                /*
+                 * Close open/idle connections. This API is available in Node versions 18.2 and higher
+                 */
+                this.server.closeAllConnections();
+            }
+            this.server.unref();
+            this.server = undefined;
+        }
+    }
+}
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -82100,7 +81613,7 @@ var msalCommon = __nccwpck_require__(5405);
 /**
  * OAuth2.0 Device code client
  */
-class DeviceCodeClient extends msalCommon.BaseClient {
+class DeviceCodeClient extends BaseClient {
     constructor(configuration) {
         super(configuration);
     }
@@ -82112,9 +81625,9 @@ class DeviceCodeClient extends msalCommon.BaseClient {
     async acquireToken(request) {
         const deviceCodeResponse = await this.getDeviceCode(request);
         request.deviceCodeCallback(deviceCodeResponse);
-        const reqTimestamp = msalCommon.TimeUtils.nowSeconds();
+        const reqTimestamp = nowSeconds();
         const response = await this.acquireTokenWithDeviceCode(request, deviceCodeResponse);
-        const responseHandler = new msalCommon.ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
+        const responseHandler = new ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
         // Validate response. This function throws a server error if an error is returned by the server.
         responseHandler.validateTokenResponse(response);
         return responseHandler.handleServerTokenResponse(response, this.authority, reqTimestamp, request);
@@ -82125,7 +81638,7 @@ class DeviceCodeClient extends msalCommon.BaseClient {
      */
     async getDeviceCode(request) {
         const queryParametersString = this.createExtraQueryParameters(request);
-        const endpoint = msalCommon.UrlString.appendQueryString(this.authority.deviceCodeEndpoint, queryParametersString);
+        const endpoint = UrlString.appendQueryString(this.authority.deviceCodeEndpoint, queryParametersString);
         const queryString = this.createQueryString(request);
         const headers = this.createTokenRequestHeaders();
         const thumbprint = {
@@ -82146,7 +81659,7 @@ class DeviceCodeClient extends msalCommon.BaseClient {
      * @param request
      */
     createExtraQueryParameters(request) {
-        const parameterBuilder = new msalCommon.RequestParameterBuilder();
+        const parameterBuilder = new RequestParameterBuilder();
         if (request.extraQueryParameters) {
             parameterBuilder.addExtraQueryParameters(request.extraQueryParameters);
         }
@@ -82176,7 +81689,7 @@ class DeviceCodeClient extends msalCommon.BaseClient {
      * Create device code endpoint query parameters and returns string
      */
     createQueryString(request) {
-        const parameterBuilder = new msalCommon.RequestParameterBuilder();
+        const parameterBuilder = new RequestParameterBuilder();
         parameterBuilder.addScopes(request.scopes);
         parameterBuilder.addClientId(this.config.authOptions.clientId);
         if (request.extraQueryParameters) {
@@ -82197,20 +81710,20 @@ class DeviceCodeClient extends msalCommon.BaseClient {
     continuePolling(deviceCodeExpirationTime, userSpecifiedTimeout, userSpecifiedCancelFlag) {
         if (userSpecifiedCancelFlag) {
             this.logger.error("Token request cancelled by setting DeviceCodeRequest.cancel = true");
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.deviceCodePollingCancelled);
+            throw createClientAuthError(deviceCodePollingCancelled);
         }
         else if (userSpecifiedTimeout &&
             userSpecifiedTimeout < deviceCodeExpirationTime &&
-            msalCommon.TimeUtils.nowSeconds() > userSpecifiedTimeout) {
+            nowSeconds() > userSpecifiedTimeout) {
             this.logger.error(`User defined timeout for device code polling reached. The timeout was set for ${userSpecifiedTimeout}`);
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.userTimeoutReached);
+            throw createClientAuthError(userTimeoutReached);
         }
-        else if (msalCommon.TimeUtils.nowSeconds() > deviceCodeExpirationTime) {
+        else if (nowSeconds() > deviceCodeExpirationTime) {
             if (userSpecifiedTimeout) {
                 this.logger.verbose(`User specified timeout ignored as the device code has expired before the timeout elapsed. The user specified timeout was set for ${userSpecifiedTimeout}`);
             }
             this.logger.error(`Device code expired. Expiration time of device code was ${deviceCodeExpirationTime}`);
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.deviceCodeExpired);
+            throw createClientAuthError(deviceCodeExpired);
         }
         return true;
     }
@@ -82222,13 +81735,13 @@ class DeviceCodeClient extends msalCommon.BaseClient {
      */
     async acquireTokenWithDeviceCode(request, deviceCodeResponse) {
         const queryParametersString = this.createTokenQueryParameters(request);
-        const endpoint = msalCommon.UrlString.appendQueryString(this.authority.tokenEndpoint, queryParametersString);
+        const endpoint = UrlString.appendQueryString(this.authority.tokenEndpoint, queryParametersString);
         const requestBody = this.createTokenRequestBody(request, deviceCodeResponse);
         const headers = this.createTokenRequestHeaders();
         const userSpecifiedTimeout = request.timeout
-            ? msalCommon.TimeUtils.nowSeconds() + request.timeout
+            ? nowSeconds() + request.timeout
             : undefined;
-        const deviceCodeExpirationTime = msalCommon.TimeUtils.nowSeconds() + deviceCodeResponse.expiresIn;
+        const deviceCodeExpirationTime = nowSeconds() + deviceCodeResponse.expiresIn;
         const pollingIntervalMilli = deviceCodeResponse.interval * 1000;
         /*
          * Poll token endpoint while (device code is not expired AND operation has not been cancelled by
@@ -82249,14 +81762,14 @@ class DeviceCodeClient extends msalCommon.BaseClient {
             const response = await this.executePostToTokenEndpoint(endpoint, requestBody, headers, thumbprint, request.correlationId);
             if (response.body && response.body.error) {
                 // user authorization is pending. Sleep for polling interval and try again
-                if (response.body.error === msalCommon.Constants.AUTHORIZATION_PENDING) {
+                if (response.body.error === Constants$1.AUTHORIZATION_PENDING) {
                     this.logger.info("Authorization pending. Continue polling.");
-                    await msalCommon.TimeUtils.delay(pollingIntervalMilli);
+                    await delay(pollingIntervalMilli);
                 }
                 else {
                     // for any other error, throw
                     this.logger.info("Unexpected error in polling from the server");
-                    throw msalCommon.createAuthError(msalCommon.AuthErrorCodes.postRequestFailed, response.body.error);
+                    throw createAuthError(postRequestFailed, response.body.error);
                 }
             }
             else {
@@ -82269,7 +81782,7 @@ class DeviceCodeClient extends msalCommon.BaseClient {
          * and in the rare case the conditionals in continuePolling() may not catch everything...
          */
         this.logger.error("Polling stopped for unknown reasons.");
-        throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.deviceCodeUnknownError);
+        throw createClientAuthError(deviceCodeUnknownError);
     }
     /**
      * Creates query parameters and converts to string.
@@ -82277,10 +81790,10 @@ class DeviceCodeClient extends msalCommon.BaseClient {
      * @param deviceCodeResponse
      */
     createTokenRequestBody(request, deviceCodeResponse) {
-        const requestParameters = new msalCommon.RequestParameterBuilder();
+        const requestParameters = new RequestParameterBuilder();
         requestParameters.addScopes(request.scopes);
         requestParameters.addClientId(this.config.authOptions.clientId);
-        requestParameters.addGrantType(msalCommon.GrantType.DEVICE_CODE_GRANT);
+        requestParameters.addGrantType(GrantType.DEVICE_CODE_GRANT);
         requestParameters.addDeviceCode(deviceCodeResponse.deviceCode);
         const correlationId = request.correlationId ||
             this.config.cryptoInterface.createNewGuid();
@@ -82292,7 +81805,7 @@ class DeviceCodeClient extends msalCommon.BaseClient {
         if (this.serverTelemetryManager) {
             requestParameters.addServerTelemetry(this.serverTelemetryManager);
         }
-        if (!msalCommon.StringUtils.isEmptyObj(request.claims) ||
+        if (!StringUtils.isEmptyObj(request.claims) ||
             (this.config.authOptions.clientCapabilities &&
                 this.config.authOptions.clientCapabilities.length > 0)) {
             requestParameters.addClaims(request.claims, this.config.authOptions.clientCapabilities);
@@ -82300,1022 +81813,6 @@ class DeviceCodeClient extends msalCommon.BaseClient {
         return requestParameters.createQueryString();
     }
 }
-
-exports.DeviceCodeClient = DeviceCodeClient;
-//# sourceMappingURL=DeviceCodeClient.cjs.map
-
-
-/***/ }),
-
-/***/ 4129:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var Configuration = __nccwpck_require__(677);
-var packageMetadata = __nccwpck_require__(6507);
-var CryptoProvider = __nccwpck_require__(6174);
-var ClientCredentialClient = __nccwpck_require__(6091);
-var ManagedIdentityClient = __nccwpck_require__(1100);
-var NodeStorage = __nccwpck_require__(1064);
-var Constants = __nccwpck_require__(7753);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Class to initialize a managed identity and identify the service
- * @public
- */
-class ManagedIdentityApplication {
-    constructor(configuration) {
-        // undefined config means the managed identity is system-assigned
-        this.config = Configuration.buildManagedIdentityConfiguration(configuration || {});
-        this.logger = new msalCommon.Logger(this.config.system.loggerOptions, packageMetadata.name, packageMetadata.version);
-        const fakeStatusAuthorityOptions = {
-            canonicalAuthority: msalCommon.Constants.DEFAULT_AUTHORITY,
-        };
-        if (!ManagedIdentityApplication.nodeStorage) {
-            ManagedIdentityApplication.nodeStorage = new NodeStorage.NodeStorage(this.logger, this.config.managedIdentityId.id, msalCommon.DEFAULT_CRYPTO_IMPLEMENTATION, fakeStatusAuthorityOptions);
-        }
-        this.networkClient = this.config.system.networkClient;
-        this.cryptoProvider = new CryptoProvider.CryptoProvider();
-        const fakeAuthorityOptions = {
-            protocolMode: msalCommon.ProtocolMode.AAD,
-            knownAuthorities: [Constants.DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY],
-            cloudDiscoveryMetadata: "",
-            authorityMetadata: "",
-        };
-        this.fakeAuthority = new msalCommon.Authority(Constants.DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY, this.networkClient, ManagedIdentityApplication.nodeStorage, fakeAuthorityOptions, this.logger, this.cryptoProvider.createNewGuid(), // correlationID
-        undefined, true);
-        this.fakeClientCredentialClient = new ClientCredentialClient.ClientCredentialClient({
-            authOptions: {
-                clientId: this.config.managedIdentityId.id,
-                authority: this.fakeAuthority,
-            },
-        });
-        this.managedIdentityClient = new ManagedIdentityClient.ManagedIdentityClient(this.logger, ManagedIdentityApplication.nodeStorage, this.networkClient, this.cryptoProvider);
-    }
-    /**
-     * Acquire an access token from the cache or the managed identity
-     * @param managedIdentityRequest - the ManagedIdentityRequestParams object passed in by the developer
-     * @returns the access token
-     */
-    async acquireToken(managedIdentityRequestParams) {
-        if (!managedIdentityRequestParams.resource) {
-            throw msalCommon.createClientConfigurationError(msalCommon.ClientConfigurationErrorCodes.urlEmptyError);
-        }
-        const managedIdentityRequest = {
-            forceRefresh: managedIdentityRequestParams.forceRefresh,
-            resource: managedIdentityRequestParams.resource.replace("/.default", ""),
-            scopes: [
-                managedIdentityRequestParams.resource.replace("/.default", ""),
-            ],
-            authority: this.fakeAuthority.canonicalAuthority,
-            correlationId: this.cryptoProvider.createNewGuid(),
-        };
-        if (managedIdentityRequest.forceRefresh) {
-            // make a network call to the managed identity source
-            return this.managedIdentityClient.sendManagedIdentityTokenRequest(managedIdentityRequest, this.config.managedIdentityId, this.fakeAuthority);
-        }
-        const [cachedAuthenticationResult, lastCacheOutcome] = await this.fakeClientCredentialClient.getCachedAuthenticationResult(managedIdentityRequest, this.config, this.cryptoProvider, this.fakeAuthority, ManagedIdentityApplication.nodeStorage);
-        if (cachedAuthenticationResult) {
-            // if the token is not expired but must be refreshed; get a new one in the background
-            if (lastCacheOutcome === msalCommon.CacheOutcome.PROACTIVELY_REFRESHED) {
-                this.logger.info("ClientCredentialClient:getCachedAuthenticationResult - Cached access token's refreshOn property has been exceeded'. It's not expired, but must be refreshed.");
-                // make a network call to the managed identity source; refresh the access token in the background
-                const refreshAccessToken = true;
-                await this.managedIdentityClient.sendManagedIdentityTokenRequest(managedIdentityRequest, this.config.managedIdentityId, this.fakeAuthority, refreshAccessToken);
-            }
-            return cachedAuthenticationResult;
-        }
-        else {
-            // make a network call to the managed identity source
-            return this.managedIdentityClient.sendManagedIdentityTokenRequest(managedIdentityRequest, this.config.managedIdentityId, this.fakeAuthority);
-        }
-    }
-    /**
-     * Determine the Managed Identity Source based on available environment variables. This API is consumed by Azure Identity SDK.
-     * @returns ManagedIdentitySourceNames - The Managed Identity source's name
-     */
-    getManagedIdentitySource() {
-        return (ManagedIdentityClient.ManagedIdentityClient.sourceName ||
-            this.managedIdentityClient.getManagedIdentitySource());
-    }
-}
-
-exports.ManagedIdentityApplication = ManagedIdentityApplication;
-//# sourceMappingURL=ManagedIdentityApplication.cjs.map
-
-
-/***/ }),
-
-/***/ 1100:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var AppService = __nccwpck_require__(9685);
-var AzureArc = __nccwpck_require__(4984);
-var CloudShell = __nccwpck_require__(2239);
-var Imds = __nccwpck_require__(7473);
-var ServiceFabric = __nccwpck_require__(2678);
-var ManagedIdentityError = __nccwpck_require__(384);
-var Constants = __nccwpck_require__(7753);
-var ManagedIdentityErrorCodes = __nccwpck_require__(2398);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/*
- * Class to initialize a managed identity and identify the service.
- * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/ManagedIdentityClient.cs
- */
-class ManagedIdentityClient {
-    constructor(logger, nodeStorage, networkClient, cryptoProvider) {
-        this.logger = logger;
-        this.nodeStorage = nodeStorage;
-        this.networkClient = networkClient;
-        this.cryptoProvider = cryptoProvider;
-    }
-    async sendManagedIdentityTokenRequest(managedIdentityRequest, managedIdentityId, fakeAuthority, refreshAccessToken) {
-        if (!ManagedIdentityClient.identitySource) {
-            ManagedIdentityClient.identitySource =
-                this.selectManagedIdentitySource(this.logger, this.nodeStorage, this.networkClient, this.cryptoProvider, managedIdentityId);
-        }
-        return ManagedIdentityClient.identitySource.acquireTokenWithManagedIdentity(managedIdentityRequest, managedIdentityId, fakeAuthority, refreshAccessToken);
-    }
-    allEnvironmentVariablesAreDefined(environmentVariables) {
-        return Object.values(environmentVariables).every((environmentVariable) => {
-            return environmentVariable !== undefined;
-        });
-    }
-    /**
-     * Determine the Managed Identity Source based on available environment variables. This API is consumed by ManagedIdentityApplication's getManagedIdentitySource.
-     * @returns ManagedIdentitySourceNames - The Managed Identity source's name
-     */
-    getManagedIdentitySource() {
-        ManagedIdentityClient.sourceName =
-            this.allEnvironmentVariablesAreDefined(ServiceFabric.ServiceFabric.getEnvironmentVariables())
-                ? Constants.ManagedIdentitySourceNames.SERVICE_FABRIC
-                : this.allEnvironmentVariablesAreDefined(AppService.AppService.getEnvironmentVariables())
-                    ? Constants.ManagedIdentitySourceNames.APP_SERVICE
-                    : this.allEnvironmentVariablesAreDefined(CloudShell.CloudShell.getEnvironmentVariables())
-                        ? Constants.ManagedIdentitySourceNames.CLOUD_SHELL
-                        : this.allEnvironmentVariablesAreDefined(AzureArc.AzureArc.getEnvironmentVariables())
-                            ? Constants.ManagedIdentitySourceNames.AZURE_ARC
-                            : Constants.ManagedIdentitySourceNames.DEFAULT_TO_IMDS;
-        return ManagedIdentityClient.sourceName;
-    }
-    /**
-     * Tries to create a managed identity source for all sources
-     * @returns the managed identity Source
-     */
-    selectManagedIdentitySource(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
-        const source = ServiceFabric.ServiceFabric.tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) ||
-            AppService.AppService.tryCreate(logger, nodeStorage, networkClient, cryptoProvider) ||
-            CloudShell.CloudShell.tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) ||
-            AzureArc.AzureArc.tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) ||
-            Imds.Imds.tryCreate(logger, nodeStorage, networkClient, cryptoProvider);
-        if (!source) {
-            throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.unableToCreateSource);
-        }
-        return source;
-    }
-}
-
-exports.ManagedIdentityClient = ManagedIdentityClient;
-//# sourceMappingURL=ManagedIdentityClient.cjs.map
-
-
-/***/ }),
-
-/***/ 9685:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var BaseManagedIdentitySource = __nccwpck_require__(2147);
-var Constants = __nccwpck_require__(7753);
-var ManagedIdentityRequestParameters = __nccwpck_require__(9241);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-// MSI Constants. Docs for MSI are available here https://docs.microsoft.com/azure/app-service/overview-managed-identity
-const APP_SERVICE_MSI_API_VERSION = "2019-08-01";
-/**
- * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/AppServiceManagedIdentitySource.cs
- */
-class AppService extends BaseManagedIdentitySource.BaseManagedIdentitySource {
-    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader) {
-        super(logger, nodeStorage, networkClient, cryptoProvider);
-        this.identityEndpoint = identityEndpoint;
-        this.identityHeader = identityHeader;
-    }
-    static getEnvironmentVariables() {
-        const identityEndpoint = process.env[Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT];
-        const identityHeader = process.env[Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER];
-        return [identityEndpoint, identityHeader];
-    }
-    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider) {
-        const [identityEndpoint, identityHeader] = AppService.getEnvironmentVariables();
-        // if either of the identity endpoint or identity header variables are undefined, this MSI provider is unavailable.
-        if (!identityEndpoint || !identityHeader) {
-            logger.info(`[Managed Identity] ${Constants.ManagedIdentitySourceNames.APP_SERVICE} managed identity is unavailable because one or both of the '${Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER}' and '${Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' environment variables are not defined.`);
-            return null;
-        }
-        const validatedIdentityEndpoint = AppService.getValidatedEnvVariableUrlString(Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT, identityEndpoint, Constants.ManagedIdentitySourceNames.APP_SERVICE, logger);
-        logger.info(`[Managed Identity] Environment variables validation passed for ${Constants.ManagedIdentitySourceNames.APP_SERVICE} managed identity. Endpoint URI: ${validatedIdentityEndpoint}. Creating ${Constants.ManagedIdentitySourceNames.APP_SERVICE} managed identity.`);
-        return new AppService(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader);
-    }
-    createRequest(resource, managedIdentityId) {
-        const request = new ManagedIdentityRequestParameters.ManagedIdentityRequestParameters(Constants.HttpMethod.GET, this.identityEndpoint);
-        request.headers[Constants.APP_SERVICE_SECRET_HEADER_NAME] = this.identityHeader;
-        request.queryParameters[Constants.API_VERSION_QUERY_PARAMETER_NAME] =
-            APP_SERVICE_MSI_API_VERSION;
-        request.queryParameters[Constants.RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
-            resource;
-        if (managedIdentityId.idType !== Constants.ManagedIdentityIdType.SYSTEM_ASSIGNED) {
-            request.queryParameters[this.getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityId.idType)] = managedIdentityId.id;
-        }
-        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
-        return request;
-    }
-}
-
-exports.AppService = AppService;
-//# sourceMappingURL=AppService.cjs.map
-
-
-/***/ }),
-
-/***/ 4984:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var ManagedIdentityRequestParameters = __nccwpck_require__(9241);
-var BaseManagedIdentitySource = __nccwpck_require__(2147);
-var ManagedIdentityError = __nccwpck_require__(384);
-var Constants = __nccwpck_require__(7753);
-var fs = __nccwpck_require__(9896);
-var path = __nccwpck_require__(6928);
-var ManagedIdentityErrorCodes = __nccwpck_require__(2398);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const ARC_API_VERSION = "2019-11-01";
-const DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT = "http://127.0.0.1:40342/metadata/identity/oauth2/token";
-const HIMDS_EXECUTABLE_HELPER_STRING = "N/A: himds executable exists";
-const SUPPORTED_AZURE_ARC_PLATFORMS = {
-    win32: `${process.env["ProgramData"]}\\AzureConnectedMachineAgent\\Tokens\\`,
-    linux: "/var/opt/azcmagent/tokens/",
-};
-const AZURE_ARC_FILE_DETECTION = {
-    win32: `${process.env["ProgramFiles"]}\\AzureConnectedMachineAgent\\himds.exe`,
-    linux: "/opt/azcmagent/bin/himds",
-};
-/**
- * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/AzureArcManagedIdentitySource.cs
- */
-class AzureArc extends BaseManagedIdentitySource.BaseManagedIdentitySource {
-    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint) {
-        super(logger, nodeStorage, networkClient, cryptoProvider);
-        this.identityEndpoint = identityEndpoint;
-    }
-    static getEnvironmentVariables() {
-        let identityEndpoint = process.env[Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT];
-        let imdsEndpoint = process.env[Constants.ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT];
-        // if either of the identity or imds endpoints are undefined, check if the himds executable exists
-        if (!identityEndpoint || !imdsEndpoint) {
-            // get the expected Windows or Linux file path of the himds executable
-            const fileDetectionPath = AZURE_ARC_FILE_DETECTION[process.platform];
-            try {
-                /*
-                 * check if the himds executable exists and its permissions allow it to be read
-                 * returns undefined if true, throws an error otherwise
-                 */
-                fs.accessSync(fileDetectionPath, fs.constants.F_OK | fs.constants.R_OK);
-                identityEndpoint = DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT;
-                imdsEndpoint = HIMDS_EXECUTABLE_HELPER_STRING;
-            }
-            catch (err) {
-                /*
-                 * do nothing
-                 * accessSync returns undefined on success, and throws an error on failure
-                 */
-            }
-        }
-        return [identityEndpoint, imdsEndpoint];
-    }
-    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
-        const [identityEndpoint, imdsEndpoint] = AzureArc.getEnvironmentVariables();
-        // if either of the identity or imds endpoints are undefined (even after himds file detection)
-        if (!identityEndpoint || !imdsEndpoint) {
-            logger.info(`[Managed Identity] ${Constants.ManagedIdentitySourceNames.AZURE_ARC} managed identity is unavailable through environment variables because one or both of '${Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' and '${Constants.ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT}' are not defined. ${Constants.ManagedIdentitySourceNames.AZURE_ARC} managed identity is also unavailable through file detection.`);
-            return null;
-        }
-        // check if the imds endpoint is set to the default for file detection
-        if (imdsEndpoint === HIMDS_EXECUTABLE_HELPER_STRING) {
-            logger.info(`[Managed Identity] ${Constants.ManagedIdentitySourceNames.AZURE_ARC} managed identity is available through file detection. Defaulting to known ${Constants.ManagedIdentitySourceNames.AZURE_ARC} endpoint: ${DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT}. Creating ${Constants.ManagedIdentitySourceNames.AZURE_ARC} managed identity.`);
-        }
-        else {
-            // otherwise, both the identity and imds endpoints are defined without file detection; validate them
-            const validatedIdentityEndpoint = AzureArc.getValidatedEnvVariableUrlString(Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT, identityEndpoint, Constants.ManagedIdentitySourceNames.AZURE_ARC, logger);
-            // remove trailing slash
-            validatedIdentityEndpoint.endsWith("/")
-                ? validatedIdentityEndpoint.slice(0, -1)
-                : validatedIdentityEndpoint;
-            AzureArc.getValidatedEnvVariableUrlString(Constants.ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT, imdsEndpoint, Constants.ManagedIdentitySourceNames.AZURE_ARC, logger);
-            logger.info(`[Managed Identity] Environment variables validation passed for ${Constants.ManagedIdentitySourceNames.AZURE_ARC} managed identity. Endpoint URI: ${validatedIdentityEndpoint}. Creating ${Constants.ManagedIdentitySourceNames.AZURE_ARC} managed identity.`);
-        }
-        if (managedIdentityId.idType !== Constants.ManagedIdentityIdType.SYSTEM_ASSIGNED) {
-            throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.unableToCreateAzureArc);
-        }
-        return new AzureArc(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint);
-    }
-    createRequest(resource) {
-        const request = new ManagedIdentityRequestParameters.ManagedIdentityRequestParameters(Constants.HttpMethod.GET, this.identityEndpoint.replace("localhost", "127.0.0.1"));
-        request.headers[Constants.METADATA_HEADER_NAME] = "true";
-        request.queryParameters[Constants.API_VERSION_QUERY_PARAMETER_NAME] =
-            ARC_API_VERSION;
-        request.queryParameters[Constants.RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
-            resource;
-        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
-        return request;
-    }
-    async getServerTokenResponseAsync(originalResponse, networkClient, networkRequest, networkRequestOptions) {
-        let retryResponse;
-        if (originalResponse.status === msalCommon.HttpStatus.UNAUTHORIZED) {
-            const wwwAuthHeader = originalResponse.headers["www-authenticate"];
-            if (!wwwAuthHeader) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.wwwAuthenticateHeaderMissing);
-            }
-            if (!wwwAuthHeader.includes("Basic realm=")) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.wwwAuthenticateHeaderUnsupportedFormat);
-            }
-            const secretFilePath = wwwAuthHeader.split("Basic realm=")[1];
-            // throw an error if the managed identity application is not being run on Windows or Linux
-            if (!SUPPORTED_AZURE_ARC_PLATFORMS.hasOwnProperty(process.platform)) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.platformNotSupported);
-            }
-            // get the expected Windows or Linux file path
-            const expectedSecretFilePath = SUPPORTED_AZURE_ARC_PLATFORMS[process.platform];
-            // throw an error if the file in the file path is not a .key file
-            const fileName = path.basename(secretFilePath);
-            if (!fileName.endsWith(".key")) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.invalidFileExtension);
-            }
-            /*
-             * throw an error if the file path from the www-authenticate header does not match the
-             * expected file path for the platform (Windows or Linux) the managed identity application
-             * is running on
-             */
-            if (expectedSecretFilePath + fileName !== secretFilePath) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.invalidFilePath);
-            }
-            let secretFileSize;
-            // attempt to get the secret file's size, in bytes
-            try {
-                secretFileSize = await fs.statSync(secretFilePath).size;
-            }
-            catch (e) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.unableToReadSecretFile);
-            }
-            // throw an error if the secret file's size is greater than 4096 bytes
-            if (secretFileSize > Constants.AZURE_ARC_SECRET_FILE_MAX_SIZE_BYTES) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.invalidSecret);
-            }
-            // attempt to read the contents of the secret file
-            let secret;
-            try {
-                secret = fs.readFileSync(secretFilePath, "utf-8");
-            }
-            catch (e) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.unableToReadSecretFile);
-            }
-            const authHeaderValue = `Basic ${secret}`;
-            this.logger.info(`[Managed Identity] Adding authorization header to the request.`);
-            networkRequest.headers[Constants.AUTHORIZATION_HEADER_NAME] = authHeaderValue;
-            try {
-                retryResponse =
-                    await networkClient.sendGetRequestAsync(networkRequest.computeUri(), networkRequestOptions);
-            }
-            catch (error) {
-                if (error instanceof msalCommon.AuthError) {
-                    throw error;
-                }
-                else {
-                    throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.networkError);
-                }
-            }
-        }
-        return this.getServerTokenResponse(retryResponse || originalResponse);
-    }
-}
-
-exports.ARC_API_VERSION = ARC_API_VERSION;
-exports.AZURE_ARC_FILE_DETECTION = AZURE_ARC_FILE_DETECTION;
-exports.AzureArc = AzureArc;
-exports.DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT = DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT;
-exports.SUPPORTED_AZURE_ARC_PLATFORMS = SUPPORTED_AZURE_ARC_PLATFORMS;
-//# sourceMappingURL=AzureArc.cjs.map
-
-
-/***/ }),
-
-/***/ 2147:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var Constants = __nccwpck_require__(7753);
-var ManagedIdentityError = __nccwpck_require__(384);
-var ManagedIdentityErrorCodes = __nccwpck_require__(2398);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Managed Identity User Assigned Id Query Parameter Names
- */
-const ManagedIdentityUserAssignedIdQueryParameterNames = {
-    MANAGED_IDENTITY_CLIENT_ID: "client_id",
-    MANAGED_IDENTITY_OBJECT_ID: "object_id",
-    MANAGED_IDENTITY_RESOURCE_ID: "mi_res_id",
-};
-class BaseManagedIdentitySource {
-    constructor(logger, nodeStorage, networkClient, cryptoProvider) {
-        this.logger = logger;
-        this.nodeStorage = nodeStorage;
-        this.networkClient = networkClient;
-        this.cryptoProvider = cryptoProvider;
-    }
-    async getServerTokenResponseAsync(response, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _networkClient, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _networkRequest, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _networkRequestOptions) {
-        return this.getServerTokenResponse(response);
-    }
-    getServerTokenResponse(response) {
-        let refreshIn, expiresIn;
-        if (response.body.expires_on) {
-            expiresIn = response.body.expires_on - msalCommon.TimeUtils.nowSeconds();
-            // compute refresh_in as 1/2 of expires_in, but only if expires_in > 2h
-            if (expiresIn > 2 * 3600) {
-                refreshIn = expiresIn / 2;
-            }
-        }
-        const serverTokenResponse = {
-            status: response.status,
-            // success
-            access_token: response.body.access_token,
-            expires_in: expiresIn,
-            scope: response.body.resource,
-            token_type: response.body.token_type,
-            refresh_in: refreshIn,
-            // error
-            correlation_id: response.body.correlation_id || response.body.correlationId,
-            error: typeof response.body.error === "string"
-                ? response.body.error
-                : response.body.error?.code,
-            error_description: response.body.message ||
-                (typeof response.body.error === "string"
-                    ? response.body.error_description
-                    : response.body.error?.message),
-            error_codes: response.body.error_codes,
-            timestamp: response.body.timestamp,
-            trace_id: response.body.trace_id,
-        };
-        return serverTokenResponse;
-    }
-    async acquireTokenWithManagedIdentity(managedIdentityRequest, managedIdentityId, fakeAuthority, refreshAccessToken) {
-        const networkRequest = this.createRequest(managedIdentityRequest.resource, managedIdentityId);
-        const headers = networkRequest.headers;
-        headers[msalCommon.HeaderNames.CONTENT_TYPE] = msalCommon.Constants.URL_FORM_CONTENT_TYPE;
-        const networkRequestOptions = { headers };
-        if (Object.keys(networkRequest.bodyParameters).length) {
-            networkRequestOptions.body =
-                networkRequest.computeParametersBodyString();
-        }
-        const reqTimestamp = msalCommon.TimeUtils.nowSeconds();
-        let response;
-        try {
-            // Sources that send POST requests: Cloud Shell
-            if (networkRequest.httpMethod === Constants.HttpMethod.POST) {
-                response =
-                    await this.networkClient.sendPostRequestAsync(networkRequest.computeUri(), networkRequestOptions);
-                // Sources that send GET requests: App Service, Azure Arc, IMDS, Service Fabric
-            }
-            else {
-                response =
-                    await this.networkClient.sendGetRequestAsync(networkRequest.computeUri(), networkRequestOptions);
-            }
-        }
-        catch (error) {
-            if (error instanceof msalCommon.AuthError) {
-                throw error;
-            }
-            else {
-                throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.networkError);
-            }
-        }
-        const responseHandler = new msalCommon.ResponseHandler(managedIdentityId.id, this.nodeStorage, this.cryptoProvider, this.logger, null, null);
-        const serverTokenResponse = await this.getServerTokenResponseAsync(response, this.networkClient, networkRequest, networkRequestOptions);
-        responseHandler.validateTokenResponse(serverTokenResponse, refreshAccessToken);
-        // caches the token
-        return responseHandler.handleServerTokenResponse(serverTokenResponse, fakeAuthority, reqTimestamp, managedIdentityRequest);
-    }
-    getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityIdType) {
-        switch (managedIdentityIdType) {
-            case Constants.ManagedIdentityIdType.USER_ASSIGNED_CLIENT_ID:
-                this.logger.info("[Managed Identity] Adding user assigned client id to the request.");
-                return ManagedIdentityUserAssignedIdQueryParameterNames.MANAGED_IDENTITY_CLIENT_ID;
-            case Constants.ManagedIdentityIdType.USER_ASSIGNED_RESOURCE_ID:
-                this.logger.info("[Managed Identity] Adding user assigned resource id to the request.");
-                return ManagedIdentityUserAssignedIdQueryParameterNames.MANAGED_IDENTITY_RESOURCE_ID;
-            case Constants.ManagedIdentityIdType.USER_ASSIGNED_OBJECT_ID:
-                this.logger.info("[Managed Identity] Adding user assigned object id to the request.");
-                return ManagedIdentityUserAssignedIdQueryParameterNames.MANAGED_IDENTITY_OBJECT_ID;
-            default:
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.invalidManagedIdentityIdType);
-        }
-    }
-}
-BaseManagedIdentitySource.getValidatedEnvVariableUrlString = (envVariableStringName, envVariable, sourceName, logger) => {
-    try {
-        return new msalCommon.UrlString(envVariable).urlString;
-    }
-    catch (error) {
-        logger.info(`[Managed Identity] ${sourceName} managed identity is unavailable because the '${envVariableStringName}' environment variable is malformed.`);
-        throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.MsiEnvironmentVariableUrlMalformedErrorCodes[envVariableStringName]);
-    }
-};
-
-exports.BaseManagedIdentitySource = BaseManagedIdentitySource;
-exports.ManagedIdentityUserAssignedIdQueryParameterNames = ManagedIdentityUserAssignedIdQueryParameterNames;
-//# sourceMappingURL=BaseManagedIdentitySource.cjs.map
-
-
-/***/ }),
-
-/***/ 2239:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var ManagedIdentityRequestParameters = __nccwpck_require__(9241);
-var BaseManagedIdentitySource = __nccwpck_require__(2147);
-var Constants = __nccwpck_require__(7753);
-var ManagedIdentityError = __nccwpck_require__(384);
-var ManagedIdentityErrorCodes = __nccwpck_require__(2398);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/CloudShellManagedIdentitySource.cs
- */
-class CloudShell extends BaseManagedIdentitySource.BaseManagedIdentitySource {
-    constructor(logger, nodeStorage, networkClient, cryptoProvider, msiEndpoint) {
-        super(logger, nodeStorage, networkClient, cryptoProvider);
-        this.msiEndpoint = msiEndpoint;
-    }
-    static getEnvironmentVariables() {
-        const msiEndpoint = process.env[Constants.ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT];
-        return [msiEndpoint];
-    }
-    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
-        const [msiEndpoint] = CloudShell.getEnvironmentVariables();
-        // if the msi endpoint environment variable is undefined, this MSI provider is unavailable.
-        if (!msiEndpoint) {
-            logger.info(`[Managed Identity] ${Constants.ManagedIdentitySourceNames.CLOUD_SHELL} managed identity is unavailable because the '${Constants.ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT} environment variable is not defined.`);
-            return null;
-        }
-        const validatedMsiEndpoint = CloudShell.getValidatedEnvVariableUrlString(Constants.ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT, msiEndpoint, Constants.ManagedIdentitySourceNames.CLOUD_SHELL, logger);
-        logger.info(`[Managed Identity] Environment variable validation passed for ${Constants.ManagedIdentitySourceNames.CLOUD_SHELL} managed identity. Endpoint URI: ${validatedMsiEndpoint}. Creating ${Constants.ManagedIdentitySourceNames.CLOUD_SHELL} managed identity.`);
-        if (managedIdentityId.idType !== Constants.ManagedIdentityIdType.SYSTEM_ASSIGNED) {
-            throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.unableToCreateCloudShell);
-        }
-        return new CloudShell(logger, nodeStorage, networkClient, cryptoProvider, msiEndpoint);
-    }
-    createRequest(resource) {
-        const request = new ManagedIdentityRequestParameters.ManagedIdentityRequestParameters(Constants.HttpMethod.POST, this.msiEndpoint);
-        request.headers[Constants.METADATA_HEADER_NAME] = "true";
-        request.bodyParameters[Constants.RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
-            resource;
-        return request;
-    }
-}
-
-exports.CloudShell = CloudShell;
-//# sourceMappingURL=CloudShell.cjs.map
-
-
-/***/ }),
-
-/***/ 7473:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var ManagedIdentityRequestParameters = __nccwpck_require__(9241);
-var BaseManagedIdentitySource = __nccwpck_require__(2147);
-var Constants = __nccwpck_require__(7753);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-// IMDS constants. Docs for IMDS are available here https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http
-const IMDS_TOKEN_PATH = "/metadata/identity/oauth2/token";
-const DEFAULT_IMDS_ENDPOINT = `http://169.254.169.254${IMDS_TOKEN_PATH}`;
-const IMDS_API_VERSION = "2018-02-01";
-// Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/ImdsManagedIdentitySource.cs
-class Imds extends BaseManagedIdentitySource.BaseManagedIdentitySource {
-    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint) {
-        super(logger, nodeStorage, networkClient, cryptoProvider);
-        this.identityEndpoint = identityEndpoint;
-    }
-    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider) {
-        let validatedIdentityEndpoint;
-        if (process.env[Constants.ManagedIdentityEnvironmentVariableNames
-            .AZURE_POD_IDENTITY_AUTHORITY_HOST]) {
-            logger.info(`[Managed Identity] Environment variable ${Constants.ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST} for ${Constants.ManagedIdentitySourceNames.IMDS} returned endpoint: ${process.env[Constants.ManagedIdentityEnvironmentVariableNames
-                .AZURE_POD_IDENTITY_AUTHORITY_HOST]}`);
-            validatedIdentityEndpoint = Imds.getValidatedEnvVariableUrlString(Constants.ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST, `${process.env[Constants.ManagedIdentityEnvironmentVariableNames
-                .AZURE_POD_IDENTITY_AUTHORITY_HOST]}${IMDS_TOKEN_PATH}`, Constants.ManagedIdentitySourceNames.IMDS, logger);
-        }
-        else {
-            logger.info(`[Managed Identity] Unable to find ${Constants.ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST} environment variable for ${Constants.ManagedIdentitySourceNames.IMDS}, using the default endpoint.`);
-            validatedIdentityEndpoint = DEFAULT_IMDS_ENDPOINT;
-        }
-        return new Imds(logger, nodeStorage, networkClient, cryptoProvider, validatedIdentityEndpoint);
-    }
-    createRequest(resource, managedIdentityId) {
-        const request = new ManagedIdentityRequestParameters.ManagedIdentityRequestParameters(Constants.HttpMethod.GET, this.identityEndpoint);
-        request.headers[Constants.METADATA_HEADER_NAME] = "true";
-        request.queryParameters[Constants.API_VERSION_QUERY_PARAMETER_NAME] =
-            IMDS_API_VERSION;
-        request.queryParameters[Constants.RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
-            resource;
-        if (managedIdentityId.idType !== Constants.ManagedIdentityIdType.SYSTEM_ASSIGNED) {
-            request.queryParameters[this.getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityId.idType)] = managedIdentityId.id;
-        }
-        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
-        return request;
-    }
-}
-
-exports.Imds = Imds;
-//# sourceMappingURL=Imds.cjs.map
-
-
-/***/ }),
-
-/***/ 2678:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var ManagedIdentityRequestParameters = __nccwpck_require__(9241);
-var BaseManagedIdentitySource = __nccwpck_require__(2147);
-var Constants = __nccwpck_require__(7753);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-// MSI Constants. Docs for MSI are available here https://docs.microsoft.com/azure/app-service/overview-managed-identity
-const SERVICE_FABRIC_MSI_API_VERSION = "2019-07-01-preview";
-/**
- * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/ServiceFabricManagedIdentitySource.cs
- */
-class ServiceFabric extends BaseManagedIdentitySource.BaseManagedIdentitySource {
-    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader) {
-        super(logger, nodeStorage, networkClient, cryptoProvider);
-        this.identityEndpoint = identityEndpoint;
-        this.identityHeader = identityHeader;
-    }
-    static getEnvironmentVariables() {
-        const identityEndpoint = process.env[Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT];
-        const identityHeader = process.env[Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER];
-        const identityServerThumbprint = process.env[Constants.ManagedIdentityEnvironmentVariableNames
-            .IDENTITY_SERVER_THUMBPRINT];
-        return [identityEndpoint, identityHeader, identityServerThumbprint];
-    }
-    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
-        const [identityEndpoint, identityHeader, identityServerThumbprint] = ServiceFabric.getEnvironmentVariables();
-        /*
-         * if either of the identity endpoint, identity header, or identity server thumbprint
-         * environment variables are undefined, this MSI provider is unavailable.
-         */
-        if (!identityEndpoint || !identityHeader || !identityServerThumbprint) {
-            logger.info(`[Managed Identity] ${Constants.ManagedIdentitySourceNames.SERVICE_FABRIC} managed identity is unavailable because one or all of the '${Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER}', '${Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' or '${Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_SERVER_THUMBPRINT}' environment variables are not defined.`);
-            return null;
-        }
-        const validatedIdentityEndpoint = ServiceFabric.getValidatedEnvVariableUrlString(Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT, identityEndpoint, Constants.ManagedIdentitySourceNames.SERVICE_FABRIC, logger);
-        logger.info(`[Managed Identity] Environment variables validation passed for ${Constants.ManagedIdentitySourceNames.SERVICE_FABRIC} managed identity. Endpoint URI: ${validatedIdentityEndpoint}. Creating ${Constants.ManagedIdentitySourceNames.SERVICE_FABRIC} managed identity.`);
-        if (managedIdentityId.idType !== Constants.ManagedIdentityIdType.SYSTEM_ASSIGNED) {
-            logger.warning(`[Managed Identity] ${Constants.ManagedIdentitySourceNames.SERVICE_FABRIC} user assigned managed identity is configured in the cluster, not during runtime. See also: https://learn.microsoft.com/en-us/azure/service-fabric/configure-existing-cluster-enable-managed-identity-token-service.`);
-        }
-        return new ServiceFabric(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader);
-    }
-    createRequest(resource, managedIdentityId) {
-        const request = new ManagedIdentityRequestParameters.ManagedIdentityRequestParameters(Constants.HttpMethod.GET, this.identityEndpoint);
-        request.headers[Constants.SERVICE_FABRIC_SECRET_HEADER_NAME] =
-            this.identityHeader;
-        request.queryParameters[Constants.API_VERSION_QUERY_PARAMETER_NAME] =
-            SERVICE_FABRIC_MSI_API_VERSION;
-        request.queryParameters[Constants.RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
-            resource;
-        if (managedIdentityId.idType !== Constants.ManagedIdentityIdType.SYSTEM_ASSIGNED) {
-            request.queryParameters[this.getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityId.idType)] = managedIdentityId.id;
-        }
-        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
-        return request;
-    }
-}
-
-exports.ServiceFabric = ServiceFabric;
-//# sourceMappingURL=ServiceFabric.cjs.map
-
-
-/***/ }),
-
-/***/ 9393:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var EncodingUtils = __nccwpck_require__(2092);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * On-Behalf-Of client
- */
-class OnBehalfOfClient extends msalCommon.BaseClient {
-    constructor(configuration) {
-        super(configuration);
-    }
-    /**
-     * Public API to acquire tokens with on behalf of flow
-     * @param request
-     */
-    async acquireToken(request) {
-        this.scopeSet = new msalCommon.ScopeSet(request.scopes || []);
-        // generate the user_assertion_hash for OBOAssertion
-        this.userAssertionHash = await this.cryptoUtils.hashString(request.oboAssertion);
-        if (request.skipCache || request.claims) {
-            return this.executeTokenRequest(request, this.authority, this.userAssertionHash);
-        }
-        try {
-            return await this.getCachedAuthenticationResult(request);
-        }
-        catch (e) {
-            // Any failure falls back to interactive request, once we implement distributed cache, we plan to handle `createRefreshRequiredError` to refresh using the RT
-            return await this.executeTokenRequest(request, this.authority, this.userAssertionHash);
-        }
-    }
-    /**
-     * look up cache for tokens
-     * Find idtoken in the cache
-     * Find accessToken based on user assertion and account info in the cache
-     * Please note we are not yet supported OBO tokens refreshed with long lived RT. User will have to send a new assertion if the current access token expires
-     * This is to prevent security issues when the assertion changes over time, however, longlived RT helps retaining the session
-     * @param request
-     */
-    async getCachedAuthenticationResult(request) {
-        // look in the cache for the access_token which matches the incoming_assertion
-        const cachedAccessToken = this.readAccessTokenFromCacheForOBO(this.config.authOptions.clientId, request);
-        if (!cachedAccessToken) {
-            // Must refresh due to non-existent access_token.
-            this.serverTelemetryManager?.setCacheOutcome(msalCommon.CacheOutcome.NO_CACHED_ACCESS_TOKEN);
-            this.logger.info("SilentFlowClient:acquireCachedToken - No access token found in cache for the given properties.");
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.tokenRefreshRequired);
-        }
-        else if (msalCommon.TimeUtils.isTokenExpired(cachedAccessToken.expiresOn, this.config.systemOptions.tokenRenewalOffsetSeconds)) {
-            // Access token expired, will need to renewed
-            this.serverTelemetryManager?.setCacheOutcome(msalCommon.CacheOutcome.CACHED_ACCESS_TOKEN_EXPIRED);
-            this.logger.info(`OnbehalfofFlow:getCachedAuthenticationResult - Cached access token is expired or will expire within ${this.config.systemOptions.tokenRenewalOffsetSeconds} seconds.`);
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.tokenRefreshRequired);
-        }
-        // fetch the idToken from cache
-        const cachedIdToken = this.readIdTokenFromCacheForOBO(cachedAccessToken.homeAccountId);
-        let idTokenClaims;
-        let cachedAccount = null;
-        if (cachedIdToken) {
-            idTokenClaims = msalCommon.AuthToken.extractTokenClaims(cachedIdToken.secret, EncodingUtils.EncodingUtils.base64Decode);
-            const localAccountId = idTokenClaims.oid || idTokenClaims.sub;
-            const accountInfo = {
-                homeAccountId: cachedIdToken.homeAccountId,
-                environment: cachedIdToken.environment,
-                tenantId: cachedIdToken.realm,
-                username: msalCommon.Constants.EMPTY_STRING,
-                localAccountId: localAccountId || msalCommon.Constants.EMPTY_STRING,
-            };
-            cachedAccount = this.cacheManager.readAccountFromCache(accountInfo);
-        }
-        // increment telemetry cache hit counter
-        if (this.config.serverTelemetryManager) {
-            this.config.serverTelemetryManager.incrementCacheHits();
-        }
-        return msalCommon.ResponseHandler.generateAuthenticationResult(this.cryptoUtils, this.authority, {
-            account: cachedAccount,
-            accessToken: cachedAccessToken,
-            idToken: cachedIdToken,
-            refreshToken: null,
-            appMetadata: null,
-        }, true, request, idTokenClaims);
-    }
-    /**
-     * read idtoken from cache, this is a specific implementation for OBO as the requirements differ from a generic lookup in the cacheManager
-     * Certain use cases of OBO flow do not expect an idToken in the cache/or from the service
-     * @param atHomeAccountId {string}
-     */
-    readIdTokenFromCacheForOBO(atHomeAccountId) {
-        const idTokenFilter = {
-            homeAccountId: atHomeAccountId,
-            environment: this.authority.canonicalAuthorityUrlComponents.HostNameAndPort,
-            credentialType: msalCommon.CredentialType.ID_TOKEN,
-            clientId: this.config.authOptions.clientId,
-            realm: this.authority.tenant,
-        };
-        const idTokenMap = this.cacheManager.getIdTokensByFilter(idTokenFilter);
-        // When acquiring a token on behalf of an application, there might not be an id token in the cache
-        if (Object.values(idTokenMap).length < 1) {
-            return null;
-        }
-        return Object.values(idTokenMap)[0];
-    }
-    /**
-     * Fetches the cached access token based on incoming assertion
-     * @param clientId
-     * @param request
-     * @param userAssertionHash
-     */
-    readAccessTokenFromCacheForOBO(clientId, request) {
-        const authScheme = request.authenticationScheme || msalCommon.AuthenticationScheme.BEARER;
-        /*
-         * Distinguish between Bearer and PoP/SSH token cache types
-         * Cast to lowercase to handle "bearer" from ADFS
-         */
-        const credentialType = authScheme &&
-            authScheme.toLowerCase() !==
-                msalCommon.AuthenticationScheme.BEARER.toLowerCase()
-            ? msalCommon.CredentialType.ACCESS_TOKEN_WITH_AUTH_SCHEME
-            : msalCommon.CredentialType.ACCESS_TOKEN;
-        const accessTokenFilter = {
-            credentialType: credentialType,
-            clientId,
-            target: msalCommon.ScopeSet.createSearchScopes(this.scopeSet.asArray()),
-            tokenType: authScheme,
-            keyId: request.sshKid,
-            requestedClaimsHash: request.requestedClaimsHash,
-            userAssertionHash: this.userAssertionHash,
-        };
-        const accessTokens = this.cacheManager.getAccessTokensByFilter(accessTokenFilter);
-        const numAccessTokens = accessTokens.length;
-        if (numAccessTokens < 1) {
-            return null;
-        }
-        else if (numAccessTokens > 1) {
-            throw msalCommon.createClientAuthError(msalCommon.ClientAuthErrorCodes.multipleMatchingTokens);
-        }
-        return accessTokens[0];
-    }
-    /**
-     * Make a network call to the server requesting credentials
-     * @param request
-     * @param authority
-     */
-    async executeTokenRequest(request, authority, userAssertionHash) {
-        const queryParametersString = this.createTokenQueryParameters(request);
-        const endpoint = msalCommon.UrlString.appendQueryString(authority.tokenEndpoint, queryParametersString);
-        const requestBody = await this.createTokenRequestBody(request);
-        const headers = this.createTokenRequestHeaders();
-        const thumbprint = {
-            clientId: this.config.authOptions.clientId,
-            authority: request.authority,
-            scopes: request.scopes,
-            claims: request.claims,
-            authenticationScheme: request.authenticationScheme,
-            resourceRequestMethod: request.resourceRequestMethod,
-            resourceRequestUri: request.resourceRequestUri,
-            shrClaims: request.shrClaims,
-            sshKid: request.sshKid,
-        };
-        const reqTimestamp = msalCommon.TimeUtils.nowSeconds();
-        const response = await this.executePostToTokenEndpoint(endpoint, requestBody, headers, thumbprint, request.correlationId);
-        const responseHandler = new msalCommon.ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
-        responseHandler.validateTokenResponse(response.body);
-        const tokenResponse = await responseHandler.handleServerTokenResponse(response.body, this.authority, reqTimestamp, request, undefined, userAssertionHash);
-        return tokenResponse;
-    }
-    /**
-     * generate a server request in accepable format
-     * @param request
-     */
-    async createTokenRequestBody(request) {
-        const parameterBuilder = new msalCommon.RequestParameterBuilder();
-        parameterBuilder.addClientId(this.config.authOptions.clientId);
-        parameterBuilder.addScopes(request.scopes);
-        parameterBuilder.addGrantType(msalCommon.GrantType.JWT_BEARER);
-        parameterBuilder.addClientInfo();
-        parameterBuilder.addLibraryInfo(this.config.libraryInfo);
-        parameterBuilder.addApplicationTelemetry(this.config.telemetry.application);
-        parameterBuilder.addThrottling();
-        if (this.serverTelemetryManager) {
-            parameterBuilder.addServerTelemetry(this.serverTelemetryManager);
-        }
-        const correlationId = request.correlationId ||
-            this.config.cryptoInterface.createNewGuid();
-        parameterBuilder.addCorrelationId(correlationId);
-        parameterBuilder.addRequestTokenUse(msalCommon.AADServerParamKeys.ON_BEHALF_OF);
-        parameterBuilder.addOboAssertion(request.oboAssertion);
-        if (this.config.clientCredentials.clientSecret) {
-            parameterBuilder.addClientSecret(this.config.clientCredentials.clientSecret);
-        }
-        const clientAssertion = this.config.clientCredentials.clientAssertion;
-        if (clientAssertion) {
-            parameterBuilder.addClientAssertion(await msalCommon.getClientAssertion(clientAssertion.assertion, this.config.authOptions.clientId, request.resourceRequestUri));
-            parameterBuilder.addClientAssertionType(clientAssertion.assertionType);
-        }
-        if (request.claims ||
-            (this.config.authOptions.clientCapabilities &&
-                this.config.authOptions.clientCapabilities.length > 0)) {
-            parameterBuilder.addClaims(request.claims, this.config.authOptions.clientCapabilities);
-        }
-        return parameterBuilder.createQueryString();
-    }
-}
-
-exports.OnBehalfOfClient = OnBehalfOfClient;
-//# sourceMappingURL=OnBehalfOfClient.cjs.map
-
-
-/***/ }),
-
-/***/ 4540:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var Constants = __nccwpck_require__(7753);
-var msalCommon = __nccwpck_require__(5405);
-var ClientApplication = __nccwpck_require__(6801);
-var NodeAuthError = __nccwpck_require__(7303);
-var LoopbackClient = __nccwpck_require__(4499);
-var DeviceCodeClient = __nccwpck_require__(2412);
-var packageMetadata = __nccwpck_require__(6507);
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -83326,7 +81823,7 @@ var packageMetadata = __nccwpck_require__(6507);
  * are not trusted to safely store application secrets, and therefore can only request tokens in the name of an user.
  * @public
  */
-class PublicClientApplication extends ClientApplication.ClientApplication {
+class PublicClientApplication extends ClientApplication {
     /**
      * Important attributes in the Configuration object for auth are:
      * - clientID: the application ID of your application. You can obtain one by registering your application with our Application registration portal.
@@ -83355,9 +81852,9 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
                 this.logger.warning("NativeBroker implementation was provided but the broker is unavailable.");
             }
         }
-        this.skus = msalCommon.ServerTelemetryManager.makeExtraSkuString({
-            libraryName: Constants.Constants.MSAL_SKU,
-            libraryVersion: packageMetadata.version,
+        this.skus = ServerTelemetryManager.makeExtraSkuString({
+            libraryName: Constants.MSAL_SKU,
+            libraryVersion: version,
         });
     }
     /**
@@ -83372,15 +81869,15 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
     async acquireTokenByDeviceCode(request) {
         this.logger.info("acquireTokenByDeviceCode called", request.correlationId);
         const validRequest = Object.assign(request, await this.initializeBaseRequest(request));
-        const serverTelemetryManager = this.initializeServerTelemetryManager(Constants.ApiId.acquireTokenByDeviceCode, validRequest.correlationId);
+        const serverTelemetryManager = this.initializeServerTelemetryManager(ApiId.acquireTokenByDeviceCode, validRequest.correlationId);
         try {
             const deviceCodeConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, undefined, request.azureCloudOptions);
-            const deviceCodeClient = new DeviceCodeClient.DeviceCodeClient(deviceCodeConfig);
+            const deviceCodeClient = new DeviceCodeClient(deviceCodeConfig);
             this.logger.verbose("Device code client created", validRequest.correlationId);
             return await deviceCodeClient.acquireToken(validRequest);
         }
         catch (e) {
-            if (e instanceof msalCommon.AuthError) {
+            if (e instanceof AuthError) {
                 e.setCorrelationId(validRequest.correlationId);
             }
             serverTelemetryManager.cacheFailedRequest(e);
@@ -83398,21 +81895,21 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
             const brokerRequest = {
                 ...remainingProperties,
                 clientId: this.config.auth.clientId,
-                scopes: request.scopes || msalCommon.OIDC_DEFAULT_SCOPES,
-                redirectUri: `${Constants.Constants.HTTP_PROTOCOL}${Constants.Constants.LOCALHOST}`,
+                scopes: request.scopes || OIDC_DEFAULT_SCOPES,
+                redirectUri: `${Constants.HTTP_PROTOCOL}${Constants.LOCALHOST}`,
                 authority: request.authority || this.config.auth.authority,
                 correlationId: correlationId,
                 extraParameters: {
                     ...remainingProperties.extraQueryParameters,
                     ...remainingProperties.tokenQueryParameters,
-                    [msalCommon.AADServerParamKeys.X_CLIENT_EXTRA_SKU]: this.skus,
+                    [X_CLIENT_EXTRA_SKU]: this.skus,
                 },
                 accountId: remainingProperties.account?.nativeAccountId,
             };
             return this.nativeBrokerPlugin.acquireTokenInteractive(brokerRequest, windowHandle);
         }
         const { verifier, challenge } = await this.cryptoProvider.generatePkceCodes();
-        const loopbackClient = customLoopbackClient || new LoopbackClient.LoopbackClient();
+        const loopbackClient = customLoopbackClient || new LoopbackClient();
         let authCodeResponse = {};
         let authCodeListenerError = null;
         try {
@@ -83430,11 +81927,11 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
             const validRequest = {
                 ...remainingProperties,
                 correlationId: correlationId,
-                scopes: request.scopes || msalCommon.OIDC_DEFAULT_SCOPES,
+                scopes: request.scopes || OIDC_DEFAULT_SCOPES,
                 redirectUri: redirectUri,
-                responseMode: msalCommon.ResponseMode.QUERY,
+                responseMode: ResponseMode.QUERY,
                 codeChallenge: challenge,
-                codeChallengeMethod: msalCommon.CodeChallengeMethodValues.S256,
+                codeChallengeMethod: CodeChallengeMethodValues.S256,
             };
             const authCodeUrl = await this.getAuthCodeUrl(validRequest);
             await openBrowser(authCodeUrl);
@@ -83443,16 +81940,16 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
                 throw authCodeListenerError;
             }
             if (authCodeResponse.error) {
-                throw new msalCommon.ServerError(authCodeResponse.error, authCodeResponse.error_description, authCodeResponse.suberror);
+                throw new ServerError(authCodeResponse.error, authCodeResponse.error_description, authCodeResponse.suberror);
             }
             else if (!authCodeResponse.code) {
-                throw NodeAuthError.NodeAuthError.createNoAuthCodeInResponseError();
+                throw NodeAuthError.createNoAuthCodeInResponseError();
             }
             const clientInfo = authCodeResponse.client_info;
             const tokenRequest = {
                 code: authCodeResponse.code,
                 codeVerifier: verifier,
-                clientInfo: clientInfo || msalCommon.Constants.EMPTY_STRING,
+                clientInfo: clientInfo || Constants$1.EMPTY_STRING,
                 ...validRequest,
             };
             return await this.acquireTokenByCode(tokenRequest); // Await this so the server doesn't close prematurely
@@ -83473,13 +81970,13 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
             const brokerRequest = {
                 ...request,
                 clientId: this.config.auth.clientId,
-                scopes: request.scopes || msalCommon.OIDC_DEFAULT_SCOPES,
-                redirectUri: `${Constants.Constants.HTTP_PROTOCOL}${Constants.Constants.LOCALHOST}`,
+                scopes: request.scopes || OIDC_DEFAULT_SCOPES,
+                redirectUri: `${Constants.HTTP_PROTOCOL}${Constants.LOCALHOST}`,
                 authority: request.authority || this.config.auth.authority,
                 correlationId: correlationId,
                 extraParameters: {
                     ...request.tokenQueryParameters,
-                    [msalCommon.AADServerParamKeys.X_CLIENT_EXTRA_SKU]: this.skus,
+                    [X_CLIENT_EXTRA_SKU]: this.skus,
                 },
                 accountId: request.account.nativeAccountId,
                 forceRefresh: request.forceRefresh || false,
@@ -83525,11 +82022,11 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
         return new Promise((resolve, reject) => {
             let ticks = 0;
             const id = setInterval(() => {
-                if (Constants.LOOPBACK_SERVER_CONSTANTS.TIMEOUT_MS /
-                    Constants.LOOPBACK_SERVER_CONSTANTS.INTERVAL_MS <
+                if (LOOPBACK_SERVER_CONSTANTS.TIMEOUT_MS /
+                    LOOPBACK_SERVER_CONSTANTS.INTERVAL_MS <
                     ticks) {
                     clearInterval(id);
-                    reject(NodeAuthError.NodeAuthError.createLoopbackServerTimeoutError());
+                    reject(NodeAuthError.createLoopbackServerTimeoutError());
                     return;
                 }
                 try {
@@ -83539,9 +82036,9 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
                     return;
                 }
                 catch (e) {
-                    if (e instanceof msalCommon.AuthError &&
+                    if (e instanceof AuthError &&
                         e.errorCode ===
-                            NodeAuthError.NodeAuthErrorMessage.noLoopbackServerExists.code) {
+                            NodeAuthErrorMessage.noLoopbackServerExists.code) {
                         // Loopback server is not listening yet
                         ticks++;
                         return;
@@ -83550,93 +82047,178 @@ class PublicClientApplication extends ClientApplication.ClientApplication {
                     reject(e);
                     return;
                 }
-            }, Constants.LOOPBACK_SERVER_CONSTANTS.INTERVAL_MS);
+            }, LOOPBACK_SERVER_CONSTANTS.INTERVAL_MS);
         });
     }
 }
-
-exports.PublicClientApplication = PublicClientApplication;
-//# sourceMappingURL=PublicClientApplication.cjs.map
-
-
-/***/ }),
-
-/***/ 9250:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
 /**
- * Oauth2.0 Password grant client
- * Note: We are only supporting public clients for password grant and for purely testing purposes
+ * OAuth2.0 client credential grant
  */
-class UsernamePasswordClient extends msalCommon.BaseClient {
-    constructor(configuration) {
+class ClientCredentialClient extends BaseClient {
+    constructor(configuration, appTokenProvider) {
         super(configuration);
+        this.appTokenProvider = appTokenProvider;
     }
     /**
-     * API to acquire a token by passing the username and password to the service in exchage of credentials
-     * password_grant
+     * Public API to acquire a token with ClientCredential Flow for Confidential clients
      * @param request
      */
     async acquireToken(request) {
-        this.logger.info("in acquireToken call in username-password client");
-        const reqTimestamp = msalCommon.TimeUtils.nowSeconds();
-        const response = await this.executeTokenRequest(this.authority, request);
-        const responseHandler = new msalCommon.ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
-        // Validate response. This function throws a server error if an error is returned by the server.
-        responseHandler.validateTokenResponse(response.body);
-        const tokenResponse = responseHandler.handleServerTokenResponse(response.body, this.authority, reqTimestamp, request);
+        if (request.skipCache || request.claims) {
+            return this.executeTokenRequest(request, this.authority);
+        }
+        const [cachedAuthenticationResult, lastCacheOutcome] = await this.getCachedAuthenticationResult(request, this.config, this.cryptoUtils, this.authority, this.cacheManager, this.serverTelemetryManager);
+        if (cachedAuthenticationResult) {
+            // if the token is not expired but must be refreshed; get a new one in the background
+            if (lastCacheOutcome === CacheOutcome.PROACTIVELY_REFRESHED) {
+                this.logger.info("ClientCredentialClient:getCachedAuthenticationResult - Cached access token's refreshOn property has been exceeded'. It's not expired, but must be refreshed.");
+                // refresh the access token in the background
+                const refreshAccessToken = true;
+                await this.executeTokenRequest(request, this.authority, refreshAccessToken);
+            }
+            // return the cached token
+            return cachedAuthenticationResult;
+        }
+        else {
+            return this.executeTokenRequest(request, this.authority);
+        }
+    }
+    /**
+     * looks up cache if the tokens are cached already
+     */
+    async getCachedAuthenticationResult(request, config, cryptoUtils, authority, cacheManager, serverTelemetryManager) {
+        const clientConfiguration = config;
+        const managedIdentityConfiguration = config;
+        let lastCacheOutcome = CacheOutcome.NOT_APPLICABLE;
+        // read the user-supplied cache into memory, if applicable
+        let cacheContext;
+        if (clientConfiguration.serializableCache &&
+            clientConfiguration.persistencePlugin) {
+            cacheContext = new TokenCacheContext(clientConfiguration.serializableCache, false);
+            await clientConfiguration.persistencePlugin.beforeCacheAccess(cacheContext);
+        }
+        const cachedAccessToken = this.readAccessTokenFromCache(authority, managedIdentityConfiguration.managedIdentityId?.id ||
+            clientConfiguration.authOptions.clientId, new ScopeSet(request.scopes || []), cacheManager);
+        if (clientConfiguration.serializableCache &&
+            clientConfiguration.persistencePlugin &&
+            cacheContext) {
+            await clientConfiguration.persistencePlugin.afterCacheAccess(cacheContext);
+        }
+        // must refresh due to non-existent access_token
+        if (!cachedAccessToken) {
+            serverTelemetryManager?.setCacheOutcome(CacheOutcome.NO_CACHED_ACCESS_TOKEN);
+            return [null, CacheOutcome.NO_CACHED_ACCESS_TOKEN];
+        }
+        // must refresh due to the expires_in value
+        if (isTokenExpired(cachedAccessToken.expiresOn, clientConfiguration.systemOptions?.tokenRenewalOffsetSeconds ||
+            DEFAULT_TOKEN_RENEWAL_OFFSET_SEC)) {
+            serverTelemetryManager?.setCacheOutcome(CacheOutcome.CACHED_ACCESS_TOKEN_EXPIRED);
+            return [null, CacheOutcome.CACHED_ACCESS_TOKEN_EXPIRED];
+        }
+        // must refresh (in the background) due to the refresh_in value
+        if (cachedAccessToken.refreshOn &&
+            isTokenExpired(cachedAccessToken.refreshOn.toString(), 0)) {
+            lastCacheOutcome = CacheOutcome.PROACTIVELY_REFRESHED;
+            serverTelemetryManager?.setCacheOutcome(CacheOutcome.PROACTIVELY_REFRESHED);
+        }
+        return [
+            await ResponseHandler.generateAuthenticationResult(cryptoUtils, authority, {
+                account: null,
+                idToken: null,
+                accessToken: cachedAccessToken,
+                refreshToken: null,
+                appMetadata: null,
+            }, true, request),
+            lastCacheOutcome,
+        ];
+    }
+    /**
+     * Reads access token from the cache
+     */
+    readAccessTokenFromCache(authority, id, scopeSet, cacheManager) {
+        const accessTokenFilter = {
+            homeAccountId: Constants$1.EMPTY_STRING,
+            environment: authority.canonicalAuthorityUrlComponents.HostNameAndPort,
+            credentialType: CredentialType.ACCESS_TOKEN,
+            clientId: id,
+            realm: authority.tenant,
+            target: ScopeSet.createSearchScopes(scopeSet.asArray()),
+        };
+        const accessTokens = cacheManager.getAccessTokensByFilter(accessTokenFilter);
+        if (accessTokens.length < 1) {
+            return null;
+        }
+        else if (accessTokens.length > 1) {
+            throw createClientAuthError(multipleMatchingTokens);
+        }
+        return accessTokens[0];
+    }
+    /**
+     * Makes a network call to request the token from the service
+     * @param request
+     * @param authority
+     */
+    async executeTokenRequest(request, authority, refreshAccessToken) {
+        let serverTokenResponse;
+        let reqTimestamp;
+        if (this.appTokenProvider) {
+            this.logger.info("Using appTokenProvider extensibility.");
+            const appTokenPropviderParameters = {
+                correlationId: request.correlationId,
+                tenantId: this.config.authOptions.authority.tenant,
+                scopes: request.scopes,
+                claims: request.claims,
+            };
+            reqTimestamp = nowSeconds();
+            const appTokenProviderResult = await this.appTokenProvider(appTokenPropviderParameters);
+            serverTokenResponse = {
+                access_token: appTokenProviderResult.accessToken,
+                expires_in: appTokenProviderResult.expiresInSeconds,
+                refresh_in: appTokenProviderResult.refreshInSeconds,
+                token_type: AuthenticationScheme.BEARER,
+            };
+        }
+        else {
+            const queryParametersString = this.createTokenQueryParameters(request);
+            const endpoint = UrlString.appendQueryString(authority.tokenEndpoint, queryParametersString);
+            const requestBody = await this.createTokenRequestBody(request);
+            const headers = this.createTokenRequestHeaders();
+            const thumbprint = {
+                clientId: this.config.authOptions.clientId,
+                authority: request.authority,
+                scopes: request.scopes,
+                claims: request.claims,
+                authenticationScheme: request.authenticationScheme,
+                resourceRequestMethod: request.resourceRequestMethod,
+                resourceRequestUri: request.resourceRequestUri,
+                shrClaims: request.shrClaims,
+                sshKid: request.sshKid,
+            };
+            this.logger.info("Sending token request to endpoint: " + authority.tokenEndpoint);
+            reqTimestamp = nowSeconds();
+            const response = await this.executePostToTokenEndpoint(endpoint, requestBody, headers, thumbprint, request.correlationId);
+            serverTokenResponse = response.body;
+            serverTokenResponse.status = response.status;
+        }
+        const responseHandler = new ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
+        responseHandler.validateTokenResponse(serverTokenResponse, refreshAccessToken);
+        const tokenResponse = await responseHandler.handleServerTokenResponse(serverTokenResponse, this.authority, reqTimestamp, request);
         return tokenResponse;
     }
     /**
-     * Executes POST request to token endpoint
-     * @param authority
-     * @param request
-     */
-    async executeTokenRequest(authority, request) {
-        const queryParametersString = this.createTokenQueryParameters(request);
-        const endpoint = msalCommon.UrlString.appendQueryString(authority.tokenEndpoint, queryParametersString);
-        const requestBody = await this.createTokenRequestBody(request);
-        const headers = this.createTokenRequestHeaders({
-            credential: request.username,
-            type: msalCommon.CcsCredentialType.UPN,
-        });
-        const thumbprint = {
-            clientId: this.config.authOptions.clientId,
-            authority: authority.canonicalAuthority,
-            scopes: request.scopes,
-            claims: request.claims,
-            authenticationScheme: request.authenticationScheme,
-            resourceRequestMethod: request.resourceRequestMethod,
-            resourceRequestUri: request.resourceRequestUri,
-            shrClaims: request.shrClaims,
-            sshKid: request.sshKid,
-        };
-        return this.executePostToTokenEndpoint(endpoint, requestBody, headers, thumbprint, request.correlationId);
-    }
-    /**
-     * Generates a map for all the params to be sent to the service
+     * generate the request to the server in the acceptable format
      * @param request
      */
     async createTokenRequestBody(request) {
-        const parameterBuilder = new msalCommon.RequestParameterBuilder();
+        const parameterBuilder = new RequestParameterBuilder();
         parameterBuilder.addClientId(this.config.authOptions.clientId);
-        parameterBuilder.addUsername(request.username);
-        parameterBuilder.addPassword(request.password);
-        parameterBuilder.addScopes(request.scopes);
-        parameterBuilder.addResponseTypeForTokenAndIdToken();
-        parameterBuilder.addGrantType(msalCommon.GrantType.RESOURCE_OWNER_PASSWORD_GRANT);
-        parameterBuilder.addClientInfo();
+        parameterBuilder.addScopes(request.scopes, false);
+        parameterBuilder.addGrantType(GrantType.CLIENT_CREDENTIALS_GRANT);
         parameterBuilder.addLibraryInfo(this.config.libraryInfo);
         parameterBuilder.addApplicationTelemetry(this.config.telemetry.application);
         parameterBuilder.addThrottling();
@@ -83649,236 +82231,517 @@ class UsernamePasswordClient extends msalCommon.BaseClient {
         if (this.config.clientCredentials.clientSecret) {
             parameterBuilder.addClientSecret(this.config.clientCredentials.clientSecret);
         }
-        const clientAssertion = this.config.clientCredentials.clientAssertion;
+        // Use clientAssertion from request, fallback to client assertion in base configuration
+        const clientAssertion = request.clientAssertion ||
+            this.config.clientCredentials.clientAssertion;
         if (clientAssertion) {
-            parameterBuilder.addClientAssertion(await msalCommon.getClientAssertion(clientAssertion.assertion, this.config.authOptions.clientId, request.resourceRequestUri));
+            parameterBuilder.addClientAssertion(await getClientAssertion(clientAssertion.assertion, this.config.authOptions.clientId, request.resourceRequestUri));
             parameterBuilder.addClientAssertionType(clientAssertion.assertionType);
         }
-        if (!msalCommon.StringUtils.isEmptyObj(request.claims) ||
+        if (!StringUtils.isEmptyObj(request.claims) ||
             (this.config.authOptions.clientCapabilities &&
                 this.config.authOptions.clientCapabilities.length > 0)) {
             parameterBuilder.addClaims(request.claims, this.config.authOptions.clientCapabilities);
-        }
-        if (this.config.systemOptions.preventCorsPreflight &&
-            request.username) {
-            parameterBuilder.addCcsUpn(request.username);
         }
         return parameterBuilder.createQueryString();
     }
 }
 
-exports.UsernamePasswordClient = UsernamePasswordClient;
-//# sourceMappingURL=UsernamePasswordClient.cjs.map
-
-
-/***/ }),
-
-/***/ 677:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var HttpClient = __nccwpck_require__(3576);
-var ManagedIdentityId = __nccwpck_require__(4497);
-var Constants = __nccwpck_require__(7753);
-var LinearRetryPolicy = __nccwpck_require__(2114);
-var HttpClientWithRetries = __nccwpck_require__(6942);
-var NodeAuthError = __nccwpck_require__(7303);
-
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-const DEFAULT_AUTH_OPTIONS = {
-    clientId: msalCommon.Constants.EMPTY_STRING,
-    authority: msalCommon.Constants.DEFAULT_AUTHORITY,
-    clientSecret: msalCommon.Constants.EMPTY_STRING,
-    clientAssertion: msalCommon.Constants.EMPTY_STRING,
-    clientCertificate: {
-        thumbprint: msalCommon.Constants.EMPTY_STRING,
-        thumbprintSha256: msalCommon.Constants.EMPTY_STRING,
-        privateKey: msalCommon.Constants.EMPTY_STRING,
-        x5c: msalCommon.Constants.EMPTY_STRING,
-    },
-    knownAuthorities: [],
-    cloudDiscoveryMetadata: msalCommon.Constants.EMPTY_STRING,
-    authorityMetadata: msalCommon.Constants.EMPTY_STRING,
-    clientCapabilities: [],
-    protocolMode: msalCommon.ProtocolMode.AAD,
-    azureCloudOptions: {
-        azureCloudInstance: msalCommon.AzureCloudInstance.None,
-        tenant: msalCommon.Constants.EMPTY_STRING,
-    },
-    skipAuthorityMetadataCache: false,
-};
-const DEFAULT_CACHE_OPTIONS = {
-    claimsBasedCachingEnabled: false,
-};
-const DEFAULT_LOGGER_OPTIONS = {
-    loggerCallback: () => {
-        // allow users to not set logger call back
-    },
-    piiLoggingEnabled: false,
-    logLevel: msalCommon.LogLevel.Info,
-};
-const DEFAULT_SYSTEM_OPTIONS = {
-    loggerOptions: DEFAULT_LOGGER_OPTIONS,
-    networkClient: new HttpClient.HttpClient(),
-    proxyUrl: msalCommon.Constants.EMPTY_STRING,
-    customAgentOptions: {},
-    disableInternalRetries: false,
-};
-const DEFAULT_TELEMETRY_OPTIONS = {
-    application: {
-        appName: msalCommon.Constants.EMPTY_STRING,
-        appVersion: msalCommon.Constants.EMPTY_STRING,
-    },
-};
 /**
- * Sets the default options when not explicitly configured from app developer
- *
- * @param auth - Authentication options
- * @param cache - Cache options
- * @param system - System options
- * @param telemetry - Telemetry options
- *
- * @returns Configuration
- * @internal
+ * On-Behalf-Of client
  */
-function buildAppConfiguration({ auth, broker, cache, system, telemetry, }) {
-    const systemOptions = {
-        ...DEFAULT_SYSTEM_OPTIONS,
-        networkClient: new HttpClient.HttpClient(system?.proxyUrl, system?.customAgentOptions),
-        loggerOptions: system?.loggerOptions || DEFAULT_LOGGER_OPTIONS,
-        disableInternalRetries: system?.disableInternalRetries || false,
-    };
-    // if client certificate was provided, ensure that at least one of the SHA-1 or SHA-256 thumbprints were provided
-    if (!!auth.clientCertificate &&
-        !!!auth.clientCertificate.thumbprint &&
-        !!!auth.clientCertificate.thumbprintSha256) {
-        throw NodeAuthError.NodeAuthError.createStateNotFoundError();
+class OnBehalfOfClient extends BaseClient {
+    constructor(configuration) {
+        super(configuration);
     }
-    return {
-        auth: { ...DEFAULT_AUTH_OPTIONS, ...auth },
-        broker: { ...broker },
-        cache: { ...DEFAULT_CACHE_OPTIONS, ...cache },
-        system: { ...systemOptions, ...system },
-        telemetry: { ...DEFAULT_TELEMETRY_OPTIONS, ...telemetry },
-    };
+    /**
+     * Public API to acquire tokens with on behalf of flow
+     * @param request
+     */
+    async acquireToken(request) {
+        this.scopeSet = new ScopeSet(request.scopes || []);
+        // generate the user_assertion_hash for OBOAssertion
+        this.userAssertionHash = await this.cryptoUtils.hashString(request.oboAssertion);
+        if (request.skipCache || request.claims) {
+            return this.executeTokenRequest(request, this.authority, this.userAssertionHash);
+        }
+        try {
+            return await this.getCachedAuthenticationResult(request);
+        }
+        catch (e) {
+            // Any failure falls back to interactive request, once we implement distributed cache, we plan to handle `createRefreshRequiredError` to refresh using the RT
+            return await this.executeTokenRequest(request, this.authority, this.userAssertionHash);
+        }
+    }
+    /**
+     * look up cache for tokens
+     * Find idtoken in the cache
+     * Find accessToken based on user assertion and account info in the cache
+     * Please note we are not yet supported OBO tokens refreshed with long lived RT. User will have to send a new assertion if the current access token expires
+     * This is to prevent security issues when the assertion changes over time, however, longlived RT helps retaining the session
+     * @param request
+     */
+    async getCachedAuthenticationResult(request) {
+        // look in the cache for the access_token which matches the incoming_assertion
+        const cachedAccessToken = this.readAccessTokenFromCacheForOBO(this.config.authOptions.clientId, request);
+        if (!cachedAccessToken) {
+            // Must refresh due to non-existent access_token.
+            this.serverTelemetryManager?.setCacheOutcome(CacheOutcome.NO_CACHED_ACCESS_TOKEN);
+            this.logger.info("SilentFlowClient:acquireCachedToken - No access token found in cache for the given properties.");
+            throw createClientAuthError(tokenRefreshRequired);
+        }
+        else if (isTokenExpired(cachedAccessToken.expiresOn, this.config.systemOptions.tokenRenewalOffsetSeconds)) {
+            // Access token expired, will need to renewed
+            this.serverTelemetryManager?.setCacheOutcome(CacheOutcome.CACHED_ACCESS_TOKEN_EXPIRED);
+            this.logger.info(`OnbehalfofFlow:getCachedAuthenticationResult - Cached access token is expired or will expire within ${this.config.systemOptions.tokenRenewalOffsetSeconds} seconds.`);
+            throw createClientAuthError(tokenRefreshRequired);
+        }
+        // fetch the idToken from cache
+        const cachedIdToken = this.readIdTokenFromCacheForOBO(cachedAccessToken.homeAccountId);
+        let idTokenClaims;
+        let cachedAccount = null;
+        if (cachedIdToken) {
+            idTokenClaims = extractTokenClaims(cachedIdToken.secret, EncodingUtils.base64Decode);
+            const localAccountId = idTokenClaims.oid || idTokenClaims.sub;
+            const accountInfo = {
+                homeAccountId: cachedIdToken.homeAccountId,
+                environment: cachedIdToken.environment,
+                tenantId: cachedIdToken.realm,
+                username: Constants$1.EMPTY_STRING,
+                localAccountId: localAccountId || Constants$1.EMPTY_STRING,
+            };
+            cachedAccount = this.cacheManager.readAccountFromCache(accountInfo);
+        }
+        // increment telemetry cache hit counter
+        if (this.config.serverTelemetryManager) {
+            this.config.serverTelemetryManager.incrementCacheHits();
+        }
+        return ResponseHandler.generateAuthenticationResult(this.cryptoUtils, this.authority, {
+            account: cachedAccount,
+            accessToken: cachedAccessToken,
+            idToken: cachedIdToken,
+            refreshToken: null,
+            appMetadata: null,
+        }, true, request, idTokenClaims);
+    }
+    /**
+     * read idtoken from cache, this is a specific implementation for OBO as the requirements differ from a generic lookup in the cacheManager
+     * Certain use cases of OBO flow do not expect an idToken in the cache/or from the service
+     * @param atHomeAccountId {string}
+     */
+    readIdTokenFromCacheForOBO(atHomeAccountId) {
+        const idTokenFilter = {
+            homeAccountId: atHomeAccountId,
+            environment: this.authority.canonicalAuthorityUrlComponents.HostNameAndPort,
+            credentialType: CredentialType.ID_TOKEN,
+            clientId: this.config.authOptions.clientId,
+            realm: this.authority.tenant,
+        };
+        const idTokenMap = this.cacheManager.getIdTokensByFilter(idTokenFilter);
+        // When acquiring a token on behalf of an application, there might not be an id token in the cache
+        if (Object.values(idTokenMap).length < 1) {
+            return null;
+        }
+        return Object.values(idTokenMap)[0];
+    }
+    /**
+     * Fetches the cached access token based on incoming assertion
+     * @param clientId
+     * @param request
+     * @param userAssertionHash
+     */
+    readAccessTokenFromCacheForOBO(clientId, request) {
+        const authScheme = request.authenticationScheme || AuthenticationScheme.BEARER;
+        /*
+         * Distinguish between Bearer and PoP/SSH token cache types
+         * Cast to lowercase to handle "bearer" from ADFS
+         */
+        const credentialType = authScheme &&
+            authScheme.toLowerCase() !==
+                AuthenticationScheme.BEARER.toLowerCase()
+            ? CredentialType.ACCESS_TOKEN_WITH_AUTH_SCHEME
+            : CredentialType.ACCESS_TOKEN;
+        const accessTokenFilter = {
+            credentialType: credentialType,
+            clientId,
+            target: ScopeSet.createSearchScopes(this.scopeSet.asArray()),
+            tokenType: authScheme,
+            keyId: request.sshKid,
+            requestedClaimsHash: request.requestedClaimsHash,
+            userAssertionHash: this.userAssertionHash,
+        };
+        const accessTokens = this.cacheManager.getAccessTokensByFilter(accessTokenFilter);
+        const numAccessTokens = accessTokens.length;
+        if (numAccessTokens < 1) {
+            return null;
+        }
+        else if (numAccessTokens > 1) {
+            throw createClientAuthError(multipleMatchingTokens);
+        }
+        return accessTokens[0];
+    }
+    /**
+     * Make a network call to the server requesting credentials
+     * @param request
+     * @param authority
+     */
+    async executeTokenRequest(request, authority, userAssertionHash) {
+        const queryParametersString = this.createTokenQueryParameters(request);
+        const endpoint = UrlString.appendQueryString(authority.tokenEndpoint, queryParametersString);
+        const requestBody = await this.createTokenRequestBody(request);
+        const headers = this.createTokenRequestHeaders();
+        const thumbprint = {
+            clientId: this.config.authOptions.clientId,
+            authority: request.authority,
+            scopes: request.scopes,
+            claims: request.claims,
+            authenticationScheme: request.authenticationScheme,
+            resourceRequestMethod: request.resourceRequestMethod,
+            resourceRequestUri: request.resourceRequestUri,
+            shrClaims: request.shrClaims,
+            sshKid: request.sshKid,
+        };
+        const reqTimestamp = nowSeconds();
+        const response = await this.executePostToTokenEndpoint(endpoint, requestBody, headers, thumbprint, request.correlationId);
+        const responseHandler = new ResponseHandler(this.config.authOptions.clientId, this.cacheManager, this.cryptoUtils, this.logger, this.config.serializableCache, this.config.persistencePlugin);
+        responseHandler.validateTokenResponse(response.body);
+        const tokenResponse = await responseHandler.handleServerTokenResponse(response.body, this.authority, reqTimestamp, request, undefined, userAssertionHash);
+        return tokenResponse;
+    }
+    /**
+     * generate a server request in accepable format
+     * @param request
+     */
+    async createTokenRequestBody(request) {
+        const parameterBuilder = new RequestParameterBuilder();
+        parameterBuilder.addClientId(this.config.authOptions.clientId);
+        parameterBuilder.addScopes(request.scopes);
+        parameterBuilder.addGrantType(GrantType.JWT_BEARER);
+        parameterBuilder.addClientInfo();
+        parameterBuilder.addLibraryInfo(this.config.libraryInfo);
+        parameterBuilder.addApplicationTelemetry(this.config.telemetry.application);
+        parameterBuilder.addThrottling();
+        if (this.serverTelemetryManager) {
+            parameterBuilder.addServerTelemetry(this.serverTelemetryManager);
+        }
+        const correlationId = request.correlationId ||
+            this.config.cryptoInterface.createNewGuid();
+        parameterBuilder.addCorrelationId(correlationId);
+        parameterBuilder.addRequestTokenUse(ON_BEHALF_OF);
+        parameterBuilder.addOboAssertion(request.oboAssertion);
+        if (this.config.clientCredentials.clientSecret) {
+            parameterBuilder.addClientSecret(this.config.clientCredentials.clientSecret);
+        }
+        const clientAssertion = this.config.clientCredentials.clientAssertion;
+        if (clientAssertion) {
+            parameterBuilder.addClientAssertion(await getClientAssertion(clientAssertion.assertion, this.config.authOptions.clientId, request.resourceRequestUri));
+            parameterBuilder.addClientAssertionType(clientAssertion.assertionType);
+        }
+        if (request.claims ||
+            (this.config.authOptions.clientCapabilities &&
+                this.config.authOptions.clientCapabilities.length > 0)) {
+            parameterBuilder.addClaims(request.claims, this.config.authOptions.clientCapabilities);
+        }
+        return parameterBuilder.createQueryString();
+    }
 }
-function buildManagedIdentityConfiguration({ managedIdentityIdParams, system, }) {
-    const managedIdentityId = new ManagedIdentityId.ManagedIdentityId(managedIdentityIdParams);
-    const loggerOptions = system?.loggerOptions || DEFAULT_LOGGER_OPTIONS;
-    let networkClient;
-    // use developer provided network client if passed in
-    if (system?.networkClient) {
-        networkClient = system.networkClient;
-        // otherwise, create a new one
-    }
-    else {
-        networkClient = new HttpClient.HttpClient(system?.proxyUrl, system?.customAgentOptions);
-    }
-    // wrap the network client with a retry policy if the developer has not disabled the option to do so
-    if (!system?.disableInternalRetries) {
-        const linearRetryPolicy = new LinearRetryPolicy.LinearRetryPolicy(Constants.MANAGED_IDENTITY_MAX_RETRIES, Constants.MANAGED_IDENTITY_RETRY_DELAY, Constants.MANAGED_IDENTITY_HTTP_STATUS_CODES_TO_RETRY_ON);
-        networkClient = new HttpClientWithRetries.HttpClientWithRetries(networkClient, linearRetryPolicy);
-    }
-    return {
-        managedIdentityId: managedIdentityId,
-        system: {
-            loggerOptions,
-            networkClient,
-        },
-    };
-}
-
-exports.buildAppConfiguration = buildAppConfiguration;
-exports.buildManagedIdentityConfiguration = buildManagedIdentityConfiguration;
-//# sourceMappingURL=Configuration.cjs.map
-
-
-/***/ }),
-
-/***/ 4497:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var ManagedIdentityError = __nccwpck_require__(384);
-var Constants = __nccwpck_require__(7753);
-var ManagedIdentityErrorCodes = __nccwpck_require__(2398);
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-class ManagedIdentityId {
-    get id() {
-        return this._id;
+// AADAuthorityConstants
+/**
+ *  This class is to be used to acquire tokens for confidential client applications (webApp, webAPI). Confidential client applications
+ *  will configure application secrets, client certificates/assertions as applicable
+ * @public
+ */
+class ConfidentialClientApplication extends ClientApplication {
+    /**
+     * Constructor for the ConfidentialClientApplication
+     *
+     * Required attributes in the Configuration object are:
+     * - clientID: the application ID of your application. You can obtain one by registering your application with our application registration portal
+     * - authority: the authority URL for your application.
+     * - client credential: Must set either client secret, certificate, or assertion for confidential clients. You can obtain a client secret from the application registration portal.
+     *
+     * In Azure AD, authority is a URL indicating of the form https://login.microsoftonline.com/\{Enter_the_Tenant_Info_Here\}.
+     * If your application supports Accounts in one organizational directory, replace "Enter_the_Tenant_Info_Here" value with the Tenant Id or Tenant name (for example, contoso.microsoft.com).
+     * If your application supports Accounts in any organizational directory, replace "Enter_the_Tenant_Info_Here" value with organizations.
+     * If your application supports Accounts in any organizational directory and personal Microsoft accounts, replace "Enter_the_Tenant_Info_Here" value with common.
+     * To restrict support to Personal Microsoft accounts only, replace "Enter_the_Tenant_Info_Here" value with consumers.
+     *
+     * In Azure B2C, authority is of the form https://\{instance\}/tfp/\{tenant\}/\{policyName\}/
+     * Full B2C functionality will be available in this library in future versions.
+     *
+     * @param Configuration - configuration object for the MSAL ConfidentialClientApplication instance
+     */
+    constructor(configuration) {
+        super(configuration);
+        this.setClientCredential();
+        this.appTokenProvider = undefined;
     }
-    set id(value) {
-        this._id = value;
+    /**
+     * This extensibility point only works for the client_credential flow, i.e. acquireTokenByClientCredential and
+     * is meant for Azure SDK to enhance Managed Identity support.
+     *
+     * @param IAppTokenProvider  - Extensibility interface, which allows the app developer to return a token from a custom source.
+     */
+    SetAppTokenProvider(provider) {
+        this.appTokenProvider = provider;
     }
-    get idType() {
-        return this._idType;
-    }
-    set idType(value) {
-        this._idType = value;
-    }
-    constructor(managedIdentityIdParams) {
-        const userAssignedClientId = managedIdentityIdParams?.userAssignedClientId;
-        const userAssignedResourceId = managedIdentityIdParams?.userAssignedResourceId;
-        const userAssignedObjectId = managedIdentityIdParams?.userAssignedObjectId;
-        if (userAssignedClientId) {
-            if (userAssignedResourceId || userAssignedObjectId) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.invalidManagedIdentityIdType);
-            }
-            this.id = userAssignedClientId;
-            this.idType = Constants.ManagedIdentityIdType.USER_ASSIGNED_CLIENT_ID;
+    /**
+     * Acquires tokens from the authority for the application (not for an end user).
+     */
+    async acquireTokenByClientCredential(request) {
+        this.logger.info("acquireTokenByClientCredential called", request.correlationId);
+        // If there is a client assertion present in the request, it overrides the one present in the client configuration
+        let clientAssertion;
+        if (request.clientAssertion) {
+            clientAssertion = {
+                assertion: await getClientAssertion(request.clientAssertion, this.config.auth.clientId
+                // tokenEndpoint will be undefined. resourceRequestUri is omitted in ClientCredentialRequest
+                ),
+                assertionType: Constants.JWT_BEARER_ASSERTION_TYPE,
+            };
         }
-        else if (userAssignedResourceId) {
-            if (userAssignedClientId || userAssignedObjectId) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.invalidManagedIdentityIdType);
-            }
-            this.id = userAssignedResourceId;
-            this.idType = Constants.ManagedIdentityIdType.USER_ASSIGNED_RESOURCE_ID;
+        const baseRequest = await this.initializeBaseRequest(request);
+        // valid base request should not contain oidc scopes in this grant type
+        const validBaseRequest = {
+            ...baseRequest,
+            scopes: baseRequest.scopes.filter((scope) => !OIDC_DEFAULT_SCOPES.includes(scope)),
+        };
+        const validRequest = {
+            ...request,
+            ...validBaseRequest,
+            clientAssertion,
+        };
+        /*
+         * valid request should not have "common" or "organizations" in lieu of the tenant_id in the authority in the auth configuration
+         * example authority: "https://login.microsoftonline.com/TenantId",
+         */
+        const authority = new UrlString(validRequest.authority);
+        const tenantId = authority.getUrlComponents().PathSegments[0];
+        if (Object.values(AADAuthorityConstants).includes(tenantId)) {
+            throw createClientAuthError(missingTenantIdError);
         }
-        else if (userAssignedObjectId) {
-            if (userAssignedClientId || userAssignedResourceId) {
-                throw ManagedIdentityError.createManagedIdentityError(ManagedIdentityErrorCodes.invalidManagedIdentityIdType);
+        const azureRegionConfiguration = {
+            azureRegion: validRequest.azureRegion,
+            environmentRegion: process.env[REGION_ENVIRONMENT_VARIABLE],
+        };
+        const serverTelemetryManager = this.initializeServerTelemetryManager(ApiId.acquireTokenByClientCredential, validRequest.correlationId, validRequest.skipCache);
+        try {
+            const clientCredentialConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, serverTelemetryManager, azureRegionConfiguration, request.azureCloudOptions);
+            const clientCredentialClient = new ClientCredentialClient(clientCredentialConfig, this.appTokenProvider);
+            this.logger.verbose("Client credential client created", validRequest.correlationId);
+            return await clientCredentialClient.acquireToken(validRequest);
+        }
+        catch (e) {
+            if (e instanceof AuthError) {
+                e.setCorrelationId(validRequest.correlationId);
             }
-            this.id = userAssignedObjectId;
-            this.idType = Constants.ManagedIdentityIdType.USER_ASSIGNED_OBJECT_ID;
+            serverTelemetryManager.cacheFailedRequest(e);
+            throw e;
+        }
+    }
+    /**
+     * Acquires tokens from the authority for the application.
+     *
+     * Used in scenarios where the current app is a middle-tier service which was called with a token
+     * representing an end user. The current app can use the token (oboAssertion) to request another
+     * token to access downstream web API, on behalf of that user.
+     *
+     * The current middle-tier app has no user interaction to obtain consent.
+     * See how to gain consent upfront for your middle-tier app from this article.
+     * https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-on-behalf-of-flow#gaining-consent-for-the-middle-tier-application
+     */
+    async acquireTokenOnBehalfOf(request) {
+        this.logger.info("acquireTokenOnBehalfOf called", request.correlationId);
+        const validRequest = {
+            ...request,
+            ...(await this.initializeBaseRequest(request)),
+        };
+        try {
+            const onBehalfOfConfig = await this.buildOauthClientConfiguration(validRequest.authority, validRequest.correlationId, undefined, undefined, request.azureCloudOptions);
+            const oboClient = new OnBehalfOfClient(onBehalfOfConfig);
+            this.logger.verbose("On behalf of client created", validRequest.correlationId);
+            return await oboClient.acquireToken(validRequest);
+        }
+        catch (e) {
+            if (e instanceof AuthError) {
+                e.setCorrelationId(validRequest.correlationId);
+            }
+            throw e;
+        }
+    }
+    setClientCredential() {
+        const clientSecretNotEmpty = !!this.config.auth.clientSecret;
+        const clientAssertionNotEmpty = !!this.config.auth.clientAssertion;
+        const certificateNotEmpty = (!!this.config.auth.clientCertificate?.thumbprint ||
+            !!this.config.auth.clientCertificate?.thumbprintSha256) &&
+            !!this.config.auth.clientCertificate?.privateKey;
+        /*
+         * If app developer configures this callback, they don't need a credential
+         * i.e. AzureSDK can get token from Managed Identity without a cert / secret
+         */
+        if (this.appTokenProvider) {
+            return;
+        }
+        // Check that at most one credential is set on the application
+        if ((clientSecretNotEmpty && clientAssertionNotEmpty) ||
+            (clientAssertionNotEmpty && certificateNotEmpty) ||
+            (clientSecretNotEmpty && certificateNotEmpty)) {
+            throw createClientAuthError(invalidClientCredential);
+        }
+        if (this.config.auth.clientSecret) {
+            this.clientSecret = this.config.auth.clientSecret;
+            return;
+        }
+        if (this.config.auth.clientAssertion) {
+            this.developerProvidedClientAssertion =
+                this.config.auth.clientAssertion;
+            return;
+        }
+        if (!certificateNotEmpty) {
+            throw createClientAuthError(invalidClientCredential);
         }
         else {
-            this.id = Constants.DEFAULT_MANAGED_IDENTITY_ID;
-            this.idType = Constants.ManagedIdentityIdType.SYSTEM_ASSIGNED;
+            this.clientAssertion = !!this.config.auth.clientCertificate
+                .thumbprintSha256
+                ? ClientAssertion.fromCertificateWithSha256Thumbprint(this.config.auth.clientCertificate.thumbprintSha256, this.config.auth.clientCertificate.privateKey, this.config.auth.clientCertificate.x5c)
+                : ClientAssertion.fromCertificate(
+                // guaranteed to be a string, due to prior error checking in this function
+                this.config.auth.clientCertificate.thumbprint, this.config.auth.clientCertificate.privateKey, this.config.auth.clientCertificate.x5c);
         }
     }
 }
 
-exports.ManagedIdentityId = ManagedIdentityId;
-//# sourceMappingURL=ManagedIdentityId.cjs.map
-
-
-/***/ }),
-
-/***/ 9241:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/**
+ * Managed Identity User Assigned Id Query Parameter Names
+ */
+const ManagedIdentityUserAssignedIdQueryParameterNames = {
+    MANAGED_IDENTITY_CLIENT_ID: "client_id",
+    MANAGED_IDENTITY_OBJECT_ID: "object_id",
+    MANAGED_IDENTITY_RESOURCE_ID: "mi_res_id",
+};
+class BaseManagedIdentitySource {
+    constructor(logger, nodeStorage, networkClient, cryptoProvider) {
+        this.logger = logger;
+        this.nodeStorage = nodeStorage;
+        this.networkClient = networkClient;
+        this.cryptoProvider = cryptoProvider;
+    }
+    async getServerTokenResponseAsync(response, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _networkClient, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _networkRequest, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _networkRequestOptions) {
+        return this.getServerTokenResponse(response);
+    }
+    getServerTokenResponse(response) {
+        let refreshIn, expiresIn;
+        if (response.body.expires_on) {
+            expiresIn = response.body.expires_on - nowSeconds();
+            // compute refresh_in as 1/2 of expires_in, but only if expires_in > 2h
+            if (expiresIn > 2 * 3600) {
+                refreshIn = expiresIn / 2;
+            }
+        }
+        const serverTokenResponse = {
+            status: response.status,
+            // success
+            access_token: response.body.access_token,
+            expires_in: expiresIn,
+            scope: response.body.resource,
+            token_type: response.body.token_type,
+            refresh_in: refreshIn,
+            // error
+            correlation_id: response.body.correlation_id || response.body.correlationId,
+            error: typeof response.body.error === "string"
+                ? response.body.error
+                : response.body.error?.code,
+            error_description: response.body.message ||
+                (typeof response.body.error === "string"
+                    ? response.body.error_description
+                    : response.body.error?.message),
+            error_codes: response.body.error_codes,
+            timestamp: response.body.timestamp,
+            trace_id: response.body.trace_id,
+        };
+        return serverTokenResponse;
+    }
+    async acquireTokenWithManagedIdentity(managedIdentityRequest, managedIdentityId, fakeAuthority, refreshAccessToken) {
+        const networkRequest = this.createRequest(managedIdentityRequest.resource, managedIdentityId);
+        const headers = networkRequest.headers;
+        headers[HeaderNames.CONTENT_TYPE] = Constants$1.URL_FORM_CONTENT_TYPE;
+        const networkRequestOptions = { headers };
+        if (Object.keys(networkRequest.bodyParameters).length) {
+            networkRequestOptions.body =
+                networkRequest.computeParametersBodyString();
+        }
+        const reqTimestamp = nowSeconds();
+        let response;
+        try {
+            // Sources that send POST requests: Cloud Shell
+            if (networkRequest.httpMethod === HttpMethod.POST) {
+                response =
+                    await this.networkClient.sendPostRequestAsync(networkRequest.computeUri(), networkRequestOptions);
+                // Sources that send GET requests: App Service, Azure Arc, IMDS, Service Fabric
+            }
+            else {
+                response =
+                    await this.networkClient.sendGetRequestAsync(networkRequest.computeUri(), networkRequestOptions);
+            }
+        }
+        catch (error) {
+            if (error instanceof AuthError) {
+                throw error;
+            }
+            else {
+                throw createClientAuthError(networkError);
+            }
+        }
+        const responseHandler = new ResponseHandler(managedIdentityId.id, this.nodeStorage, this.cryptoProvider, this.logger, null, null);
+        const serverTokenResponse = await this.getServerTokenResponseAsync(response, this.networkClient, networkRequest, networkRequestOptions);
+        responseHandler.validateTokenResponse(serverTokenResponse, refreshAccessToken);
+        // caches the token
+        return responseHandler.handleServerTokenResponse(serverTokenResponse, fakeAuthority, reqTimestamp, managedIdentityRequest);
+    }
+    getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityIdType) {
+        switch (managedIdentityIdType) {
+            case ManagedIdentityIdType.USER_ASSIGNED_CLIENT_ID:
+                this.logger.info("[Managed Identity] Adding user assigned client id to the request.");
+                return ManagedIdentityUserAssignedIdQueryParameterNames.MANAGED_IDENTITY_CLIENT_ID;
+            case ManagedIdentityIdType.USER_ASSIGNED_RESOURCE_ID:
+                this.logger.info("[Managed Identity] Adding user assigned resource id to the request.");
+                return ManagedIdentityUserAssignedIdQueryParameterNames.MANAGED_IDENTITY_RESOURCE_ID;
+            case ManagedIdentityIdType.USER_ASSIGNED_OBJECT_ID:
+                this.logger.info("[Managed Identity] Adding user assigned object id to the request.");
+                return ManagedIdentityUserAssignedIdQueryParameterNames.MANAGED_IDENTITY_OBJECT_ID;
+            default:
+                throw createManagedIdentityError(invalidManagedIdentityIdType);
+        }
+    }
+}
+BaseManagedIdentitySource.getValidatedEnvVariableUrlString = (envVariableStringName, envVariable, sourceName, logger) => {
+    try {
+        return new UrlString(envVariable).urlString;
+    }
+    catch (error) {
+        logger.info(`[Managed Identity] ${sourceName} managed identity is unavailable because the '${envVariableStringName}' environment variable is malformed.`);
+        throw createManagedIdentityError(MsiEnvironmentVariableUrlMalformedErrorCodes[envVariableStringName]);
+    }
+};
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
@@ -83893,15 +82756,15 @@ class ManagedIdentityRequestParameters {
         this.queryParameters = {};
     }
     computeUri() {
-        const parameterBuilder = new msalCommon.RequestParameterBuilder();
+        const parameterBuilder = new RequestParameterBuilder();
         if (this.queryParameters) {
             parameterBuilder.addExtraQueryParameters(this.queryParameters);
         }
         const queryParametersString = parameterBuilder.createQueryString();
-        return msalCommon.UrlString.appendQueryString(this._baseEndpoint, queryParametersString);
+        return UrlString.appendQueryString(this._baseEndpoint, queryParametersString);
     }
     computeParametersBodyString() {
-        const parameterBuilder = new msalCommon.RequestParameterBuilder();
+        const parameterBuilder = new RequestParameterBuilder();
         if (this.bodyParameters) {
             parameterBuilder.addExtraQueryParameters(this.bodyParameters);
         }
@@ -83909,1466 +82772,555 @@ class ManagedIdentityRequestParameters {
     }
 }
 
-exports.ManagedIdentityRequestParameters = ManagedIdentityRequestParameters;
-//# sourceMappingURL=ManagedIdentityRequestParameters.cjs.map
-
-
-/***/ }),
-
-/***/ 6174:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var GuidGenerator = __nccwpck_require__(9452);
-var EncodingUtils = __nccwpck_require__(2092);
-var PkceGenerator = __nccwpck_require__(9396);
-var HashUtils = __nccwpck_require__(3373);
-
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
+// MSI Constants. Docs for MSI are available here https://docs.microsoft.com/azure/app-service/overview-managed-identity
+const APP_SERVICE_MSI_API_VERSION = "2019-08-01";
 /**
- * This class implements MSAL node's crypto interface, which allows it to perform base64 encoding and decoding, generating cryptographically random GUIDs and
- * implementing Proof Key for Code Exchange specs for the OAuth Authorization Code Flow using PKCE (rfc here: https://tools.ietf.org/html/rfc7636).
- * @public
+ * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/AppServiceManagedIdentitySource.cs
  */
-class CryptoProvider {
-    constructor() {
-        // Browser crypto needs to be validated first before any other classes can be set.
-        this.pkceGenerator = new PkceGenerator.PkceGenerator();
-        this.guidGenerator = new GuidGenerator.GuidGenerator();
-        this.hashUtils = new HashUtils.HashUtils();
+class AppService extends BaseManagedIdentitySource {
+    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader) {
+        super(logger, nodeStorage, networkClient, cryptoProvider);
+        this.identityEndpoint = identityEndpoint;
+        this.identityHeader = identityHeader;
     }
-    /**
-     * base64 URL safe encoded string
-     */
-    base64UrlEncode() {
-        throw new Error("Method not implemented.");
+    static getEnvironmentVariables() {
+        const identityEndpoint = process.env[ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT];
+        const identityHeader = process.env[ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER];
+        return [identityEndpoint, identityHeader];
     }
-    /**
-     * Stringifies and base64Url encodes input public key
-     * @param inputKid
-     * @returns Base64Url encoded public key
-     */
-    encodeKid() {
-        throw new Error("Method not implemented.");
+    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider) {
+        const [identityEndpoint, identityHeader] = AppService.getEnvironmentVariables();
+        // if either of the identity endpoint or identity header variables are undefined, this MSI provider is unavailable.
+        if (!identityEndpoint || !identityHeader) {
+            logger.info(`[Managed Identity] ${ManagedIdentitySourceNames.APP_SERVICE} managed identity is unavailable because one or both of the '${ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER}' and '${ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' environment variables are not defined.`);
+            return null;
+        }
+        const validatedIdentityEndpoint = AppService.getValidatedEnvVariableUrlString(ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT, identityEndpoint, ManagedIdentitySourceNames.APP_SERVICE, logger);
+        logger.info(`[Managed Identity] Environment variables validation passed for ${ManagedIdentitySourceNames.APP_SERVICE} managed identity. Endpoint URI: ${validatedIdentityEndpoint}. Creating ${ManagedIdentitySourceNames.APP_SERVICE} managed identity.`);
+        return new AppService(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader);
     }
-    /**
-     * Creates a new random GUID - used to populate state and nonce.
-     * @returns string (GUID)
-     */
-    createNewGuid() {
-        return this.guidGenerator.generateGuid();
-    }
-    /**
-     * Encodes input string to base64.
-     * @param input - string to be encoded
-     */
-    base64Encode(input) {
-        return EncodingUtils.EncodingUtils.base64Encode(input);
-    }
-    /**
-     * Decodes input string from base64.
-     * @param input - string to be decoded
-     */
-    base64Decode(input) {
-        return EncodingUtils.EncodingUtils.base64Decode(input);
-    }
-    /**
-     * Generates PKCE codes used in Authorization Code Flow.
-     */
-    generatePkceCodes() {
-        return this.pkceGenerator.generatePkceCodes();
-    }
-    /**
-     * Generates a keypair, stores it and returns a thumbprint - not yet implemented for node
-     */
-    getPublicKeyThumbprint() {
-        throw new Error("Method not implemented.");
-    }
-    /**
-     * Removes cryptographic keypair from key store matching the keyId passed in
-     * @param kid
-     */
-    removeTokenBindingKey() {
-        throw new Error("Method not implemented.");
-    }
-    /**
-     * Removes all cryptographic keys from Keystore
-     */
-    clearKeystore() {
-        throw new Error("Method not implemented.");
-    }
-    /**
-     * Signs the given object as a jwt payload with private key retrieved by given kid - currently not implemented for node
-     */
-    signJwt() {
-        throw new Error("Method not implemented.");
-    }
-    /**
-     * Returns the SHA-256 hash of an input string
-     */
-    async hashString(plainText) {
-        return EncodingUtils.EncodingUtils.base64EncodeUrl(this.hashUtils.sha256(plainText).toString("base64"), "base64");
+    createRequest(resource, managedIdentityId) {
+        const request = new ManagedIdentityRequestParameters(HttpMethod.GET, this.identityEndpoint);
+        request.headers[APP_SERVICE_SECRET_HEADER_NAME] = this.identityHeader;
+        request.queryParameters[API_VERSION_QUERY_PARAMETER_NAME] =
+            APP_SERVICE_MSI_API_VERSION;
+        request.queryParameters[RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
+            resource;
+        if (managedIdentityId.idType !== ManagedIdentityIdType.SYSTEM_ASSIGNED) {
+            request.queryParameters[this.getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityId.idType)] = managedIdentityId.id;
+        }
+        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
+        return request;
     }
 }
-
-exports.CryptoProvider = CryptoProvider;
-//# sourceMappingURL=CryptoProvider.cjs.map
-
-
-/***/ }),
-
-/***/ 9452:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var uuid = __nccwpck_require__(2048);
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-class GuidGenerator {
-    /**
-     *
-     * RFC4122: The version 4 UUID is meant for generating UUIDs from truly-random or pseudo-random numbers.
-     * uuidv4 generates guids from cryprtographically-string random
-     */
-    generateGuid() {
-        return uuid.v4();
-    }
-    /**
-     * verifies if a string is  GUID
-     * @param guid
-     */
-    isGuid(guid) {
-        const regexGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        return regexGuid.test(guid);
-    }
-}
-
-exports.GuidGenerator = GuidGenerator;
-//# sourceMappingURL=GuidGenerator.cjs.map
-
-
-/***/ }),
-
-/***/ 3373:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var Constants = __nccwpck_require__(7753);
-var crypto = __nccwpck_require__(6982);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class HashUtils {
-    /**
-     * generate 'SHA256' hash
-     * @param buffer
-     */
-    sha256(buffer) {
-        return crypto.createHash(Constants.Hash.SHA256).update(buffer).digest();
-    }
-}
-
-exports.HashUtils = HashUtils;
-//# sourceMappingURL=HashUtils.cjs.map
-
-
-/***/ }),
-
-/***/ 9396:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var Constants = __nccwpck_require__(7753);
-var EncodingUtils = __nccwpck_require__(2092);
-var HashUtils = __nccwpck_require__(3373);
-var crypto = __nccwpck_require__(6982);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
+const ARC_API_VERSION = "2019-11-01";
+const DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT = "http://127.0.0.1:40342/metadata/identity/oauth2/token";
+const HIMDS_EXECUTABLE_HELPER_STRING = "N/A: himds executable exists";
+const SUPPORTED_AZURE_ARC_PLATFORMS = {
+    win32: `${process.env["ProgramData"]}\\AzureConnectedMachineAgent\\Tokens\\`,
+    linux: "/var/opt/azcmagent/tokens/",
+};
+const AZURE_ARC_FILE_DETECTION = {
+    win32: `${process.env["ProgramFiles"]}\\AzureConnectedMachineAgent\\himds.exe`,
+    linux: "/opt/azcmagent/bin/himds",
+};
 /**
- * https://tools.ietf.org/html/rfc7636#page-8
+ * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/AzureArcManagedIdentitySource.cs
  */
-class PkceGenerator {
-    constructor() {
-        this.hashUtils = new HashUtils.HashUtils();
+class AzureArc extends BaseManagedIdentitySource {
+    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint) {
+        super(logger, nodeStorage, networkClient, cryptoProvider);
+        this.identityEndpoint = identityEndpoint;
     }
-    /**
-     * generates the codeVerfier and the challenge from the codeVerfier
-     * reference: https://tools.ietf.org/html/rfc7636#section-4.1 and https://tools.ietf.org/html/rfc7636#section-4.2
-     */
-    async generatePkceCodes() {
-        const verifier = this.generateCodeVerifier();
-        const challenge = this.generateCodeChallengeFromVerifier(verifier);
-        return { verifier, challenge };
-    }
-    /**
-     * generates the codeVerfier; reference: https://tools.ietf.org/html/rfc7636#section-4.1
-     */
-    generateCodeVerifier() {
-        const charArr = [];
-        const maxNumber = 256 - (256 % Constants.CharSet.CV_CHARSET.length);
-        while (charArr.length <= Constants.RANDOM_OCTET_SIZE) {
-            const byte = crypto.randomBytes(1)[0];
-            if (byte >= maxNumber) {
+    static getEnvironmentVariables() {
+        let identityEndpoint = process.env[ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT];
+        let imdsEndpoint = process.env[ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT];
+        // if either of the identity or imds endpoints are undefined, check if the himds executable exists
+        if (!identityEndpoint || !imdsEndpoint) {
+            // get the expected Windows or Linux file path of the himds executable
+            const fileDetectionPath = AZURE_ARC_FILE_DETECTION[process.platform];
+            try {
                 /*
-                 * Ignore this number to maintain randomness.
-                 * Including it would result in an unequal distribution of characters after doing the modulo
+                 * check if the himds executable exists and its permissions allow it to be read
+                 * returns undefined if true, throws an error otherwise
                  */
-                continue;
+                fs.accessSync(fileDetectionPath, fs.constants.F_OK | fs.constants.R_OK);
+                identityEndpoint = DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT;
+                imdsEndpoint = HIMDS_EXECUTABLE_HELPER_STRING;
             }
-            const index = byte % Constants.CharSet.CV_CHARSET.length;
-            charArr.push(Constants.CharSet.CV_CHARSET[index]);
-        }
-        const verifier = charArr.join(msalCommon.Constants.EMPTY_STRING);
-        return EncodingUtils.EncodingUtils.base64EncodeUrl(verifier);
-    }
-    /**
-     * generate the challenge from the codeVerfier; reference: https://tools.ietf.org/html/rfc7636#section-4.2
-     * @param codeVerifier
-     */
-    generateCodeChallengeFromVerifier(codeVerifier) {
-        return EncodingUtils.EncodingUtils.base64EncodeUrl(this.hashUtils.sha256(codeVerifier).toString("base64"), "base64");
-    }
-}
-
-exports.PkceGenerator = PkceGenerator;
-//# sourceMappingURL=PkceGenerator.cjs.map
-
-
-/***/ }),
-
-/***/ 384:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var ManagedIdentityErrorCodes = __nccwpck_require__(2398);
-var Constants = __nccwpck_require__(7753);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * ManagedIdentityErrorMessage class containing string constants used by error codes and messages.
- */
-const ManagedIdentityErrorMessages = {
-    [ManagedIdentityErrorCodes.invalidFileExtension]: "The file path in the WWW-Authenticate header does not contain a .key file.",
-    [ManagedIdentityErrorCodes.invalidFilePath]: "The file path in the WWW-Authenticate header is not in a valid Windows or Linux Format.",
-    [ManagedIdentityErrorCodes.invalidManagedIdentityIdType]: "More than one ManagedIdentityIdType was provided.",
-    [ManagedIdentityErrorCodes.invalidSecret]: "The secret in the file on the file path in the WWW-Authenticate header is greater than 4096 bytes.",
-    [ManagedIdentityErrorCodes.platformNotSupported]: "The platform is not supported by Azure Arc. Azure Arc only supports Windows and Linux.",
-    [ManagedIdentityErrorCodes.missingId]: "A ManagedIdentityId id was not provided.",
-    [ManagedIdentityErrorCodes.MsiEnvironmentVariableUrlMalformedErrorCodes
-        .AZURE_POD_IDENTITY_AUTHORITY_HOST]: `The Managed Identity's '${Constants.ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST}' environment variable is malformed.`,
-    [ManagedIdentityErrorCodes.MsiEnvironmentVariableUrlMalformedErrorCodes
-        .IDENTITY_ENDPOINT]: `The Managed Identity's '${Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' environment variable is malformed.`,
-    [ManagedIdentityErrorCodes.MsiEnvironmentVariableUrlMalformedErrorCodes
-        .IMDS_ENDPOINT]: `The Managed Identity's '${Constants.ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT}' environment variable is malformed.`,
-    [ManagedIdentityErrorCodes.MsiEnvironmentVariableUrlMalformedErrorCodes
-        .MSI_ENDPOINT]: `The Managed Identity's '${Constants.ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT}' environment variable is malformed.`,
-    [ManagedIdentityErrorCodes.networkUnavailable]: "Authentication unavailable. The request to the managed identity endpoint timed out.",
-    [ManagedIdentityErrorCodes.unableToCreateAzureArc]: "Azure Arc Managed Identities can only be system assigned.",
-    [ManagedIdentityErrorCodes.unableToCreateCloudShell]: "Cloud Shell Managed Identities can only be system assigned.",
-    [ManagedIdentityErrorCodes.unableToCreateSource]: "Unable to create a Managed Identity source based on environment variables.",
-    [ManagedIdentityErrorCodes.unableToReadSecretFile]: "Unable to read the secret file.",
-    [ManagedIdentityErrorCodes.userAssignedNotAvailableAtRuntime]: "Service Fabric user assigned managed identity ClientId or ResourceId is not configurable at runtime.",
-    [ManagedIdentityErrorCodes.wwwAuthenticateHeaderMissing]: "A 401 response was received form the Azure Arc Managed Identity, but the www-authenticate header is missing.",
-    [ManagedIdentityErrorCodes.wwwAuthenticateHeaderUnsupportedFormat]: "A 401 response was received form the Azure Arc Managed Identity, but the www-authenticate header is in an unsupported format.",
-};
-class ManagedIdentityError extends msalCommon.AuthError {
-    constructor(errorCode) {
-        super(errorCode, ManagedIdentityErrorMessages[errorCode]);
-        this.name = "ManagedIdentityError";
-        Object.setPrototypeOf(this, ManagedIdentityError.prototype);
-    }
-}
-function createManagedIdentityError(errorCode) {
-    return new ManagedIdentityError(errorCode);
-}
-
-exports.ManagedIdentityError = ManagedIdentityError;
-exports.ManagedIdentityErrorMessages = ManagedIdentityErrorMessages;
-exports.createManagedIdentityError = createManagedIdentityError;
-//# sourceMappingURL=ManagedIdentityError.cjs.map
-
-
-/***/ }),
-
-/***/ 2398:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var Constants = __nccwpck_require__(7753);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-const invalidFileExtension = "invalid_file_extension";
-const invalidFilePath = "invalid_file_path";
-const invalidManagedIdentityIdType = "invalid_managed_identity_id_type";
-const invalidSecret = "invalid_secret";
-const missingId = "missing_client_id";
-const networkUnavailable = "network_unavailable";
-const platformNotSupported = "platform_not_supported";
-const unableToCreateAzureArc = "unable_to_create_azure_arc";
-const unableToCreateCloudShell = "unable_to_create_cloud_shell";
-const unableToCreateSource = "unable_to_create_source";
-const unableToReadSecretFile = "unable_to_read_secret_file";
-const userAssignedNotAvailableAtRuntime = "user_assigned_not_available_at_runtime";
-const wwwAuthenticateHeaderMissing = "www_authenticate_header_missing";
-const wwwAuthenticateHeaderUnsupportedFormat = "www_authenticate_header_unsupported_format";
-const MsiEnvironmentVariableUrlMalformedErrorCodes = {
-    [Constants.ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST]: "azure_pod_identity_authority_host_url_malformed",
-    [Constants.ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT]: "identity_endpoint_url_malformed",
-    [Constants.ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT]: "imds_endpoint_url_malformed",
-    [Constants.ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT]: "msi_endpoint_url_malformed",
-};
-
-exports.MsiEnvironmentVariableUrlMalformedErrorCodes = MsiEnvironmentVariableUrlMalformedErrorCodes;
-exports.invalidFileExtension = invalidFileExtension;
-exports.invalidFilePath = invalidFilePath;
-exports.invalidManagedIdentityIdType = invalidManagedIdentityIdType;
-exports.invalidSecret = invalidSecret;
-exports.missingId = missingId;
-exports.networkUnavailable = networkUnavailable;
-exports.platformNotSupported = platformNotSupported;
-exports.unableToCreateAzureArc = unableToCreateAzureArc;
-exports.unableToCreateCloudShell = unableToCreateCloudShell;
-exports.unableToCreateSource = unableToCreateSource;
-exports.unableToReadSecretFile = unableToReadSecretFile;
-exports.userAssignedNotAvailableAtRuntime = userAssignedNotAvailableAtRuntime;
-exports.wwwAuthenticateHeaderMissing = wwwAuthenticateHeaderMissing;
-exports.wwwAuthenticateHeaderUnsupportedFormat = wwwAuthenticateHeaderUnsupportedFormat;
-//# sourceMappingURL=ManagedIdentityErrorCodes.cjs.map
-
-
-/***/ }),
-
-/***/ 7303:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * NodeAuthErrorMessage class containing string constants used by error codes and messages.
- */
-const NodeAuthErrorMessage = {
-    invalidLoopbackAddressType: {
-        code: "invalid_loopback_server_address_type",
-        desc: "Loopback server address is not type string. This is unexpected.",
-    },
-    unableToLoadRedirectUri: {
-        code: "unable_to_load_redirectUrl",
-        desc: "Loopback server callback was invoked without a url. This is unexpected.",
-    },
-    noAuthCodeInResponse: {
-        code: "no_auth_code_in_response",
-        desc: "No auth code found in the server response. Please check your network trace to determine what happened.",
-    },
-    noLoopbackServerExists: {
-        code: "no_loopback_server_exists",
-        desc: "No loopback server exists yet.",
-    },
-    loopbackServerAlreadyExists: {
-        code: "loopback_server_already_exists",
-        desc: "Loopback server already exists. Cannot create another.",
-    },
-    loopbackServerTimeout: {
-        code: "loopback_server_timeout",
-        desc: "Timed out waiting for auth code listener to be registered.",
-    },
-    stateNotFoundError: {
-        code: "state_not_found",
-        desc: "State not found. Please verify that the request originated from msal.",
-    },
-    thumbprintMissing: {
-        code: "thumbprint_missing_from_client_certificate",
-        desc: "Client certificate does not contain a SHA-1 or SHA-256 thumbprint.",
-    },
-};
-class NodeAuthError extends msalCommon.AuthError {
-    constructor(errorCode, errorMessage) {
-        super(errorCode, errorMessage);
-        this.name = "NodeAuthError";
-    }
-    /**
-     * Creates an error thrown if loopback server address is of type string.
-     */
-    static createInvalidLoopbackAddressTypeError() {
-        return new NodeAuthError(NodeAuthErrorMessage.invalidLoopbackAddressType.code, `${NodeAuthErrorMessage.invalidLoopbackAddressType.desc}`);
-    }
-    /**
-     * Creates an error thrown if the loopback server is unable to get a url.
-     */
-    static createUnableToLoadRedirectUrlError() {
-        return new NodeAuthError(NodeAuthErrorMessage.unableToLoadRedirectUri.code, `${NodeAuthErrorMessage.unableToLoadRedirectUri.desc}`);
-    }
-    /**
-     * Creates an error thrown if the server response does not contain an auth code.
-     */
-    static createNoAuthCodeInResponseError() {
-        return new NodeAuthError(NodeAuthErrorMessage.noAuthCodeInResponse.code, `${NodeAuthErrorMessage.noAuthCodeInResponse.desc}`);
-    }
-    /**
-     * Creates an error thrown if the loopback server has not been spun up yet.
-     */
-    static createNoLoopbackServerExistsError() {
-        return new NodeAuthError(NodeAuthErrorMessage.noLoopbackServerExists.code, `${NodeAuthErrorMessage.noLoopbackServerExists.desc}`);
-    }
-    /**
-     * Creates an error thrown if a loopback server already exists when attempting to create another one.
-     */
-    static createLoopbackServerAlreadyExistsError() {
-        return new NodeAuthError(NodeAuthErrorMessage.loopbackServerAlreadyExists.code, `${NodeAuthErrorMessage.loopbackServerAlreadyExists.desc}`);
-    }
-    /**
-     * Creates an error thrown if the loopback server times out registering the auth code listener.
-     */
-    static createLoopbackServerTimeoutError() {
-        return new NodeAuthError(NodeAuthErrorMessage.loopbackServerTimeout.code, `${NodeAuthErrorMessage.loopbackServerTimeout.desc}`);
-    }
-    /**
-     * Creates an error thrown when the state is not present.
-     */
-    static createStateNotFoundError() {
-        return new NodeAuthError(NodeAuthErrorMessage.stateNotFoundError.code, NodeAuthErrorMessage.stateNotFoundError.desc);
-    }
-    /**
-     * Creates an error thrown when client certificate was provided, but neither the SHA-1 or SHA-256 thumbprints were provided
-     */
-    static createThumbprintMissingError() {
-        return new NodeAuthError(NodeAuthErrorMessage.thumbprintMissing.code, NodeAuthErrorMessage.thumbprintMissing.desc);
-    }
-}
-
-exports.NodeAuthError = NodeAuthError;
-exports.NodeAuthErrorMessage = NodeAuthErrorMessage;
-//# sourceMappingURL=NodeAuthError.cjs.map
-
-
-/***/ }),
-
-/***/ 6264:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var internals = __nccwpck_require__(1534);
-var PublicClientApplication = __nccwpck_require__(4540);
-var ConfidentialClientApplication = __nccwpck_require__(2891);
-var ClientApplication = __nccwpck_require__(6801);
-var ClientCredentialClient = __nccwpck_require__(6091);
-var DeviceCodeClient = __nccwpck_require__(2412);
-var OnBehalfOfClient = __nccwpck_require__(9393);
-var ManagedIdentityApplication = __nccwpck_require__(4129);
-var UsernamePasswordClient = __nccwpck_require__(9250);
-var Configuration = __nccwpck_require__(677);
-var ClientAssertion = __nccwpck_require__(879);
-var TokenCache = __nccwpck_require__(6590);
-var NodeStorage = __nccwpck_require__(1064);
-var DistributedCachePlugin = __nccwpck_require__(9641);
-var Constants = __nccwpck_require__(7753);
-var CryptoProvider = __nccwpck_require__(6174);
-var msalCommon = __nccwpck_require__(5405);
-var packageMetadata = __nccwpck_require__(6507);
-
-
-
-exports.internals = internals;
-exports.PublicClientApplication = PublicClientApplication.PublicClientApplication;
-exports.ConfidentialClientApplication = ConfidentialClientApplication.ConfidentialClientApplication;
-exports.ClientApplication = ClientApplication.ClientApplication;
-exports.ClientCredentialClient = ClientCredentialClient.ClientCredentialClient;
-exports.DeviceCodeClient = DeviceCodeClient.DeviceCodeClient;
-exports.OnBehalfOfClient = OnBehalfOfClient.OnBehalfOfClient;
-exports.ManagedIdentityApplication = ManagedIdentityApplication.ManagedIdentityApplication;
-exports.UsernamePasswordClient = UsernamePasswordClient.UsernamePasswordClient;
-exports.buildAppConfiguration = Configuration.buildAppConfiguration;
-exports.ClientAssertion = ClientAssertion.ClientAssertion;
-exports.TokenCache = TokenCache.TokenCache;
-exports.NodeStorage = NodeStorage.NodeStorage;
-exports.DistributedCachePlugin = DistributedCachePlugin.DistributedCachePlugin;
-exports.ManagedIdentitySourceNames = Constants.ManagedIdentitySourceNames;
-exports.CryptoProvider = CryptoProvider.CryptoProvider;
-Object.defineProperty(exports, "AuthError", ({
-	enumerable: true,
-	get: function () { return msalCommon.AuthError; }
-}));
-Object.defineProperty(exports, "AuthErrorCodes", ({
-	enumerable: true,
-	get: function () { return msalCommon.AuthErrorCodes; }
-}));
-Object.defineProperty(exports, "AuthErrorMessage", ({
-	enumerable: true,
-	get: function () { return msalCommon.AuthErrorMessage; }
-}));
-Object.defineProperty(exports, "AzureCloudInstance", ({
-	enumerable: true,
-	get: function () { return msalCommon.AzureCloudInstance; }
-}));
-Object.defineProperty(exports, "ClientAuthError", ({
-	enumerable: true,
-	get: function () { return msalCommon.ClientAuthError; }
-}));
-Object.defineProperty(exports, "ClientAuthErrorCodes", ({
-	enumerable: true,
-	get: function () { return msalCommon.ClientAuthErrorCodes; }
-}));
-Object.defineProperty(exports, "ClientAuthErrorMessage", ({
-	enumerable: true,
-	get: function () { return msalCommon.ClientAuthErrorMessage; }
-}));
-Object.defineProperty(exports, "ClientConfigurationError", ({
-	enumerable: true,
-	get: function () { return msalCommon.ClientConfigurationError; }
-}));
-Object.defineProperty(exports, "ClientConfigurationErrorCodes", ({
-	enumerable: true,
-	get: function () { return msalCommon.ClientConfigurationErrorCodes; }
-}));
-Object.defineProperty(exports, "ClientConfigurationErrorMessage", ({
-	enumerable: true,
-	get: function () { return msalCommon.ClientConfigurationErrorMessage; }
-}));
-Object.defineProperty(exports, "InteractionRequiredAuthError", ({
-	enumerable: true,
-	get: function () { return msalCommon.InteractionRequiredAuthError; }
-}));
-Object.defineProperty(exports, "InteractionRequiredAuthErrorCodes", ({
-	enumerable: true,
-	get: function () { return msalCommon.InteractionRequiredAuthErrorCodes; }
-}));
-Object.defineProperty(exports, "InteractionRequiredAuthErrorMessage", ({
-	enumerable: true,
-	get: function () { return msalCommon.InteractionRequiredAuthErrorMessage; }
-}));
-Object.defineProperty(exports, "LogLevel", ({
-	enumerable: true,
-	get: function () { return msalCommon.LogLevel; }
-}));
-Object.defineProperty(exports, "Logger", ({
-	enumerable: true,
-	get: function () { return msalCommon.Logger; }
-}));
-Object.defineProperty(exports, "PromptValue", ({
-	enumerable: true,
-	get: function () { return msalCommon.PromptValue; }
-}));
-Object.defineProperty(exports, "ProtocolMode", ({
-	enumerable: true,
-	get: function () { return msalCommon.ProtocolMode; }
-}));
-Object.defineProperty(exports, "ResponseMode", ({
-	enumerable: true,
-	get: function () { return msalCommon.ResponseMode; }
-}));
-Object.defineProperty(exports, "ServerError", ({
-	enumerable: true,
-	get: function () { return msalCommon.ServerError; }
-}));
-Object.defineProperty(exports, "TokenCacheContext", ({
-	enumerable: true,
-	get: function () { return msalCommon.TokenCacheContext; }
-}));
-exports.version = packageMetadata.version;
-//# sourceMappingURL=index.cjs.map
-
-
-/***/ }),
-
-/***/ 1534:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var Serializer = __nccwpck_require__(5868);
-var Deserializer = __nccwpck_require__(6341);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * Warning: This set of exports is purely intended to be used by other MSAL libraries, and should be considered potentially unstable. We strongly discourage using them directly, you do so at your own risk.
- * Breaking changes to these APIs will be shipped under a minor version, instead of a major version.
- */
-
-exports.Serializer = Serializer.Serializer;
-exports.Deserializer = Deserializer.Deserializer;
-//# sourceMappingURL=internals.cjs.map
-
-
-/***/ }),
-
-/***/ 3576:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var Constants = __nccwpck_require__(7753);
-var NetworkUtils = __nccwpck_require__(7383);
-var http = __nccwpck_require__(8611);
-var https = __nccwpck_require__(5692);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-/**
- * This class implements the API for network requests.
- */
-class HttpClient {
-    constructor(proxyUrl, customAgentOptions) {
-        this.proxyUrl = proxyUrl || "";
-        this.customAgentOptions = customAgentOptions || {};
-    }
-    /**
-     * Http Get request
-     * @param url
-     * @param options
-     */
-    async sendGetRequestAsync(url, options, timeout) {
-        if (this.proxyUrl) {
-            return networkRequestViaProxy(url, this.proxyUrl, Constants.HttpMethod.GET, options, this.customAgentOptions, timeout);
-        }
-        else {
-            return networkRequestViaHttps(url, Constants.HttpMethod.GET, options, this.customAgentOptions, timeout);
-        }
-    }
-    /**
-     * Http Post request
-     * @param url
-     * @param options
-     */
-    async sendPostRequestAsync(url, options) {
-        if (this.proxyUrl) {
-            return networkRequestViaProxy(url, this.proxyUrl, Constants.HttpMethod.POST, options, this.customAgentOptions);
-        }
-        else {
-            return networkRequestViaHttps(url, Constants.HttpMethod.POST, options, this.customAgentOptions);
-        }
-    }
-}
-const networkRequestViaProxy = (destinationUrlString, proxyUrlString, httpMethod, options, agentOptions, timeout) => {
-    const destinationUrl = new URL(destinationUrlString);
-    const proxyUrl = new URL(proxyUrlString);
-    // "method: connect" must be used to establish a connection to the proxy
-    const headers = options?.headers || {};
-    const tunnelRequestOptions = {
-        host: proxyUrl.hostname,
-        port: proxyUrl.port,
-        method: "CONNECT",
-        path: destinationUrl.hostname,
-        headers: headers,
-    };
-    if (agentOptions && Object.keys(agentOptions).length) {
-        tunnelRequestOptions.agent = new http.Agent(agentOptions);
-    }
-    // compose a request string for the socket
-    let postRequestStringContent = "";
-    if (httpMethod === Constants.HttpMethod.POST) {
-        const body = options?.body || "";
-        postRequestStringContent =
-            "Content-Type: application/x-www-form-urlencoded\r\n" +
-                `Content-Length: ${body.length}\r\n` +
-                `\r\n${body}`;
-    }
-    else {
-        // optional timeout is only for get requests (regionDiscovery, for example)
-        if (timeout) {
-            tunnelRequestOptions.timeout = timeout;
-        }
-    }
-    const outgoingRequestString = `${httpMethod.toUpperCase()} ${destinationUrl.href} HTTP/1.1\r\n` +
-        `Host: ${destinationUrl.host}\r\n` +
-        "Connection: close\r\n" +
-        postRequestStringContent +
-        "\r\n";
-    return new Promise((resolve, reject) => {
-        const request = http.request(tunnelRequestOptions);
-        if (timeout) {
-            request.on("timeout", () => {
-                request.destroy();
-                reject(new Error("Request time out"));
-            });
-        }
-        request.end();
-        // establish connection to the proxy
-        request.on("connect", (response, socket) => {
-            const proxyStatusCode = response?.statusCode || Constants.ProxyStatus.SERVER_ERROR;
-            if (proxyStatusCode < Constants.ProxyStatus.SUCCESS_RANGE_START ||
-                proxyStatusCode > Constants.ProxyStatus.SUCCESS_RANGE_END) {
-                request.destroy();
-                socket.destroy();
-                reject(new Error(`Error connecting to proxy. Http status code: ${response.statusCode}. Http status message: ${response?.statusMessage || "Unknown"}`));
-            }
-            // make a request over an HTTP tunnel
-            socket.write(outgoingRequestString);
-            const data = [];
-            socket.on("data", (chunk) => {
-                data.push(chunk);
-            });
-            socket.on("end", () => {
-                // combine all received buffer streams into one buffer, and then into a string
-                const dataString = Buffer.concat([...data]).toString();
-                // separate each line into it's own entry in an arry
-                const dataStringArray = dataString.split("\r\n");
-                // the first entry will contain the statusCode and statusMessage
-                const httpStatusCode = parseInt(dataStringArray[0].split(" ")[1]);
-                // remove "HTTP/1.1" and the status code to get the status message
-                const statusMessage = dataStringArray[0]
-                    .split(" ")
-                    .slice(2)
-                    .join(" ");
-                // the last entry will contain the body
-                const body = dataStringArray[dataStringArray.length - 1];
-                // everything in between the first and last entries are the headers
-                const headersArray = dataStringArray.slice(1, dataStringArray.length - 2);
-                // build an object out of all the headers
-                const entries = new Map();
-                headersArray.forEach((header) => {
-                    /**
-                     * the header might look like "Content-Length: 1531", but that is just a string
-                     * it needs to be converted to a key/value pair
-                     * split the string at the first instance of ":"
-                     * there may be more than one ":" if the value of the header is supposed to be a JSON object
-                     */
-                    const headerKeyValue = header.split(new RegExp(/:\s(.*)/s));
-                    const headerKey = headerKeyValue[0];
-                    let headerValue = headerKeyValue[1];
-                    // check if the value of the header is supposed to be a JSON object
-                    try {
-                        const object = JSON.parse(headerValue);
-                        // if it is, then convert it from a string to a JSON object
-                        if (object && typeof object === "object") {
-                            headerValue = object;
-                        }
-                    }
-                    catch (e) {
-                        // otherwise, leave it as a string
-                    }
-                    entries.set(headerKey, headerValue);
-                });
-                const headers = Object.fromEntries(entries);
-                const parsedHeaders = headers;
-                const networkResponse = NetworkUtils.NetworkUtils.getNetworkResponse(parsedHeaders, parseBody(httpStatusCode, statusMessage, parsedHeaders, body), httpStatusCode);
-                if ((httpStatusCode < msalCommon.HttpStatus.SUCCESS_RANGE_START ||
-                    httpStatusCode > msalCommon.HttpStatus.SUCCESS_RANGE_END) &&
-                    // do not destroy the request for the device code flow
-                    networkResponse.body["error"] !==
-                        Constants.Constants.AUTHORIZATION_PENDING) {
-                    request.destroy();
-                }
-                resolve(networkResponse);
-            });
-            socket.on("error", (chunk) => {
-                request.destroy();
-                socket.destroy();
-                reject(new Error(chunk.toString()));
-            });
-        });
-        request.on("error", (chunk) => {
-            request.destroy();
-            reject(new Error(chunk.toString()));
-        });
-    });
-};
-const networkRequestViaHttps = (urlString, httpMethod, options, agentOptions, timeout) => {
-    const isPostRequest = httpMethod === Constants.HttpMethod.POST;
-    const body = options?.body || "";
-    const url = new URL(urlString);
-    const headers = options?.headers || {};
-    const customOptions = {
-        method: httpMethod,
-        headers: headers,
-        ...NetworkUtils.NetworkUtils.urlToHttpOptions(url),
-    };
-    if (agentOptions && Object.keys(agentOptions).length) {
-        customOptions.agent = new https.Agent(agentOptions);
-    }
-    if (isPostRequest) {
-        // needed for post request to work
-        customOptions.headers = {
-            ...customOptions.headers,
-            "Content-Length": body.length,
-        };
-    }
-    else {
-        // optional timeout is only for get requests (regionDiscovery, for example)
-        if (timeout) {
-            customOptions.timeout = timeout;
-        }
-    }
-    return new Promise((resolve, reject) => {
-        let request;
-        // managed identity sources use http instead of https
-        if (customOptions.protocol === "http:") {
-            request = http.request(customOptions);
-        }
-        else {
-            request = https.request(customOptions);
-        }
-        if (isPostRequest) {
-            request.write(body);
-        }
-        if (timeout) {
-            request.on("timeout", () => {
-                request.destroy();
-                reject(new Error("Request time out"));
-            });
-        }
-        request.end();
-        request.on("response", (response) => {
-            const headers = response.headers;
-            const statusCode = response.statusCode;
-            const statusMessage = response.statusMessage;
-            const data = [];
-            response.on("data", (chunk) => {
-                data.push(chunk);
-            });
-            response.on("end", () => {
-                // combine all received buffer streams into one buffer, and then into a string
-                const body = Buffer.concat([...data]).toString();
-                const parsedHeaders = headers;
-                const networkResponse = NetworkUtils.NetworkUtils.getNetworkResponse(parsedHeaders, parseBody(statusCode, statusMessage, parsedHeaders, body), statusCode);
-                if ((statusCode < msalCommon.HttpStatus.SUCCESS_RANGE_START ||
-                    statusCode > msalCommon.HttpStatus.SUCCESS_RANGE_END) &&
-                    // do not destroy the request for the device code flow
-                    networkResponse.body["error"] !==
-                        Constants.Constants.AUTHORIZATION_PENDING) {
-                    request.destroy();
-                }
-                resolve(networkResponse);
-            });
-        });
-        request.on("error", (chunk) => {
-            request.destroy();
-            reject(new Error(chunk.toString()));
-        });
-    });
-};
-/**
- * Check if extra parsing is needed on the repsonse from the server
- * @param statusCode {number} the status code of the response from the server
- * @param statusMessage {string | undefined} the status message of the response from the server
- * @param headers {Record<string, string>} the headers of the response from the server
- * @param body {string} the body from the response of the server
- * @returns {Object} JSON parsed body or error object
- */
-const parseBody = (statusCode, statusMessage, headers, body) => {
-    /*
-     * Informational responses (100 – 199)
-     * Successful responses (200 – 299)
-     * Redirection messages (300 – 399)
-     * Client error responses (400 – 499)
-     * Server error responses (500 – 599)
-     */
-    let parsedBody;
-    try {
-        parsedBody = JSON.parse(body);
-    }
-    catch (error) {
-        let errorType;
-        let errorDescriptionHelper;
-        if (statusCode >= msalCommon.HttpStatus.CLIENT_ERROR_RANGE_START &&
-            statusCode <= msalCommon.HttpStatus.CLIENT_ERROR_RANGE_END) {
-            errorType = "client_error";
-            errorDescriptionHelper = "A client";
-        }
-        else if (statusCode >= msalCommon.HttpStatus.SERVER_ERROR_RANGE_START &&
-            statusCode <= msalCommon.HttpStatus.SERVER_ERROR_RANGE_END) {
-            errorType = "server_error";
-            errorDescriptionHelper = "A server";
-        }
-        else {
-            errorType = "unknown_error";
-            errorDescriptionHelper = "An unknown";
-        }
-        parsedBody = {
-            error: errorType,
-            error_description: `${errorDescriptionHelper} error occured.\nHttp status code: ${statusCode}\nHttp status message: ${statusMessage || "Unknown"}\nHeaders: ${JSON.stringify(headers)}`,
-        };
-    }
-    return parsedBody;
-};
-
-exports.HttpClient = HttpClient;
-//# sourceMappingURL=HttpClient.cjs.map
-
-
-/***/ }),
-
-/***/ 6942:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var Constants = __nccwpck_require__(7753);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class HttpClientWithRetries {
-    constructor(httpClientNoRetries, retryPolicy) {
-        this.httpClientNoRetries = httpClientNoRetries;
-        this.retryPolicy = retryPolicy;
-    }
-    async sendNetworkRequestAsyncHelper(httpMethod, url, options) {
-        if (httpMethod === Constants.HttpMethod.GET) {
-            return this.httpClientNoRetries.sendGetRequestAsync(url, options);
-        }
-        else {
-            return this.httpClientNoRetries.sendPostRequestAsync(url, options);
-        }
-    }
-    async sendNetworkRequestAsync(httpMethod, url, options) {
-        // the underlying network module (custom or HttpClient) will make the call
-        let response = await this.sendNetworkRequestAsyncHelper(httpMethod, url, options);
-        let currentRetry = 0;
-        while (await this.retryPolicy.pauseForRetry(response.status, currentRetry, response.headers[msalCommon.HeaderNames.RETRY_AFTER])) {
-            response = await this.sendNetworkRequestAsyncHelper(httpMethod, url, options);
-            currentRetry++;
-        }
-        return response;
-    }
-    async sendGetRequestAsync(url, options) {
-        return this.sendNetworkRequestAsync(Constants.HttpMethod.GET, url, options);
-    }
-    async sendPostRequestAsync(url, options) {
-        return this.sendNetworkRequestAsync(Constants.HttpMethod.POST, url, options);
-    }
-}
-
-exports.HttpClientWithRetries = HttpClientWithRetries;
-//# sourceMappingURL=HttpClientWithRetries.cjs.map
-
-
-/***/ }),
-
-/***/ 4499:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-var http = __nccwpck_require__(8611);
-var NodeAuthError = __nccwpck_require__(7303);
-var Constants = __nccwpck_require__(7753);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class LoopbackClient {
-    /**
-     * Spins up a loopback server which returns the server response when the localhost redirectUri is hit
-     * @param successTemplate
-     * @param errorTemplate
-     * @returns
-     */
-    async listenForAuthCode(successTemplate, errorTemplate) {
-        if (this.server) {
-            throw NodeAuthError.NodeAuthError.createLoopbackServerAlreadyExistsError();
-        }
-        return new Promise((resolve, reject) => {
-            this.server = http.createServer((req, res) => {
-                const url = req.url;
-                if (!url) {
-                    res.end(errorTemplate ||
-                        "Error occurred loading redirectUrl");
-                    reject(NodeAuthError.NodeAuthError.createUnableToLoadRedirectUrlError());
-                    return;
-                }
-                else if (url === msalCommon.Constants.FORWARD_SLASH) {
-                    res.end(successTemplate ||
-                        "Auth code was successfully acquired. You can close this window now.");
-                    return;
-                }
-                const redirectUri = this.getRedirectUri();
-                const parsedUrl = new URL(url, redirectUri);
-                const authCodeResponse = msalCommon.UrlUtils.getDeserializedResponse(parsedUrl.search) || {};
-                if (authCodeResponse.code) {
-                    res.writeHead(msalCommon.HttpStatus.REDIRECT, {
-                        location: redirectUri,
-                    }); // Prevent auth code from being saved in the browser history
-                    res.end();
-                }
-                if (authCodeResponse.error) {
-                    res.end(errorTemplate ||
-                        `Error occurred: ${authCodeResponse.error}`);
-                }
-                resolve(authCodeResponse);
-            });
-            this.server.listen(0, "127.0.0.1"); // Listen on any available port
-        });
-    }
-    /**
-     * Get the port that the loopback server is running on
-     * @returns
-     */
-    getRedirectUri() {
-        if (!this.server || !this.server.listening) {
-            throw NodeAuthError.NodeAuthError.createNoLoopbackServerExistsError();
-        }
-        const address = this.server.address();
-        if (!address || typeof address === "string" || !address.port) {
-            this.closeServer();
-            throw NodeAuthError.NodeAuthError.createInvalidLoopbackAddressTypeError();
-        }
-        const port = address && address.port;
-        return `${Constants.Constants.HTTP_PROTOCOL}${Constants.Constants.LOCALHOST}:${port}`;
-    }
-    /**
-     * Close the loopback server
-     */
-    closeServer() {
-        if (this.server) {
-            // Only stops accepting new connections, server will close once open/idle connections are closed.
-            this.server.close();
-            if (typeof this.server.closeAllConnections === "function") {
+            catch (err) {
                 /*
-                 * Close open/idle connections. This API is available in Node versions 18.2 and higher
+                 * do nothing
+                 * accessSync returns undefined on success, and throws an error on failure
                  */
-                this.server.closeAllConnections();
             }
-            this.server.unref();
-            this.server = undefined;
         }
+        return [identityEndpoint, imdsEndpoint];
+    }
+    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
+        const [identityEndpoint, imdsEndpoint] = AzureArc.getEnvironmentVariables();
+        // if either of the identity or imds endpoints are undefined (even after himds file detection)
+        if (!identityEndpoint || !imdsEndpoint) {
+            logger.info(`[Managed Identity] ${ManagedIdentitySourceNames.AZURE_ARC} managed identity is unavailable through environment variables because one or both of '${ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' and '${ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT}' are not defined. ${ManagedIdentitySourceNames.AZURE_ARC} managed identity is also unavailable through file detection.`);
+            return null;
+        }
+        // check if the imds endpoint is set to the default for file detection
+        if (imdsEndpoint === HIMDS_EXECUTABLE_HELPER_STRING) {
+            logger.info(`[Managed Identity] ${ManagedIdentitySourceNames.AZURE_ARC} managed identity is available through file detection. Defaulting to known ${ManagedIdentitySourceNames.AZURE_ARC} endpoint: ${DEFAULT_AZURE_ARC_IDENTITY_ENDPOINT}. Creating ${ManagedIdentitySourceNames.AZURE_ARC} managed identity.`);
+        }
+        else {
+            // otherwise, both the identity and imds endpoints are defined without file detection; validate them
+            const validatedIdentityEndpoint = AzureArc.getValidatedEnvVariableUrlString(ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT, identityEndpoint, ManagedIdentitySourceNames.AZURE_ARC, logger);
+            // remove trailing slash
+            validatedIdentityEndpoint.endsWith("/")
+                ? validatedIdentityEndpoint.slice(0, -1)
+                : validatedIdentityEndpoint;
+            AzureArc.getValidatedEnvVariableUrlString(ManagedIdentityEnvironmentVariableNames.IMDS_ENDPOINT, imdsEndpoint, ManagedIdentitySourceNames.AZURE_ARC, logger);
+            logger.info(`[Managed Identity] Environment variables validation passed for ${ManagedIdentitySourceNames.AZURE_ARC} managed identity. Endpoint URI: ${validatedIdentityEndpoint}. Creating ${ManagedIdentitySourceNames.AZURE_ARC} managed identity.`);
+        }
+        if (managedIdentityId.idType !== ManagedIdentityIdType.SYSTEM_ASSIGNED) {
+            throw createManagedIdentityError(unableToCreateAzureArc);
+        }
+        return new AzureArc(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint);
+    }
+    createRequest(resource) {
+        const request = new ManagedIdentityRequestParameters(HttpMethod.GET, this.identityEndpoint.replace("localhost", "127.0.0.1"));
+        request.headers[METADATA_HEADER_NAME] = "true";
+        request.queryParameters[API_VERSION_QUERY_PARAMETER_NAME] =
+            ARC_API_VERSION;
+        request.queryParameters[RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
+            resource;
+        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
+        return request;
+    }
+    async getServerTokenResponseAsync(originalResponse, networkClient, networkRequest, networkRequestOptions) {
+        let retryResponse;
+        if (originalResponse.status === HttpStatus.UNAUTHORIZED) {
+            const wwwAuthHeader = originalResponse.headers["www-authenticate"];
+            if (!wwwAuthHeader) {
+                throw createManagedIdentityError(wwwAuthenticateHeaderMissing);
+            }
+            if (!wwwAuthHeader.includes("Basic realm=")) {
+                throw createManagedIdentityError(wwwAuthenticateHeaderUnsupportedFormat);
+            }
+            const secretFilePath = wwwAuthHeader.split("Basic realm=")[1];
+            // throw an error if the managed identity application is not being run on Windows or Linux
+            if (!SUPPORTED_AZURE_ARC_PLATFORMS.hasOwnProperty(process.platform)) {
+                throw createManagedIdentityError(platformNotSupported);
+            }
+            // get the expected Windows or Linux file path
+            const expectedSecretFilePath = SUPPORTED_AZURE_ARC_PLATFORMS[process.platform];
+            // throw an error if the file in the file path is not a .key file
+            const fileName = path.basename(secretFilePath);
+            if (!fileName.endsWith(".key")) {
+                throw createManagedIdentityError(invalidFileExtension);
+            }
+            /*
+             * throw an error if the file path from the www-authenticate header does not match the
+             * expected file path for the platform (Windows or Linux) the managed identity application
+             * is running on
+             */
+            if (expectedSecretFilePath + fileName !== secretFilePath) {
+                throw createManagedIdentityError(invalidFilePath);
+            }
+            let secretFileSize;
+            // attempt to get the secret file's size, in bytes
+            try {
+                secretFileSize = await fs.statSync(secretFilePath).size;
+            }
+            catch (e) {
+                throw createManagedIdentityError(unableToReadSecretFile);
+            }
+            // throw an error if the secret file's size is greater than 4096 bytes
+            if (secretFileSize > AZURE_ARC_SECRET_FILE_MAX_SIZE_BYTES) {
+                throw createManagedIdentityError(invalidSecret);
+            }
+            // attempt to read the contents of the secret file
+            let secret;
+            try {
+                secret = fs.readFileSync(secretFilePath, "utf-8");
+            }
+            catch (e) {
+                throw createManagedIdentityError(unableToReadSecretFile);
+            }
+            const authHeaderValue = `Basic ${secret}`;
+            this.logger.info(`[Managed Identity] Adding authorization header to the request.`);
+            networkRequest.headers[AUTHORIZATION_HEADER_NAME] = authHeaderValue;
+            try {
+                retryResponse =
+                    await networkClient.sendGetRequestAsync(networkRequest.computeUri(), networkRequestOptions);
+            }
+            catch (error) {
+                if (error instanceof AuthError) {
+                    throw error;
+                }
+                else {
+                    throw createClientAuthError(networkError);
+                }
+            }
+        }
+        return this.getServerTokenResponse(retryResponse || originalResponse);
     }
 }
-
-exports.LoopbackClient = LoopbackClient;
-//# sourceMappingURL=LoopbackClient.cjs.map
-
-
-/***/ }),
-
-/***/ 6507:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-/* eslint-disable header/header */
-const name = "@azure/msal-node";
-const version = "2.13.1";
-
-exports.name = name;
-exports.version = version;
-//# sourceMappingURL=packageMetadata.cjs.map
-
-
-/***/ }),
-
-/***/ 2114:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-class LinearRetryPolicy {
-    constructor(maxRetries, retryDelay, httpStatusCodesToRetryOn) {
-        this.maxRetries = maxRetries;
-        this.retryDelay = retryDelay;
-        this.httpStatusCodesToRetryOn = httpStatusCodesToRetryOn;
+/**
+ * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/CloudShellManagedIdentitySource.cs
+ */
+class CloudShell extends BaseManagedIdentitySource {
+    constructor(logger, nodeStorage, networkClient, cryptoProvider, msiEndpoint) {
+        super(logger, nodeStorage, networkClient, cryptoProvider);
+        this.msiEndpoint = msiEndpoint;
     }
-    retryAfterMillisecondsToSleep(retryHeader) {
-        if (!retryHeader) {
-            return 0;
-        }
-        // retry-after header is in seconds
-        let millisToSleep = Math.round(parseFloat(retryHeader) * 1000);
-        /*
-         * retry-after header is in HTTP Date format
-         * <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
-         */
-        if (isNaN(millisToSleep)) {
-            millisToSleep = Math.max(0, 
-            // .valueOf() is needed to subtract dates in TypeScript
-            new Date(retryHeader).valueOf() - new Date().valueOf());
-        }
-        return millisToSleep;
+    static getEnvironmentVariables() {
+        const msiEndpoint = process.env[ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT];
+        return [msiEndpoint];
     }
-    async pauseForRetry(httpStatusCode, currentRetry, retryAfterHeader) {
-        if (this.httpStatusCodesToRetryOn.includes(httpStatusCode) &&
-            currentRetry < this.maxRetries) {
-            const retryAfterDelay = this.retryAfterMillisecondsToSleep(retryAfterHeader);
-            await new Promise((resolve) => {
-                // retryAfterHeader value of 0 evaluates to false, and this.retryDelay will be used
-                return setTimeout(resolve, retryAfterDelay || this.retryDelay);
-            });
-            return true;
+    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
+        const [msiEndpoint] = CloudShell.getEnvironmentVariables();
+        // if the msi endpoint environment variable is undefined, this MSI provider is unavailable.
+        if (!msiEndpoint) {
+            logger.info(`[Managed Identity] ${ManagedIdentitySourceNames.CLOUD_SHELL} managed identity is unavailable because the '${ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT} environment variable is not defined.`);
+            return null;
         }
-        return false;
+        const validatedMsiEndpoint = CloudShell.getValidatedEnvVariableUrlString(ManagedIdentityEnvironmentVariableNames.MSI_ENDPOINT, msiEndpoint, ManagedIdentitySourceNames.CLOUD_SHELL, logger);
+        logger.info(`[Managed Identity] Environment variable validation passed for ${ManagedIdentitySourceNames.CLOUD_SHELL} managed identity. Endpoint URI: ${validatedMsiEndpoint}. Creating ${ManagedIdentitySourceNames.CLOUD_SHELL} managed identity.`);
+        if (managedIdentityId.idType !== ManagedIdentityIdType.SYSTEM_ASSIGNED) {
+            throw createManagedIdentityError(unableToCreateCloudShell);
+        }
+        return new CloudShell(logger, nodeStorage, networkClient, cryptoProvider, msiEndpoint);
+    }
+    createRequest(resource) {
+        const request = new ManagedIdentityRequestParameters(HttpMethod.POST, this.msiEndpoint);
+        request.headers[METADATA_HEADER_NAME] = "true";
+        request.bodyParameters[RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
+            resource;
+        return request;
     }
 }
 
-exports.LinearRetryPolicy = LinearRetryPolicy;
-//# sourceMappingURL=LinearRetryPolicy.cjs.map
-
-
-/***/ }),
-
-/***/ 7753:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+// IMDS constants. Docs for IMDS are available here https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http
+const IMDS_TOKEN_PATH = "/metadata/identity/oauth2/token";
+const DEFAULT_IMDS_ENDPOINT = `http://169.254.169.254${IMDS_TOKEN_PATH}`;
+const IMDS_API_VERSION = "2018-02-01";
+// Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/ImdsManagedIdentitySource.cs
+class Imds extends BaseManagedIdentitySource {
+    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint) {
+        super(logger, nodeStorage, networkClient, cryptoProvider);
+        this.identityEndpoint = identityEndpoint;
+    }
+    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider) {
+        let validatedIdentityEndpoint;
+        if (process.env[ManagedIdentityEnvironmentVariableNames
+            .AZURE_POD_IDENTITY_AUTHORITY_HOST]) {
+            logger.info(`[Managed Identity] Environment variable ${ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST} for ${ManagedIdentitySourceNames.IMDS} returned endpoint: ${process.env[ManagedIdentityEnvironmentVariableNames
+                .AZURE_POD_IDENTITY_AUTHORITY_HOST]}`);
+            validatedIdentityEndpoint = Imds.getValidatedEnvVariableUrlString(ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST, `${process.env[ManagedIdentityEnvironmentVariableNames
+                .AZURE_POD_IDENTITY_AUTHORITY_HOST]}${IMDS_TOKEN_PATH}`, ManagedIdentitySourceNames.IMDS, logger);
+        }
+        else {
+            logger.info(`[Managed Identity] Unable to find ${ManagedIdentityEnvironmentVariableNames.AZURE_POD_IDENTITY_AUTHORITY_HOST} environment variable for ${ManagedIdentitySourceNames.IMDS}, using the default endpoint.`);
+            validatedIdentityEndpoint = DEFAULT_IMDS_ENDPOINT;
+        }
+        return new Imds(logger, nodeStorage, networkClient, cryptoProvider, validatedIdentityEndpoint);
+    }
+    createRequest(resource, managedIdentityId) {
+        const request = new ManagedIdentityRequestParameters(HttpMethod.GET, this.identityEndpoint);
+        request.headers[METADATA_HEADER_NAME] = "true";
+        request.queryParameters[API_VERSION_QUERY_PARAMETER_NAME] =
+            IMDS_API_VERSION;
+        request.queryParameters[RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
+            resource;
+        if (managedIdentityId.idType !== ManagedIdentityIdType.SYSTEM_ASSIGNED) {
+            request.queryParameters[this.getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityId.idType)] = managedIdentityId.id;
+        }
+        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
+        return request;
+    }
+}
 
 /*
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
 // MSI Constants. Docs for MSI are available here https://docs.microsoft.com/azure/app-service/overview-managed-identity
-const AUTHORIZATION_HEADER_NAME = "Authorization";
-const METADATA_HEADER_NAME = "Metadata";
-const APP_SERVICE_SECRET_HEADER_NAME = "X-IDENTITY-HEADER";
-const SERVICE_FABRIC_SECRET_HEADER_NAME = "secret";
-const API_VERSION_QUERY_PARAMETER_NAME = "api-version";
-const RESOURCE_BODY_OR_QUERY_PARAMETER_NAME = "resource";
-const DEFAULT_MANAGED_IDENTITY_ID = "system_assigned_managed_identity";
-const MANAGED_IDENTITY_DEFAULT_TENANT = "managed_identity";
-const DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY = `https://login.microsoftonline.com/${MANAGED_IDENTITY_DEFAULT_TENANT}/`;
+const SERVICE_FABRIC_MSI_API_VERSION = "2019-07-01-preview";
 /**
- * Managed Identity Environment Variable Names
+ * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/ServiceFabricManagedIdentitySource.cs
  */
-const ManagedIdentityEnvironmentVariableNames = {
-    AZURE_POD_IDENTITY_AUTHORITY_HOST: "AZURE_POD_IDENTITY_AUTHORITY_HOST",
-    IDENTITY_ENDPOINT: "IDENTITY_ENDPOINT",
-    IDENTITY_HEADER: "IDENTITY_HEADER",
-    IDENTITY_SERVER_THUMBPRINT: "IDENTITY_SERVER_THUMBPRINT",
-    IMDS_ENDPOINT: "IMDS_ENDPOINT",
-    MSI_ENDPOINT: "MSI_ENDPOINT",
-};
+class ServiceFabric extends BaseManagedIdentitySource {
+    constructor(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader) {
+        super(logger, nodeStorage, networkClient, cryptoProvider);
+        this.identityEndpoint = identityEndpoint;
+        this.identityHeader = identityHeader;
+    }
+    static getEnvironmentVariables() {
+        const identityEndpoint = process.env[ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT];
+        const identityHeader = process.env[ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER];
+        const identityServerThumbprint = process.env[ManagedIdentityEnvironmentVariableNames
+            .IDENTITY_SERVER_THUMBPRINT];
+        return [identityEndpoint, identityHeader, identityServerThumbprint];
+    }
+    static tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
+        const [identityEndpoint, identityHeader, identityServerThumbprint] = ServiceFabric.getEnvironmentVariables();
+        /*
+         * if either of the identity endpoint, identity header, or identity server thumbprint
+         * environment variables are undefined, this MSI provider is unavailable.
+         */
+        if (!identityEndpoint || !identityHeader || !identityServerThumbprint) {
+            logger.info(`[Managed Identity] ${ManagedIdentitySourceNames.SERVICE_FABRIC} managed identity is unavailable because one or all of the '${ManagedIdentityEnvironmentVariableNames.IDENTITY_HEADER}', '${ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT}' or '${ManagedIdentityEnvironmentVariableNames.IDENTITY_SERVER_THUMBPRINT}' environment variables are not defined.`);
+            return null;
+        }
+        const validatedIdentityEndpoint = ServiceFabric.getValidatedEnvVariableUrlString(ManagedIdentityEnvironmentVariableNames.IDENTITY_ENDPOINT, identityEndpoint, ManagedIdentitySourceNames.SERVICE_FABRIC, logger);
+        logger.info(`[Managed Identity] Environment variables validation passed for ${ManagedIdentitySourceNames.SERVICE_FABRIC} managed identity. Endpoint URI: ${validatedIdentityEndpoint}. Creating ${ManagedIdentitySourceNames.SERVICE_FABRIC} managed identity.`);
+        if (managedIdentityId.idType !== ManagedIdentityIdType.SYSTEM_ASSIGNED) {
+            logger.warning(`[Managed Identity] ${ManagedIdentitySourceNames.SERVICE_FABRIC} user assigned managed identity is configured in the cluster, not during runtime. See also: https://learn.microsoft.com/en-us/azure/service-fabric/configure-existing-cluster-enable-managed-identity-token-service.`);
+        }
+        return new ServiceFabric(logger, nodeStorage, networkClient, cryptoProvider, identityEndpoint, identityHeader);
+    }
+    createRequest(resource, managedIdentityId) {
+        const request = new ManagedIdentityRequestParameters(HttpMethod.GET, this.identityEndpoint);
+        request.headers[SERVICE_FABRIC_SECRET_HEADER_NAME] =
+            this.identityHeader;
+        request.queryParameters[API_VERSION_QUERY_PARAMETER_NAME] =
+            SERVICE_FABRIC_MSI_API_VERSION;
+        request.queryParameters[RESOURCE_BODY_OR_QUERY_PARAMETER_NAME] =
+            resource;
+        if (managedIdentityId.idType !== ManagedIdentityIdType.SYSTEM_ASSIGNED) {
+            request.queryParameters[this.getManagedIdentityUserAssignedIdQueryParameterKey(managedIdentityId.idType)] = managedIdentityId.id;
+        }
+        // bodyParameters calculated in BaseManagedIdentity.acquireTokenWithManagedIdentity
+        return request;
+    }
+}
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+/*
+ * Class to initialize a managed identity and identify the service.
+ * Original source of code: https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/identity/Azure.Identity/src/ManagedIdentityClient.cs
+ */
+class ManagedIdentityClient {
+    constructor(logger, nodeStorage, networkClient, cryptoProvider) {
+        this.logger = logger;
+        this.nodeStorage = nodeStorage;
+        this.networkClient = networkClient;
+        this.cryptoProvider = cryptoProvider;
+    }
+    async sendManagedIdentityTokenRequest(managedIdentityRequest, managedIdentityId, fakeAuthority, refreshAccessToken) {
+        if (!ManagedIdentityClient.identitySource) {
+            ManagedIdentityClient.identitySource =
+                this.selectManagedIdentitySource(this.logger, this.nodeStorage, this.networkClient, this.cryptoProvider, managedIdentityId);
+        }
+        return ManagedIdentityClient.identitySource.acquireTokenWithManagedIdentity(managedIdentityRequest, managedIdentityId, fakeAuthority, refreshAccessToken);
+    }
+    allEnvironmentVariablesAreDefined(environmentVariables) {
+        return Object.values(environmentVariables).every((environmentVariable) => {
+            return environmentVariable !== undefined;
+        });
+    }
+    /**
+     * Determine the Managed Identity Source based on available environment variables. This API is consumed by ManagedIdentityApplication's getManagedIdentitySource.
+     * @returns ManagedIdentitySourceNames - The Managed Identity source's name
+     */
+    getManagedIdentitySource() {
+        ManagedIdentityClient.sourceName =
+            this.allEnvironmentVariablesAreDefined(ServiceFabric.getEnvironmentVariables())
+                ? ManagedIdentitySourceNames.SERVICE_FABRIC
+                : this.allEnvironmentVariablesAreDefined(AppService.getEnvironmentVariables())
+                    ? ManagedIdentitySourceNames.APP_SERVICE
+                    : this.allEnvironmentVariablesAreDefined(CloudShell.getEnvironmentVariables())
+                        ? ManagedIdentitySourceNames.CLOUD_SHELL
+                        : this.allEnvironmentVariablesAreDefined(AzureArc.getEnvironmentVariables())
+                            ? ManagedIdentitySourceNames.AZURE_ARC
+                            : ManagedIdentitySourceNames.DEFAULT_TO_IMDS;
+        return ManagedIdentityClient.sourceName;
+    }
+    /**
+     * Tries to create a managed identity source for all sources
+     * @returns the managed identity Source
+     */
+    selectManagedIdentitySource(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) {
+        const source = ServiceFabric.tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) ||
+            AppService.tryCreate(logger, nodeStorage, networkClient, cryptoProvider) ||
+            CloudShell.tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) ||
+            AzureArc.tryCreate(logger, nodeStorage, networkClient, cryptoProvider, managedIdentityId) ||
+            Imds.tryCreate(logger, nodeStorage, networkClient, cryptoProvider);
+        if (!source) {
+            throw createManagedIdentityError(unableToCreateSource);
+        }
+        return source;
+    }
+}
+
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
 /**
- * Managed Identity Source Names
+ * Class to initialize a managed identity and identify the service
  * @public
  */
-const ManagedIdentitySourceNames = {
-    APP_SERVICE: "AppService",
-    AZURE_ARC: "AzureArc",
-    CLOUD_SHELL: "CloudShell",
-    DEFAULT_TO_IMDS: "DefaultToImds",
-    IMDS: "Imds",
-    SERVICE_FABRIC: "ServiceFabric",
-};
-/**
- * Managed Identity Ids
- */
-const ManagedIdentityIdType = {
-    SYSTEM_ASSIGNED: "system-assigned",
-    USER_ASSIGNED_CLIENT_ID: "user-assigned-client-id",
-    USER_ASSIGNED_RESOURCE_ID: "user-assigned-resource-id",
-    USER_ASSIGNED_OBJECT_ID: "user-assigned-object-id",
-};
-/**
- * http methods
- */
-const HttpMethod = {
-    GET: "get",
-    POST: "post",
-};
-const ProxyStatus = {
-    SUCCESS: msalCommon.HttpStatus.SUCCESS,
-    SUCCESS_RANGE_START: msalCommon.HttpStatus.SUCCESS_RANGE_START,
-    SUCCESS_RANGE_END: msalCommon.HttpStatus.SUCCESS_RANGE_END,
-    SERVER_ERROR: msalCommon.HttpStatus.SERVER_ERROR,
-};
-/**
- * Constants used for region discovery
- */
-const REGION_ENVIRONMENT_VARIABLE = "REGION_NAME";
-/**
- * Constant used for PKCE
- */
-const RANDOM_OCTET_SIZE = 32;
-/**
- * Constants used in PKCE
- */
-const Hash = {
-    SHA256: "sha256",
-};
-/**
- * Constants for encoding schemes
- */
-const CharSet = {
-    CV_CHARSET: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~",
-};
-/**
- * Constants
- */
-const Constants = {
-    MSAL_SKU: "msal.js.node",
-    JWT_BEARER_ASSERTION_TYPE: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-    AUTHORIZATION_PENDING: "authorization_pending",
-    HTTP_PROTOCOL: "http://",
-    LOCALHOST: "localhost",
-};
-/**
- * API Codes for Telemetry purposes.
- * Before adding a new code you must claim it in the MSAL Telemetry tracker as these number spaces are shared across all MSALs
- * 0-99 Silent Flow
- * 600-699 Device Code Flow
- * 800-899 Auth Code Flow
- */
-const ApiId = {
-    acquireTokenSilent: 62,
-    acquireTokenByUsernamePassword: 371,
-    acquireTokenByDeviceCode: 671,
-    acquireTokenByClientCredential: 771,
-    acquireTokenByCode: 871,
-    acquireTokenByRefreshToken: 872,
-};
-/**
- * JWT  constants
- */
-const JwtConstants = {
-    ALGORITHM: "alg",
-    RSA_256: "RS256",
-    PSS_256: "PS256",
-    X5T_256: "x5t#S256",
-    X5T: "x5t",
-    X5C: "x5c",
-    AUDIENCE: "aud",
-    EXPIRATION_TIME: "exp",
-    ISSUER: "iss",
-    SUBJECT: "sub",
-    NOT_BEFORE: "nbf",
-    JWT_ID: "jti",
-};
-const LOOPBACK_SERVER_CONSTANTS = {
-    INTERVAL_MS: 100,
-    TIMEOUT_MS: 5000,
-};
-const AZURE_ARC_SECRET_FILE_MAX_SIZE_BYTES = 4096; // 4 KB
-const MANAGED_IDENTITY_MAX_RETRIES = 3;
-const MANAGED_IDENTITY_RETRY_DELAY = 1000;
-const MANAGED_IDENTITY_HTTP_STATUS_CODES_TO_RETRY_ON = [
-    msalCommon.HttpStatus.NOT_FOUND,
-    msalCommon.HttpStatus.REQUEST_TIMEOUT,
-    msalCommon.HttpStatus.TOO_MANY_REQUESTS,
-    msalCommon.HttpStatus.SERVER_ERROR,
-    msalCommon.HttpStatus.SERVICE_UNAVAILABLE,
-    msalCommon.HttpStatus.GATEWAY_TIMEOUT,
-];
+class ManagedIdentityApplication {
+    constructor(configuration) {
+        // undefined config means the managed identity is system-assigned
+        this.config = buildManagedIdentityConfiguration(configuration || {});
+        this.logger = new Logger(this.config.system.loggerOptions, name, version);
+        const fakeStatusAuthorityOptions = {
+            canonicalAuthority: Constants$1.DEFAULT_AUTHORITY,
+        };
+        if (!ManagedIdentityApplication.nodeStorage) {
+            ManagedIdentityApplication.nodeStorage = new NodeStorage(this.logger, this.config.managedIdentityId.id, DEFAULT_CRYPTO_IMPLEMENTATION, fakeStatusAuthorityOptions);
+        }
+        this.networkClient = this.config.system.networkClient;
+        this.cryptoProvider = new CryptoProvider();
+        const fakeAuthorityOptions = {
+            protocolMode: ProtocolMode.AAD,
+            knownAuthorities: [DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY],
+            cloudDiscoveryMetadata: "",
+            authorityMetadata: "",
+        };
+        this.fakeAuthority = new Authority(DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY, this.networkClient, ManagedIdentityApplication.nodeStorage, fakeAuthorityOptions, this.logger, this.cryptoProvider.createNewGuid(), // correlationID
+        undefined, true);
+        this.fakeClientCredentialClient = new ClientCredentialClient({
+            authOptions: {
+                clientId: this.config.managedIdentityId.id,
+                authority: this.fakeAuthority,
+            },
+        });
+        this.managedIdentityClient = new ManagedIdentityClient(this.logger, ManagedIdentityApplication.nodeStorage, this.networkClient, this.cryptoProvider);
+    }
+    /**
+     * Acquire an access token from the cache or the managed identity
+     * @param managedIdentityRequest - the ManagedIdentityRequestParams object passed in by the developer
+     * @returns the access token
+     */
+    async acquireToken(managedIdentityRequestParams) {
+        if (!managedIdentityRequestParams.resource) {
+            throw createClientConfigurationError(urlEmptyError);
+        }
+        const managedIdentityRequest = {
+            forceRefresh: managedIdentityRequestParams.forceRefresh,
+            resource: managedIdentityRequestParams.resource.replace("/.default", ""),
+            scopes: [
+                managedIdentityRequestParams.resource.replace("/.default", ""),
+            ],
+            authority: this.fakeAuthority.canonicalAuthority,
+            correlationId: this.cryptoProvider.createNewGuid(),
+        };
+        if (managedIdentityRequestParams.claims ||
+            managedIdentityRequest.forceRefresh) {
+            // make a network call to the managed identity source
+            return this.managedIdentityClient.sendManagedIdentityTokenRequest(managedIdentityRequest, this.config.managedIdentityId, this.fakeAuthority);
+        }
+        const [cachedAuthenticationResult, lastCacheOutcome] = await this.fakeClientCredentialClient.getCachedAuthenticationResult(managedIdentityRequest, this.config, this.cryptoProvider, this.fakeAuthority, ManagedIdentityApplication.nodeStorage);
+        if (cachedAuthenticationResult) {
+            // if the token is not expired but must be refreshed; get a new one in the background
+            if (lastCacheOutcome === CacheOutcome.PROACTIVELY_REFRESHED) {
+                this.logger.info("ClientCredentialClient:getCachedAuthenticationResult - Cached access token's refreshOn property has been exceeded'. It's not expired, but must be refreshed.");
+                // make a network call to the managed identity source; refresh the access token in the background
+                const refreshAccessToken = true;
+                await this.managedIdentityClient.sendManagedIdentityTokenRequest(managedIdentityRequest, this.config.managedIdentityId, this.fakeAuthority, refreshAccessToken);
+            }
+            return cachedAuthenticationResult;
+        }
+        else {
+            // make a network call to the managed identity source
+            return this.managedIdentityClient.sendManagedIdentityTokenRequest(managedIdentityRequest, this.config.managedIdentityId, this.fakeAuthority);
+        }
+    }
+    /**
+     * Determine the Managed Identity Source based on available environment variables. This API is consumed by Azure Identity SDK.
+     * @returns ManagedIdentitySourceNames - The Managed Identity source's name
+     */
+    getManagedIdentitySource() {
+        return (ManagedIdentityClient.sourceName ||
+            this.managedIdentityClient.getManagedIdentitySource());
+    }
+}
 
-exports.API_VERSION_QUERY_PARAMETER_NAME = API_VERSION_QUERY_PARAMETER_NAME;
-exports.APP_SERVICE_SECRET_HEADER_NAME = APP_SERVICE_SECRET_HEADER_NAME;
-exports.AUTHORIZATION_HEADER_NAME = AUTHORIZATION_HEADER_NAME;
-exports.AZURE_ARC_SECRET_FILE_MAX_SIZE_BYTES = AZURE_ARC_SECRET_FILE_MAX_SIZE_BYTES;
-exports.ApiId = ApiId;
-exports.CharSet = CharSet;
-exports.Constants = Constants;
-exports.DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY = DEFAULT_AUTHORITY_FOR_MANAGED_IDENTITY;
-exports.DEFAULT_MANAGED_IDENTITY_ID = DEFAULT_MANAGED_IDENTITY_ID;
-exports.Hash = Hash;
-exports.HttpMethod = HttpMethod;
-exports.JwtConstants = JwtConstants;
-exports.LOOPBACK_SERVER_CONSTANTS = LOOPBACK_SERVER_CONSTANTS;
-exports.MANAGED_IDENTITY_DEFAULT_TENANT = MANAGED_IDENTITY_DEFAULT_TENANT;
-exports.MANAGED_IDENTITY_HTTP_STATUS_CODES_TO_RETRY_ON = MANAGED_IDENTITY_HTTP_STATUS_CODES_TO_RETRY_ON;
-exports.MANAGED_IDENTITY_MAX_RETRIES = MANAGED_IDENTITY_MAX_RETRIES;
-exports.MANAGED_IDENTITY_RETRY_DELAY = MANAGED_IDENTITY_RETRY_DELAY;
-exports.METADATA_HEADER_NAME = METADATA_HEADER_NAME;
-exports.ManagedIdentityEnvironmentVariableNames = ManagedIdentityEnvironmentVariableNames;
-exports.ManagedIdentityIdType = ManagedIdentityIdType;
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+class DistributedCachePlugin {
+    constructor(client, partitionManager) {
+        this.client = client;
+        this.partitionManager = partitionManager;
+    }
+    async beforeCacheAccess(cacheContext) {
+        const partitionKey = await this.partitionManager.getKey();
+        const cacheData = await this.client.get(partitionKey);
+        cacheContext.tokenCache.deserialize(cacheData);
+    }
+    async afterCacheAccess(cacheContext) {
+        if (cacheContext.cacheHasChanged) {
+            const kvStore = cacheContext.tokenCache.getKVStore();
+            const accountEntities = Object.values(kvStore).filter((value) => AccountEntity.isAccountEntity(value));
+            if (accountEntities.length > 0) {
+                const accountEntity = accountEntities[0];
+                const partitionKey = await this.partitionManager.extractKey(accountEntity);
+                await this.client.set(partitionKey, cacheContext.tokenCache.serialize());
+            }
+        }
+    }
+}
+
+exports.AuthError = AuthError;
+exports.AuthErrorCodes = AuthErrorCodes;
+exports.AuthErrorMessage = AuthErrorMessage;
+exports.AzureCloudInstance = AzureCloudInstance;
+exports.ClientApplication = ClientApplication;
+exports.ClientAssertion = ClientAssertion;
+exports.ClientAuthError = ClientAuthError;
+exports.ClientAuthErrorCodes = ClientAuthErrorCodes;
+exports.ClientAuthErrorMessage = ClientAuthErrorMessage;
+exports.ClientConfigurationError = ClientConfigurationError;
+exports.ClientConfigurationErrorCodes = ClientConfigurationErrorCodes;
+exports.ClientConfigurationErrorMessage = ClientConfigurationErrorMessage;
+exports.ClientCredentialClient = ClientCredentialClient;
+exports.ConfidentialClientApplication = ConfidentialClientApplication;
+exports.CryptoProvider = CryptoProvider;
+exports.DeviceCodeClient = DeviceCodeClient;
+exports.DistributedCachePlugin = DistributedCachePlugin;
+exports.InteractionRequiredAuthError = InteractionRequiredAuthError;
+exports.InteractionRequiredAuthErrorCodes = InteractionRequiredAuthErrorCodes;
+exports.InteractionRequiredAuthErrorMessage = InteractionRequiredAuthErrorMessage;
+exports.Logger = Logger;
+exports.ManagedIdentityApplication = ManagedIdentityApplication;
 exports.ManagedIdentitySourceNames = ManagedIdentitySourceNames;
-exports.ProxyStatus = ProxyStatus;
-exports.RANDOM_OCTET_SIZE = RANDOM_OCTET_SIZE;
-exports.REGION_ENVIRONMENT_VARIABLE = REGION_ENVIRONMENT_VARIABLE;
-exports.RESOURCE_BODY_OR_QUERY_PARAMETER_NAME = RESOURCE_BODY_OR_QUERY_PARAMETER_NAME;
-exports.SERVICE_FABRIC_SECRET_HEADER_NAME = SERVICE_FABRIC_SECRET_HEADER_NAME;
-//# sourceMappingURL=Constants.cjs.map
-
-
-/***/ }),
-
-/***/ 2092:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-var msalCommon = __nccwpck_require__(5405);
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class EncodingUtils {
-    /**
-     * 'utf8': Multibyte encoded Unicode characters. Many web pages and other document formats use UTF-8.
-     * 'base64': Base64 encoding.
-     *
-     * @param str text
-     */
-    static base64Encode(str, encoding) {
-        return Buffer.from(str, encoding).toString("base64");
-    }
-    /**
-     * encode a URL
-     * @param str
-     */
-    static base64EncodeUrl(str, encoding) {
-        return EncodingUtils.base64Encode(str, encoding)
-            .replace(/=/g, msalCommon.Constants.EMPTY_STRING)
-            .replace(/\+/g, "-")
-            .replace(/\//g, "_");
-    }
-    /**
-     * 'utf8': Multibyte encoded Unicode characters. Many web pages and other document formats use UTF-8.
-     * 'base64': Base64 encoding.
-     *
-     * @param base64Str Base64 encoded text
-     */
-    static base64Decode(base64Str) {
-        return Buffer.from(base64Str, "base64").toString("utf8");
-    }
-    /**
-     * @param base64Str Base64 encoded Url
-     */
-    static base64DecodeUrl(base64Str) {
-        let str = base64Str.replace(/-/g, "+").replace(/_/g, "/");
-        while (str.length % 4) {
-            str += "=";
-        }
-        return EncodingUtils.base64Decode(str);
-    }
-}
-
-exports.EncodingUtils = EncodingUtils;
-//# sourceMappingURL=EncodingUtils.cjs.map
-
-
-/***/ }),
-
-/***/ 7383:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-/*! @azure/msal-node v2.13.1 2024-08-29 */
-
-'use strict';
-
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License.
- */
-class NetworkUtils {
-    static getNetworkResponse(headers, body, statusCode) {
-        return {
-            headers: headers,
-            body: body,
-            status: statusCode,
-        };
-    }
-    /*
-     * Utility function that converts a URL object into an ordinary options object as expected by the
-     * http.request and https.request APIs.
-     * https://github.com/nodejs/node/blob/main/lib/internal/url.js#L1090
-     */
-    static urlToHttpOptions(url) {
-        const options = {
-            protocol: url.protocol,
-            hostname: url.hostname && url.hostname.startsWith("[")
-                ? url.hostname.slice(1, -1)
-                : url.hostname,
-            hash: url.hash,
-            search: url.search,
-            pathname: url.pathname,
-            path: `${url.pathname || ""}${url.search || ""}`,
-            href: url.href,
-        };
-        if (url.port !== "") {
-            options.port = Number(url.port);
-        }
-        if (url.username || url.password) {
-            options.auth = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`;
-        }
-        return options;
-    }
-}
-
-exports.NetworkUtils = NetworkUtils;
-//# sourceMappingURL=NetworkUtils.cjs.map
+exports.NodeStorage = NodeStorage;
+exports.OnBehalfOfClient = OnBehalfOfClient;
+exports.PromptValue = PromptValue;
+exports.ProtocolMode = ProtocolMode;
+exports.PublicClientApplication = PublicClientApplication;
+exports.ResponseMode = ResponseMode;
+exports.ServerError = ServerError;
+exports.TokenCache = TokenCache;
+exports.TokenCacheContext = TokenCacheContext;
+exports.UsernamePasswordClient = UsernamePasswordClient;
+exports.buildAppConfiguration = buildAppConfiguration;
+exports.internals = internals;
+exports.version = version;
+//# sourceMappingURL=msal-node.cjs.map
 
 
 /***/ }),
