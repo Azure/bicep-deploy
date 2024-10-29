@@ -36,7 +36,7 @@
     "@actions/io": "^1.1.3",
     "@azure/arm-resources": "^5.2.0",
     "@azure/arm-resourcesdeploymentstacks": "^1.0.0",
-    "@azure/identity": "^4.4.1",
+    "@azure/identity": "^4.5.0",
     "bicep-node": "^0.0.8"
   },
   "devDependencies": {
