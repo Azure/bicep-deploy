@@ -11,7 +11,7 @@ beforeEach(() => {
 
 describe("e2e tests", () => {
   it("runs validation", async () => {
-    await runAction(
+    const { failure } = await runAction(
       data => `
 type: deployment
 operation: validate
@@ -22,6 +22,8 @@ resource-group-name: ${data.resourceGroup}
 parameters-file: test/files/basic/main.bicepparam
 `,
     );
+
+    expect(failure).not.toBeDefined();
   });
 
   it("runs validation and handles failures", async () => {
@@ -35,7 +37,6 @@ subscription-id: ${data.subscriptionId}
 resource-group-name: ${data.resourceGroup}
 parameters-file: test/files/validationerror/main.bicepparam
 `,
-      false,
     );
 
     expect(failure).toContain("Validation failed");
@@ -43,7 +44,7 @@ parameters-file: test/files/validationerror/main.bicepparam
   });
 
   it("runs what-if", async () => {
-    await runAction(
+    const { failure } = await runAction(
       data => `
 type: deployment
 operation: whatIf
@@ -54,5 +55,7 @@ resource-group-name: ${data.resourceGroup}
 parameters-file: test/files/basic/main.bicepparam
 `,
     );
+
+    expect(failure).not.toBeDefined();
   });
 });

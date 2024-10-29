@@ -66,10 +66,7 @@ type EnvironmentData = {
   resourceGroup: string;
 };
 
-export async function runAction(
-  getYaml: (data: EnvironmentData) => string,
-  expectSuccess: boolean = true,
-) {
+export async function runAction(getYaml: (data: EnvironmentData) => string) {
   expect(process.env.LIVETEST_SUBSCRIPTION_ID).toBeDefined();
   expect(process.env.LIVETEST_RESOURCE_GROUP).toBeDefined();
 
@@ -81,10 +78,6 @@ export async function runAction(
   const result = configureMocks(getYaml(data));
 
   await run();
-
-  if (expectSuccess) {
-    expect(result.failure).toBeUndefined();
-  }
 
   return result;
 }

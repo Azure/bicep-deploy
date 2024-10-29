@@ -10,9 +10,12 @@ import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 
 export default tseslint.config({
   files: ["src/**/*.ts", "test/**/*.ts", "test-live/**/*.ts"],
-  extends: [eslint.configs.recommended, ...tseslint.configs.recommended],
-  ...pluginJest.configs['flat/recommended'],
-  ...eslintPluginPrettierRecommended,
+  extends: [
+    eslint.configs.recommended,
+    pluginJest.configs['flat/recommended'],
+    eslintPluginPrettierRecommended,
+    ...tseslint.configs.recommended,
+  ],
   languageOptions: {
     ecmaVersion: 2020,
   },

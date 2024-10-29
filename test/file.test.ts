@@ -121,7 +121,9 @@ describe("file parsing", () => {
       templateFile: "/path/to/main.json",
     };
 
-    expect(async () => await getTemplateAndParameters(config)).rejects.toThrow(
+    await expect(
+      async () => await getTemplateAndParameters(config),
+    ).rejects.toThrow(
       "Unsupported parameters file type: /path/to/parameters.what",
     );
   });
@@ -132,9 +134,9 @@ describe("file parsing", () => {
       templateFile: "/path/to/main.what",
     };
 
-    expect(async () => await getTemplateAndParameters(config)).rejects.toThrow(
-      "Unsupported template file type: /path/to/main.what",
-    );
+    await expect(
+      async () => await getTemplateAndParameters(config),
+    ).rejects.toThrow("Unsupported template file type: /path/to/main.what");
   });
 });
 
