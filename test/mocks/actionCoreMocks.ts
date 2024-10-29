@@ -10,7 +10,6 @@ export const mockActionsCore = {
   setSecret: jest.fn(),
 };
 
-// eslint-disable-next-line jest/no-untyped-mock-factory
 jest.mock("@actions/core", () => mockActionsCore);
 
 export function configureGetInputMock(inputs: Record<string, string>) {

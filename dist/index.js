@@ -83381,7 +83381,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 const main_1 = __nccwpck_require__(1730);
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 (0, main_1.run)();
 
 })();

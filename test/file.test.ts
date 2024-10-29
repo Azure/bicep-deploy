@@ -20,10 +20,8 @@ describe("file parsing", () => {
     };
 
     configureReadFile(filePath => {
-      // eslint-disable-next-line jest/no-conditional-in-test
       if (filePath === "/path/to/template.json")
         return readTestFile("files/basic/main.json");
-      // eslint-disable-next-line jest/no-conditional-in-test
       if (filePath === "/path/to/parameters.json")
         return readTestFile("files/basic/main.parameters.json");
       throw `Unexpected file path: ${filePath}`;
@@ -86,7 +84,6 @@ describe("file parsing", () => {
     };
 
     configureReadFile(filePath => {
-      // eslint-disable-next-line jest/no-conditional-in-test
       if (filePath === "/path/to/parameters.json")
         return readTestFile("files/basic/main.parameters.json");
       throw `Unexpected file path: ${filePath}`;
@@ -124,7 +121,6 @@ describe("file parsing", () => {
       templateFile: "/path/to/main.json",
     };
 
-    // eslint-disable-next-line jest/valid-expect
     expect(async () => await getTemplateAndParameters(config)).rejects.toThrow(
       "Unsupported parameters file type: /path/to/parameters.what",
     );
@@ -136,7 +132,6 @@ describe("file parsing", () => {
       templateFile: "/path/to/main.what",
     };
 
-    // eslint-disable-next-line jest/valid-expect
     expect(async () => await getTemplateAndParameters(config)).rejects.toThrow(
       "Unsupported template file type: /path/to/main.what",
     );
@@ -146,7 +141,6 @@ describe("file parsing", () => {
 describe("file parsing with parameters", () => {
   it("accepts parameter overrides", async () => {
     configureReadFile(filePath => {
-      // eslint-disable-next-line jest/no-conditional-in-test
       if (filePath === "/parameters.json")
         return readTestFile("files/basic/main.parameters.json");
       throw `Unexpected file path: ${filePath}`;
@@ -174,7 +168,6 @@ describe("file parsing with parameters", () => {
 
   it("can override missing parameters", async () => {
     configureReadFile(filePath => {
-      // eslint-disable-next-line jest/no-conditional-in-test
       if (filePath === "/parameters.json")
         return JSON.stringify({ parameters: {} });
       throw `Unexpected file path: ${filePath}`;

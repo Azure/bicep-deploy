@@ -36,5 +36,4 @@ const mockBicepNode = {
   },
 };
 
-// eslint-disable-next-line jest/no-untyped-mock-factory
 jest.mock("bicep-node", () => mockBicepNode);

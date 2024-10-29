@@ -270,7 +270,6 @@ describe("input parsing", () => {
 
     const config = parseConfig();
 
-    // eslint-disable-next-line jest/prefer-strict-equal
     expect(config).toEqual<DeploymentsConfig>({
       type: "deployment",
       name: "mockName",
@@ -321,7 +320,6 @@ describe("input parsing", () => {
 
     const config = parseConfig();
 
-    // eslint-disable-next-line jest/prefer-strict-equal
     expect(config).toEqual<DeploymentStackConfig>({
       type: "deploymentStack",
       name: "mockName",

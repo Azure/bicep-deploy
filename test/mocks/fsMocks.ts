@@ -10,5 +10,4 @@ export function configureReadFile(mock: (filePath: string) => string) {
   );
 }
 
-// eslint-disable-next-line jest/no-untyped-mock-factory
 jest.mock("fs/promises", () => mockFsPromises);
