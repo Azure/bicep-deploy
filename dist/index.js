@@ -59790,6 +59790,7 @@ exports.createStacksClient = createStacksClient;
 const arm_resources_1 = __nccwpck_require__(6271);
 const arm_resourcesdeploymentstacks_1 = __nccwpck_require__(9821);
 const identity_1 = __nccwpck_require__(3983);
+const core_1 = __nccwpck_require__(7484);
 const userAgentPrefix = "gh-azure-bicep-deploy";
 const dummySubscriptionId = "00000000-0000-0000-0000-000000000000";
 function createDeploymentClient(subscriptionId, tenantId) {
@@ -59800,6 +59801,7 @@ function createDeploymentClient(subscriptionId, tenantId) {
         userAgentOptions: {
             userAgentPrefix: userAgentPrefix,
         },
+        additionalPolicies: [debugLoggingPolicy],
         // Use a recent API version to take advantage of error improvements
         apiVersion: "2024-03-01",
     });
@@ -59812,8 +59814,38 @@ function createStacksClient(subscriptionId, tenantId) {
         userAgentOptions: {
             userAgentPrefix: userAgentPrefix,
         },
+        additionalPolicies: [debugLoggingPolicy],
     });
 }
+// Log request + response bodies to GitHub Actions debug output if enabled
+const debugLoggingPolicy = {
+    position: "perCall",
+    policy: {
+        name: "debugLoggingPolicy",
+        async sendRequest(request, next) {
+            if ((0, core_1.isDebug)()) {
+                (0, core_1.debug)(`Request: ${request.method} ${request.url}`);
+                if (request.body) {
+                    const parsed = JSON.parse(request.body.toString());
+                    (0, core_1.debug)(`Body: ${JSON.stringify(parsed, null, 2)}`);
+                }
+            }
+            const response = await next(request);
+            if ((0, core_1.isDebug)()) {
+                (0, core_1.debug)(`Response: ${response.status}`);
+                if (response.bodyAsText) {
+                    const parsed = JSON.parse(response.bodyAsText);
+                    (0, core_1.debug)(`Body: ${JSON.stringify(parsed, null, 2)}`);
+                }
+                const correlationId = response.headers.get("x-ms-correlation-request-id");
+                (0, core_1.debug)(`CorrelationId: ${correlationId}`);
+                const activityId = response.headers.get("x-ms-request-id");
+                (0, core_1.debug)(`ActivityId: ${activityId}`);
+            }
+            return response;
+        },
+    },
+};
 
 
 /***/ }),
@@ -60534,6 +60566,29 @@ function formatPropertyDelete(builder, value, indentLevel) {
         formatJsonValue(builder, value, undefined, undefined, indentLevel);
     });
 }
+function fixSdkDeltaFormattingBug(value) {
+    // For some reason, the node SDK appears to conver strings incorrectly inside the "delta" object.
+    // Instead of returning "foo", we get {0: 'f', 1: 'o', 2: 'o' }. This function works around this bug, by
+    // trying to detect this heuristically, and convert back into the correct string format.
+    // See https://github.com/Azure/bicep-deploy/issues/71 for more info.
+    if (typeof value !== "object") {
+        return value;
+    }
+    let fixedString = "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const objValue = value;
+    const keys = Object.keys(objValue);
+    for (let i = 0; i < keys.length; i++) {
+        const nextChar = objValue[i.toString()];
+        // be specific here with the check, to minimize the chance of
+        // accidentally trying to convert a value that genuinely should be an object.
+        if (typeof nextChar !== "string" || nextChar.length !== 1) {
+            return value;
+        }
+        fixedString += nextChar;
+    }
+    return fixedString;
+}
 function formatPropertyModify(builder, before, after, children, indentLevel) {
     if (children && children.length > 0) {
         // Has nested changes.
@@ -60541,6 +60596,8 @@ function formatPropertyModify(builder, before, after, children, indentLevel) {
         formatPropertyChanges(builder, sortChanges(children), indentLevel);
     }
     else {
+        before = fixSdkDeltaFormattingBug(before);
+        after = fixSdkDeltaFormattingBug(after);
         formatPropertyDelete(builder, before, indentLevel);
         // Space before =>
         if (isNonEmptyObject(before)) {

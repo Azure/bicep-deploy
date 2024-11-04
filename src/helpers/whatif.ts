@@ -484,6 +484,33 @@ function formatPropertyDelete(
   });
 }
 
+function fixSdkDeltaFormattingBug(value: UnknownValue): UnknownValue {
+  // For some reason, the node SDK appears to conver strings incorrectly inside the "delta" object.
+  // Instead of returning "foo", we get {0: 'f', 1: 'o', 2: 'o' }. This function works around this bug, by
+  // trying to detect this heuristically, and convert back into the correct string format.
+  // See https://github.com/Azure/bicep-deploy/issues/71 for more info.
+  if (typeof value !== "object") {
+    return value;
+  }
+
+  let fixedString = "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const objValue = value as any;
+  const keys = Object.keys(objValue);
+  for (let i = 0; i < keys.length; i++) {
+    const nextChar = objValue[i.toString()];
+    // be specific here with the check, to minimize the chance of
+    // accidentally trying to convert a value that genuinely should be an object.
+    if (typeof nextChar !== "string" || nextChar.length !== 1) {
+      return value;
+    }
+
+    fixedString += nextChar;
+  }
+
+  return fixedString;
+}
+
 function formatPropertyModify(
   builder: ColorStringBuilder,
   before: UnknownValue,
@@ -496,6 +523,9 @@ function formatPropertyModify(
     builder.appendLine().appendLine();
     formatPropertyChanges(builder, sortChanges(children), indentLevel);
   } else {
+    before = fixSdkDeltaFormattingBug(before);
+    after = fixSdkDeltaFormattingBug(after);
+
     formatPropertyDelete(builder, before, indentLevel);
 
     // Space before =>

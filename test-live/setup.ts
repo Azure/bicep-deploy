@@ -7,6 +7,8 @@ const mockCore = {
   info: jest.fn(),
   warning: jest.fn(),
   error: jest.fn(),
+  debug: jest.fn(),
+  isDebug: jest.fn(),
   getInput: jest.fn(),
   setFailed: jest.fn(),
   setOutput: jest.fn(),

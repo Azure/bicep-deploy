@@ -653,4 +653,60 @@ Scope: /subscriptions/00000000-0000-0000-0000-000000000004/resourceGroups/rg4
         .join("\n"),
     ).toContain(expected);
   });
+
+  it("fixes up a dodgy SDK response", () => {
+    const changes: WhatIfChange[] = [
+      {
+        resourceId:
+          "/subscriptions/00000000-0000-0000-0000-000000000004/resourceGroups/rg4/providers/Microsoft.DocumentDB/databaseAccounts/myaccount",
+        changeType: "Modify",
+        delta: [
+          {
+            propertyChangeType: "Modify",
+            path: "properties.why",
+            before: {
+              0: "y",
+              1: " ",
+              2: "u",
+              3: " ",
+              4: "d",
+              5: "o",
+              6: " ",
+              7: "d",
+              8: "i",
+              9: "s",
+              10: "?",
+            },
+            after: {
+              0: "i",
+              1: "d",
+              2: "k",
+              3: ",",
+              4: " ",
+              5: "l",
+              6: "o",
+              7: "l",
+            },
+          },
+        ],
+      },
+    ];
+
+    const expected = `
+Scope: /subscriptions/00000000-0000-0000-0000-000000000004/resourceGroups/rg4
+<MAGENTA>
+  ~ Microsoft.DocumentDB/databaseAccounts/myaccount<RESET>
+    <MAGENTA>~<RESET> properties.why<RESET>:<RESET><RED>"y u do dis?"<RESET> => <GREEN>"idk, lol"<RESET>
+<MAGENTA><RESET>
+`;
+
+    const result = formatWhatIfOperationResult({ changes }, "debug");
+
+    expect(
+      result
+        .split("\n")
+        .map(x => x.trimEnd())
+        .join("\n"),
+    ).toContain(expected);
+  });
 });
