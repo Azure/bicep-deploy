@@ -6,8 +6,8 @@ This snippet demonstrates the default usage of the `azure/bicep-deploy@v1` GitHu
 - name: Create
   uses: azure/bicep-deploy@v1
   with:
-    operation: deploymentStack
-    type: create
+    type: deploymentStack
+    operation: create
     name: Development
     location: westus2
     scope: subscription
@@ -26,8 +26,8 @@ This snippet illustrates the default usage of the `azure/bicep-deploy@v1` action
 - name: Create
   uses: azure/bicep-deploy@v1
   with:
-    operation: deploymentStack
-    type: create
+    type: deploymentStack
+    operation: create
     name: Development
     location: westus2
     scope: subscription
@@ -75,8 +75,8 @@ jobs:
       - name: Create
         uses: azure/bicep-deploy@v1
         with:
-          operation: deploymentStack
-          type: create
+          type: deploymentStack
+          operation: create
           name: Development
           location: westus2
           scope: subscription
@@ -124,8 +124,8 @@ jobs:
       - name: Validate
         uses: azure/bicep-deploy@v1
         with:
-          operation: deploymentStack
-          type: validate
+          type: deploymentStack
+          operation: validate
           name: Development
           location: westus2
           scope: subscription
@@ -166,8 +166,8 @@ jobs:
       - name: Delete
         uses: azure/bicep-deploy@v1
         with:
-          operation: deploymentStack
-          type: delete
+          type: deploymentStack
+          operation: delete
           name: Development
           location: westus2
           scope: subscription
