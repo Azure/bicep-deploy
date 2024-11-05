@@ -115,8 +115,8 @@ jobs:
       - name: Validate
         uses: azure/bicep-deploy@v1
         with:
-          operation: deployment
-          type: validate
+          type: deployment
+          operation: validate
           name: Development
           location: westus2
           scope: resourceGroup
@@ -128,8 +128,8 @@ jobs:
       - name: What-If
         uses: azure/bicep-deploy@v1
         with:
-          operation: deployment
-          type: whatIf
+          type: deployment
+          operation: whatIf
           name: Development
           location: westus2
           scope: resourceGroup
