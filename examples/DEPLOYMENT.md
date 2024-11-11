@@ -72,7 +72,6 @@ jobs:
           type: deployment
           operation: create
           name: Development
-          location: westus2
           scope: resourceGroup
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resource-group-name: example
