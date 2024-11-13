@@ -40,10 +40,27 @@ jobs:
         id: npm-test
         run: npm run test
 
+  check-access:
+    name: Check Secrets Access
+    runs-on: ubuntu-latest
+    outputs:
+      access_verified: ${{ steps.check-access.outputs.verified && !(github.event_name == 'workflow_dispatch' && github.ref != 'refs/head/main') }}
+
+    steps:
+      - id: check-access
+        if: env.SECRET_TO_CHECK != ''
+        run: echo 'verified=true' >> $GITHUB_OUTPUT
+        env:
+          SECRET_TO_CHECK: ${{ secrets.SECRET_TO_CHECK }}
+
   tests-live:
     permissions:
       contents: read
       id-token: write
+
+    if: needs.check-access.outputs.access_verified == 'true'
+    needs:
+      - check-access
 
     name: Live Tests
     runs-on: ubuntu-latest
@@ -80,6 +97,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
+    if: needs.check-access.outputs.access_verified == 'true'
+    needs:
+      - check-access
 
     name: Actions Tests
     runs-on: ${{ matrix.os }}
