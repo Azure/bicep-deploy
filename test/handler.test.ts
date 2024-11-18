@@ -48,6 +48,7 @@ describe("deployment execution", () => {
       whatIf: {
         excludeChangeTypes: ["noChange"],
       },
+      environment: "azureCloud",
     };
 
     const files: ParsedFiles = {
@@ -88,6 +89,7 @@ describe("deployment execution", () => {
       await execute(config, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        config,
         scope.subscriptionId,
         undefined,
       );
@@ -115,6 +117,7 @@ describe("deployment execution", () => {
       await execute({ ...config, operation: "validate" }, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        { ...config, operation: "validate" },
         scope.subscriptionId,
         undefined,
       );
@@ -131,6 +134,7 @@ describe("deployment execution", () => {
       await execute({ ...config, operation: "whatIf" }, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        { ...config, operation: "whatIf" },
         scope.subscriptionId,
         undefined,
       );
@@ -156,6 +160,7 @@ describe("deployment execution", () => {
       whatIf: {
         excludeChangeTypes: ["noChange"],
       },
+      environment: "azureCloud",
     };
 
     const files: ParsedFiles = {
@@ -214,6 +219,7 @@ describe("deployment execution", () => {
       await execute(config, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        config,
         scope.subscriptionId,
         undefined,
       );
@@ -245,6 +251,7 @@ describe("deployment execution", () => {
       await execute({ ...config, operation: "create" }, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        { ...config, operation: "create" },
         scope.subscriptionId,
         undefined,
       );
@@ -261,6 +268,7 @@ describe("deployment execution", () => {
       await execute({ ...config, operation: "validate" }, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        { ...config, operation: "validate" },
         scope.subscriptionId,
         undefined,
       );
@@ -279,6 +287,7 @@ describe("deployment execution", () => {
       await execute({ ...config, operation: "validate" }, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        { ...config, operation: "validate" },
         scope.subscriptionId,
         undefined,
       );
@@ -299,6 +308,7 @@ describe("deployment execution", () => {
       await execute({ ...config, operation: "whatIf" }, files);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        { ...config, operation: "whatIf" },
         scope.subscriptionId,
         undefined,
       );
@@ -337,6 +347,7 @@ describe("stack execution", () => {
       },
       bypassStackOutOfSyncError: true,
       description: "mockDescription",
+      environment: "azureCloud",
     };
 
     const files: ParsedFiles = {
@@ -377,6 +388,7 @@ describe("stack execution", () => {
       await execute(config, files);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
+        config,
         scope.subscriptionId,
         undefined,
       );
@@ -404,6 +416,7 @@ describe("stack execution", () => {
       await execute({ ...config, operation: "validate" }, files);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
+        { ...config, operation: "validate" },
         scope.subscriptionId,
         undefined,
       );
@@ -416,6 +429,7 @@ describe("stack execution", () => {
       await execute({ ...config, operation: "delete" }, files);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
+        { ...config, operation: "delete" },
         scope.subscriptionId,
         undefined,
       );
@@ -451,6 +465,7 @@ describe("stack execution", () => {
       },
       bypassStackOutOfSyncError: true,
       description: "mockDescription",
+      environment: "azureCloud",
     };
 
     const files: ParsedFiles = {
@@ -490,6 +505,7 @@ describe("stack execution", () => {
       await execute(config, files);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
+        config,
         scope.subscriptionId,
         undefined,
       );
@@ -517,6 +533,7 @@ describe("stack execution", () => {
       await execute({ ...config, operation: "validate" }, files);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
+        { ...config, operation: "validate" },
         scope.subscriptionId,
         undefined,
       );
@@ -529,6 +546,7 @@ describe("stack execution", () => {
       await execute({ ...config, operation: "delete" }, files);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
+        { ...config, operation: "delete" },
         scope.subscriptionId,
         undefined,
       );
