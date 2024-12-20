@@ -188,10 +188,13 @@ async function deploymentCreate(config: DeploymentsConfig, files: ParsedFiles) {
         },
       );
     case "tenant":
-      await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(name, {
-        ...deployment,
-        location: requireLocation(config),
-      });
+      return await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(
+        name,
+        {
+          ...deployment,
+          location: requireLocation(config),
+        },
+      );
   }
 }
 

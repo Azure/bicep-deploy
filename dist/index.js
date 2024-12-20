@@ -59559,7 +59559,7 @@ async function deploymentCreate(config, files) {
                 location: requireLocation(config),
             });
         case "tenant":
-            await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(name, {
+            return await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(name, {
                 ...deployment,
                 location: requireLocation(config),
             });

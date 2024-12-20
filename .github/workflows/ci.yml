@@ -150,6 +150,7 @@ jobs:
           parameters-file: test/files/basic/main.bicepparam
 
       - name: Test Deployment - Deploy
+        id: test-deployment-create
         uses: ./
         with:
           type: deployment
@@ -160,7 +161,14 @@ jobs:
           resource-group-name: azure-bicep-deploy-ci
           parameters-file: test/files/basic/main.bicepparam
 
+      - name: Verify Deployment Outputs
+        shell: bash
+        run: |
+          [ "${{ steps.test-deployment-create.outputs.intOutput }}" = "42" ] || exit 1
+          [ "${{ steps.test-deployment-create.outputs.stringOutput }}" = "hello world" ] || exit 1
+
       - name: Test Local Action (Stack)
+        id: test-stack-create
         uses: ./
         with:
           type: deploymentStack
@@ -172,3 +180,9 @@ jobs:
           parameters-file: test/files/basic/main.bicepparam
           action-on-unmanage-resources: delete
           deny-settings-mode: denyDelete
+
+      - name: Verify Stack Outputs
+        shell: bash
+        run: |
+          [ "${{ steps.test-stack-create.outputs.intOutput }}" = "42" ] || exit 1
+          [ "${{ steps.test-stack-create.outputs.stringOutput }}" = "hello world" ] || exit 1
