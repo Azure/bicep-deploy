@@ -66,6 +66,8 @@ For end-to-end workflow examples, please see [Deployment](./examples/DEPLOYMENT.
 
 ## Inputs
 
+The inputs for this action provide flexibility and control for managing deployment operations and resources in Azure. By combining inputs like `type`, `operation`, and `scope`, workflows can be configured to handle a variety of scenarios, from deploying individual resources to managing comprehensive deployment stacks. Inputs such as template-file, parameters-file, and tags allow for easy customization of deployment configurations and metadata. Advanced features, including `actions-on-unmanaged-resources` and "What If" analysis, ensure deployments are predictable and secure. These options make it simple to integrate Azure resource management into CI/CD workflows.
+
 | Name                                 | Description                                                         | Allowed Values                                                                                                                                   |
 | ------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `type`                               | Specifies the execution type.                                       | `deployment`, `deploymentStack`                                                                                                                  |
@@ -87,12 +89,49 @@ For end-to-end workflow examples, please see [Deployment](./examples/DEPLOYMENT.
 | `action-on-unmanage-resourcegroups`  | Specifies the action to take on unmanaged resource groups.          | `delete`, `detach`                                                                                                                               |
 | `action-on-unmanage-managementgroup` | Specifies the action to take on unmanaged management groups.        | `delete`, `detach`                                                                                                                               |
 | `deny-settings-mode`                 | Specifies the mode of the deny settings.                            | `denyDelete`, `denyWriteAndDelete`, `none`                                                                                                       |
-| `deny-settings-excluded-actions`     | Specifies the excluded actions for the deny settings.                | Free-text                                                                                                                                        |
+| `deny-settings-excluded-actions`     | Specifies the excluded actions for the deny settings.               | Free-text                                                                                                                                        |
 | `deny-settings-excluded-principals`  | Specifies the excluded principals for the deny settings.            | Free-text                                                                                                                                        |
 | `bypass-stack-out-of-sync-error`     | Specifies whether to bypass the stack out of sync error.            | `true`, `false`                                                                                                                                  |
 | `description`                        | Specifies the description of the deploymentStack.                   | Free-text                                                                                                                                        |
 | `tags`                               | Specifies the tags for the deploymentStack.                         | Free-text                                                                                                                                        |
 | `masked-outputs`                     | Specifies output names to mask values for.                          | Free-text                                                                                                                                        |
+
+## Outputs
+
+The action provides outputs from the deployment operation, which can be accessed in subsequent steps of a workflow. These outputs are useful for dynamically referencing values generated during the deployment process, such as resource IDs, endpoint URLs, or other outputs defined in Bicep templates.
+
+**Accessing Outputs**
+
+After the deployment step has been executed, outputs can be accessed using the outputs property of the step's ID. For example, if the deployment step's ID is `deployment`, its outputs can be accessed as `${{ steps.deployment.outputs.<outputName> }}`.
+
+```yaml
+- name: Print Deployment Outputs
+  run: |
+    echo "intOutput: ${{ steps.deployment.outputs.intOutput }}"
+    echo "stringOutput: ${{ steps.deployment.outputs.stringOutput }}"
+```
+
+**Defining Outputs in Bicep**
+
+Outputs are defined in the Bicep template using the output keyword. Outputs that need to be used in the workflow must be declared in the Bicep template being deployed. For example:
+
+```yaml
+output intOutput int = 42
+output stringOutput string = 'Hello, World!'
+```
+
+For detailed guidance, refer to the [Bicep Outputs](https://learn.microsoft.com/azure/azure-resource-manager/bicep/outputs) documentation.
+
+**Practical Usage**
+
+1. **Define Outputs in the Bicep Template**: Declare the outputs in the `.bicep` file as shown above.
+2. **Reference Outputs in Workflow**: Use the `${{ steps.<step_id>.outputs.<output_name> }}` syntax in subsequent steps to access the values.
+
+These outputs can then be leveraged for:
+
+- Debugging deployment results.
+- Passing values dynamically to other steps or jobs.
+- Integrating deployment results into a CI/CD pipeline.
 
 ## Contributing
 
