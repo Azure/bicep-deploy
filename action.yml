@@ -18,8 +18,8 @@ inputs:
     description: "Specifies the name of the deployment or deploymentStack."
     required: true
   location:
-    description: "Specifies the location of the deployment or deploymentStack."
-    required: true
+    description: "Specifies the location of the deployment or deploymentStack. Must be provided if the 'scope' parameter is 'subscription', 'managementGroup' or 'tenant'."
+    required: false
 
   scope:
     description: "Specifies the scope of the deployment or deploymentStack. For deployment, choose from 'resourceGroup', 'subscription', 'managementGroup', 'tenant'. For deploymentStack, choose from 'resourceGroup', 'subscription', 'managementGroup'."
