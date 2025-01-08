@@ -3,7 +3,8 @@
 import { setOutput, setFailed, setSecret } from "@actions/core";
 import { CloudError, Deployment, ErrorResponse } from "@azure/arm-resources";
 import { DeploymentStack } from "@azure/arm-resourcesdeploymentstacks";
-import { RestError } from "@azure/core-rest-pipeline";
+import { PipelineResponse, RestError } from "@azure/core-rest-pipeline";
+import { OperationOptions } from "@azure/core-client";
 
 import {
   ActionConfig,
@@ -21,6 +22,33 @@ import { logError, logInfoRaw } from "./helpers/logging";
 import { formatWhatIfOperationResult } from "./helpers/whatif";
 
 const defaultName = "azure-bicep-deploy";
+
+// workaround until we're able to pick up https://github.com/Azure/azure-sdk-for-js/pull/25500
+class CustomPollingError {
+  response: PipelineResponse;
+  details: CloudError;
+  constructor(details: CloudError, response: PipelineResponse) {
+    this.details = details;
+    this.response = response;
+  }
+}
+
+// workaround until we're able to pick up https://github.com/Azure/azure-sdk-for-js/pull/25500
+function getCreateOperationOptions(): OperationOptions {
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onResponse: (rawResponse, flatResponse: any) => {
+      if (
+        flatResponse &&
+        flatResponse.error &&
+        flatResponse.error.code &&
+        flatResponse.error.message
+      ) {
+        throw new CustomPollingError(flatResponse, rawResponse);
+      }
+    },
+  };
+}
 
 function getDeploymentClient(
   scope:
@@ -169,6 +197,7 @@ async function deploymentCreate(config: DeploymentsConfig, files: ParsedFiles) {
         scope.resourceGroup,
         name,
         deployment,
+        getCreateOperationOptions(),
       );
     case "subscription":
       return await client.deployments.beginCreateOrUpdateAtSubscriptionScopeAndWait(
@@ -177,6 +206,7 @@ async function deploymentCreate(config: DeploymentsConfig, files: ParsedFiles) {
           ...deployment,
           location: requireLocation(config),
         },
+        getCreateOperationOptions(),
       );
     case "managementGroup":
       return await client.deployments.beginCreateOrUpdateAtManagementGroupScopeAndWait(
@@ -186,6 +216,7 @@ async function deploymentCreate(config: DeploymentsConfig, files: ParsedFiles) {
           ...deployment,
           location: requireLocation(config),
         },
+        getCreateOperationOptions(),
       );
     case "tenant":
       return await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(
@@ -194,6 +225,7 @@ async function deploymentCreate(config: DeploymentsConfig, files: ParsedFiles) {
           ...deployment,
           location: requireLocation(config),
         },
+        getCreateOperationOptions(),
       );
   }
 }
@@ -458,6 +490,19 @@ async function tryWithErrorHandling<T>(
       logError(`Request failed. CorrelationId: ${correlationId}`);
 
       const { error } = ex.details as CloudError;
+      if (error) {
+        onError(error);
+        return;
+      }
+    }
+
+    if (ex instanceof CustomPollingError) {
+      const correlationId = ex.response?.headers.get(
+        "x-ms-correlation-request-id",
+      );
+      logError(`Request failed. CorrelationId: ${correlationId}`);
+
+      const { error } = ex.details;
       if (error) {
         onError(error);
         return;

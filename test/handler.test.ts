@@ -93,7 +93,7 @@ describe("deployment execution", () => {
       );
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait,
-      ).toHaveBeenCalledWith(config.name, expectedPayload);
+      ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
       expect(mockActionsCore.setOutput).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -219,7 +219,12 @@ describe("deployment execution", () => {
       );
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAndWait,
-      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+      ).toHaveBeenCalledWith(
+        scope.resourceGroup,
+        config.name,
+        expectedPayload,
+        expect.anything(),
+      );
       expect(mockActionsCore.setOutput).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -250,7 +255,12 @@ describe("deployment execution", () => {
       );
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAndWait,
-      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+      ).toHaveBeenCalledWith(
+        scope.resourceGroup,
+        config.name,
+        expectedPayload,
+        expect.anything(),
+      );
 
       expect(mockActionsCore.error).toHaveBeenCalledWith(
         colorize(JSON.stringify(mockError, null, 2), Color.Red),
