@@ -34,6 +34,25 @@ This snippet demonstrates the default usage of the `azure/bicep-deploy@v1` actio
     parameters: '{"name": "Development", "tags": { "environment": "development" }}'
 ```
 
+or with key-value-pair parameters:
+
+```yaml
+- name: Deployment
+  uses: azure/bicep-deploy@v1
+  with:
+    type: deployment
+    operation: create
+    name: Development
+    location: westus2
+    scope: resourceGroup
+    subscription-id: 00000000-0000-0000-0000-000000000000
+    resource-group-name: example
+    template-file: ./src/main.bicep
+    parameters: >-
+      name=Development
+      tags={ "environment": "development" }
+```
+
 **Create**
 
 This workflow automates the deployment process by triggering on pushes to the main branch. It runs on an Ubuntu runner, checks out the repository, logs into Azure with federated credentials, and deploys using the specified ARM or Bicep templates and parameters, targeting a specific Azure resource group and location.
