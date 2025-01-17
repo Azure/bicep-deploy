@@ -3,8 +3,8 @@ description: "GitHub Action for deploying to Azure"
 author: "Microsoft"
 
 branding:
-  icon: 'upload-cloud'
-  color: 'blue'
+  icon: "upload-cloud"
+  color: "blue"
 
 inputs:
   type:
@@ -54,7 +54,6 @@ inputs:
     description: "Specifies the parameters to use."
     required: false
 
-
   what-if-exclude-change-types:
     description: "Specifies the change types to exclude from the 'What If' operation."
     required: false
@@ -94,6 +93,10 @@ inputs:
 
   masked-outputs:
     description: "Specifies output names to mask values for."
+    required: false
+
+  environment:
+    description: "Specifies the environment to use. Choose from 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'."
     required: false
 
 runs:

@@ -56,6 +56,11 @@ type CommonConfig = {
   location?: string;
   tags?: Record<string, string>;
   maskedOutputs?: string[];
+  environment:
+    | "azureCloud"
+    | "azureChinaCloud"
+    | "azureGermanCloud"
+    | "azureUSGovernment";
 } & FileConfig;
 
 type WhatIfChangeType =
@@ -111,6 +116,13 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
   const description = getOptionalStringInput("description");
   const tags = getOptionalStringDictionaryInput("tags");
   const maskedOutputs = getOptionalStringArrayInput("masked-outputs");
+  const environment =
+    getOptionalEnumInput("environment", [
+      "azureCloud",
+      "azureChinaCloud",
+      "azureGermanCloud",
+      "azureUSGovernment",
+    ]) ?? "azureCloud";
 
   switch (type) {
     case "deployment": {
@@ -123,6 +135,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         parameters,
         tags,
         maskedOutputs,
+        environment: environment,
         operation: getRequiredEnumInput("operation", [
           "create",
           "validate",
@@ -156,6 +169,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         description,
         tags,
         maskedOutputs,
+        environment: environment,
         operation: getRequiredEnumInput("operation", [
           "create",
           "validate",

@@ -59278,6 +59278,12 @@ function parseConfig() {
     const description = (0, input_1.getOptionalStringInput)("description");
     const tags = (0, input_1.getOptionalStringDictionaryInput)("tags");
     const maskedOutputs = (0, input_1.getOptionalStringArrayInput)("masked-outputs");
+    const environment = (0, input_1.getOptionalEnumInput)("environment", [
+        "azureCloud",
+        "azureChinaCloud",
+        "azureGermanCloud",
+        "azureUSGovernment",
+    ]) ?? "azureCloud";
     switch (type) {
         case "deployment": {
             return {
@@ -59289,6 +59295,7 @@ function parseConfig() {
                 parameters,
                 tags,
                 maskedOutputs,
+                environment: environment,
                 operation: (0, input_1.getRequiredEnumInput)("operation", [
                     "create",
                     "validate",
@@ -59319,6 +59326,7 @@ function parseConfig() {
                 description,
                 tags,
                 maskedOutputs,
+                environment: environment,
                 operation: (0, input_1.getRequiredEnumInput)("operation", [
                     "create",
                     "validate",
@@ -59468,15 +59476,15 @@ function getCreateOperationOptions() {
         },
     };
 }
-function getDeploymentClient(scope) {
+function getDeploymentClient(config, scope) {
     const { tenantId } = scope;
     const subscriptionId = "subscriptionId" in scope ? scope.subscriptionId : undefined;
-    return (0, azure_1.createDeploymentClient)(subscriptionId, tenantId);
+    return (0, azure_1.createDeploymentClient)(config, subscriptionId, tenantId);
 }
-function getStacksClient(scope) {
+function getStacksClient(config, scope) {
     const { tenantId } = scope;
     const subscriptionId = "subscriptionId" in scope ? scope.subscriptionId : undefined;
-    return (0, azure_1.createStacksClient)(subscriptionId, tenantId);
+    return (0, azure_1.createStacksClient)(config, subscriptionId, tenantId);
 }
 async function execute(config, files) {
     try {
@@ -59565,7 +59573,7 @@ function setCreateOutputs(config, outputs) {
 async function deploymentCreate(config, files) {
     const name = config.name ?? defaultName;
     const scope = config.scope;
-    const client = getDeploymentClient(scope);
+    const client = getDeploymentClient(config, scope);
     const deployment = getDeployment(config, files);
     switch (scope.type) {
         case "resourceGroup":
@@ -59590,7 +59598,7 @@ async function deploymentCreate(config, files) {
 async function deploymentValidate(config, files) {
     const name = config.name ?? defaultName;
     const scope = config.scope;
-    const client = getDeploymentClient(scope);
+    const client = getDeploymentClient(config, scope);
     const deployment = getDeployment(config, files);
     switch (scope.type) {
         case "resourceGroup":
@@ -59615,7 +59623,7 @@ async function deploymentValidate(config, files) {
 async function deploymentWhatIf(config, files) {
     const deploymentName = config.name ?? defaultName;
     const scope = config.scope;
-    const client = getDeploymentClient(scope);
+    const client = getDeploymentClient(config, scope);
     const deployment = getDeployment(config, files);
     switch (scope.type) {
         case "resourceGroup":
@@ -59660,7 +59668,7 @@ function getDeployment(config, files) {
 async function stackCreate(config, files) {
     const name = config.name ?? defaultName;
     const scope = config.scope;
-    const client = getStacksClient(scope);
+    const client = getStacksClient(config, scope);
     const stack = getStack(config, files);
     switch (scope.type) {
         case "resourceGroup":
@@ -59680,7 +59688,7 @@ async function stackCreate(config, files) {
 async function stackValidate(config, files) {
     const name = config.name ?? defaultName;
     const scope = config.scope;
-    const client = getStacksClient(scope);
+    const client = getStacksClient(config, scope);
     const stack = getStack(config, files);
     switch (scope.type) {
         case "resourceGroup":
@@ -59700,7 +59708,7 @@ async function stackValidate(config, files) {
 async function stackDelete(config) {
     const name = config.name ?? defaultName;
     const scope = config.scope;
-    const client = getStacksClient(scope);
+    const client = getStacksClient(config, scope);
     const deletionOptions = getStackDeletionOptions(config);
     switch (scope.type) {
         case "resourceGroup":
@@ -59824,7 +59832,13 @@ const identity_1 = __nccwpck_require__(3983);
 const core_1 = __nccwpck_require__(7484);
 const userAgentPrefix = "gh-azure-bicep-deploy";
 const dummySubscriptionId = "00000000-0000-0000-0000-000000000000";
-function createDeploymentClient(subscriptionId, tenantId) {
+const endpoints = {
+    azureCloud: "https://management.azure.com",
+    azureChinaCloud: "https://management.chinacloudapi.cn",
+    azureGermanCloud: "https://management.microsoftazure.de",
+    azureUSGovernment: "https://management.usgovcloudapi.net",
+};
+function createDeploymentClient(config, subscriptionId, tenantId) {
     const credentials = new identity_1.DefaultAzureCredential({ tenantId });
     return new arm_resources_1.ResourceManagementClient(credentials, 
     // Use a dummy subscription ID for above-subscription scope operations
@@ -59835,9 +59849,10 @@ function createDeploymentClient(subscriptionId, tenantId) {
         additionalPolicies: [debugLoggingPolicy],
         // Use a recent API version to take advantage of error improvements
         apiVersion: "2024-03-01",
+        endpoint: endpoints[config.environment],
     });
 }
-function createStacksClient(subscriptionId, tenantId) {
+function createStacksClient(config, subscriptionId, tenantId) {
     const credentials = new identity_1.DefaultAzureCredential({ tenantId });
     return new arm_resourcesdeploymentstacks_1.DeploymentStacksClient(credentials, 
     // Use a dummy subscription ID for above-subscription scope operations
@@ -59846,6 +59861,7 @@ function createStacksClient(subscriptionId, tenantId) {
             userAgentPrefix: userAgentPrefix,
         },
         additionalPolicies: [debugLoggingPolicy],
+        endpoint: endpoints[config.environment],
     });
 }
 // Log request + response bodies to GitHub Actions debug output if enabled

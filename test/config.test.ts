@@ -64,6 +64,39 @@ describe("input validation", () => {
     );
   });
 
+  it("validates environment input for deployment", async () => {
+    configureGetInputMock({
+      type: "deployment",
+      operation: "create",
+      scope: "resourceGroup",
+      "subscription-id": "foo",
+      "resource-group-name": "mockRg",
+      "what-if-exclude-change-types": "blah",
+      environment: "asdf",
+    });
+
+    expect(() => parseConfig()).toThrow(
+      "Action input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
+    );
+  });
+
+  it("validates environment input for deploymentStack", async () => {
+    configureGetInputMock({
+      type: "deploymentStack",
+      operation: "create",
+      scope: "resourceGroup",
+      "subscription-id": "foo",
+      "resource-group-name": "mockRg",
+      "action-on-unmanage-resources": "detach",
+      "action-on-unmanage-managementgroups": "sadf",
+      environment: "asdf",
+    });
+
+    expect(() => parseConfig()).toThrow(
+      "Action input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
+    );
+  });
+
   it("requires subscription-id if scope is subscription", async () => {
     configureGetInputMock({
       type: "deployment",
@@ -266,6 +299,7 @@ describe("input parsing", () => {
       tags: '{"foo": "bar"}',
       "masked-outputs": "abc,def",
       "what-if-exclude-change-types": "noChange",
+      environment: "azureUSGovernment",
     });
 
     const config = parseConfig();
@@ -292,6 +326,7 @@ describe("input parsing", () => {
       whatIf: {
         excludeChangeTypes: ["noChange"],
       },
+      environment: "azureUSGovernment",
     });
   });
 
@@ -317,6 +352,7 @@ describe("input parsing", () => {
       "deny-settings-excluded-principals": "ghi,jkl",
       "deny-settings-apply-to-child-scopes": "true",
       "bypass-stack-out-of-sync-error": "true",
+      environment: "azureUSGovernment",
     });
 
     const config = parseConfig();
@@ -352,6 +388,7 @@ describe("input parsing", () => {
         applyToChildScopes: true,
       },
       bypassStackOutOfSyncError: true,
+      environment: "azureUSGovernment",
     });
   });
 });

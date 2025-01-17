@@ -51,6 +51,7 @@ function getCreateOperationOptions(): OperationOptions {
 }
 
 function getDeploymentClient(
+  config: ActionConfig,
   scope:
     | TenantScope
     | ManagementGroupScope
@@ -61,10 +62,11 @@ function getDeploymentClient(
   const subscriptionId =
     "subscriptionId" in scope ? scope.subscriptionId : undefined;
 
-  return createDeploymentClient(subscriptionId, tenantId);
+  return createDeploymentClient(config, subscriptionId, tenantId);
 }
 
 function getStacksClient(
+  config: ActionConfig,
   scope:
     | TenantScope
     | ManagementGroupScope
@@ -75,7 +77,7 @@ function getStacksClient(
   const subscriptionId =
     "subscriptionId" in scope ? scope.subscriptionId : undefined;
 
-  return createStacksClient(subscriptionId, tenantId);
+  return createStacksClient(config, subscriptionId, tenantId);
 }
 
 export async function execute(config: ActionConfig, files: ParsedFiles) {
@@ -188,7 +190,7 @@ function setCreateOutputs(
 async function deploymentCreate(config: DeploymentsConfig, files: ParsedFiles) {
   const name = config.name ?? defaultName;
   const scope = config.scope;
-  const client = getDeploymentClient(scope);
+  const client = getDeploymentClient(config, scope);
   const deployment = getDeployment(config, files);
 
   switch (scope.type) {
@@ -236,7 +238,7 @@ async function deploymentValidate(
 ) {
   const name = config.name ?? defaultName;
   const scope = config.scope;
-  const client = getDeploymentClient(scope);
+  const client = getDeploymentClient(config, scope);
   const deployment = getDeployment(config, files);
 
   switch (scope.type) {
@@ -274,7 +276,7 @@ async function deploymentValidate(
 async function deploymentWhatIf(config: DeploymentsConfig, files: ParsedFiles) {
   const deploymentName = config.name ?? defaultName;
   const scope = config.scope;
-  const client = getDeploymentClient(scope);
+  const client = getDeploymentClient(config, scope);
   const deployment = getDeployment(config, files);
 
   switch (scope.type) {
@@ -340,7 +342,7 @@ function getDeployment(
 async function stackCreate(config: DeploymentStackConfig, files: ParsedFiles) {
   const name = config.name ?? defaultName;
   const scope = config.scope;
-  const client = getStacksClient(scope);
+  const client = getStacksClient(config, scope);
   const stack = getStack(config, files);
 
   switch (scope.type) {
@@ -376,7 +378,7 @@ async function stackValidate(
 ) {
   const name = config.name ?? defaultName;
   const scope = config.scope;
-  const client = getStacksClient(scope);
+  const client = getStacksClient(config, scope);
   const stack = getStack(config, files);
 
   switch (scope.type) {
@@ -409,7 +411,7 @@ async function stackValidate(
 async function stackDelete(config: DeploymentStackConfig) {
   const name = config.name ?? defaultName;
   const scope = config.scope;
-  const client = getStacksClient(scope);
+  const client = getStacksClient(config, scope);
   const deletionOptions = getStackDeletionOptions(config);
 
   switch (scope.type) {

@@ -6,10 +6,19 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { AdditionalPolicyConfig } from "@azure/core-client";
 import { debug, isDebug } from "@actions/core";
 
+import { ActionConfig } from "../config";
+
 const userAgentPrefix = "gh-azure-bicep-deploy";
 const dummySubscriptionId = "00000000-0000-0000-0000-000000000000";
+const endpoints = {
+  azureCloud: "https://management.azure.com",
+  azureChinaCloud: "https://management.chinacloudapi.cn",
+  azureGermanCloud: "https://management.microsoftazure.de",
+  azureUSGovernment: "https://management.usgovcloudapi.net",
+};
 
 export function createDeploymentClient(
+  config: ActionConfig,
   subscriptionId?: string,
   tenantId?: string,
 ): ResourceManagementClient {
@@ -26,11 +35,13 @@ export function createDeploymentClient(
       additionalPolicies: [debugLoggingPolicy],
       // Use a recent API version to take advantage of error improvements
       apiVersion: "2024-03-01",
+      endpoint: endpoints[config.environment],
     },
   );
 }
 
 export function createStacksClient(
+  config: ActionConfig,
   subscriptionId?: string,
   tenantId?: string,
 ): DeploymentStacksClient {
@@ -45,6 +56,7 @@ export function createStacksClient(
         userAgentPrefix: userAgentPrefix,
       },
       additionalPolicies: [debugLoggingPolicy],
+      endpoint: endpoints[config.environment],
     },
   );
 }
