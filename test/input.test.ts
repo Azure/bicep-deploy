@@ -168,7 +168,7 @@ describe("getOptionalDictionaryInput", () => {
     configureGetInputMock({ type: "notanobject" });
 
     expect(() => getOptionalDictionaryInput("type")).toThrow(
-      "Action input 'type' must be a valid JSON object",
+      "Action input 'type' must be a valid JSON object or key value pair",
     );
   });
 
@@ -177,6 +177,24 @@ describe("getOptionalDictionaryInput", () => {
 
     expect(getOptionalDictionaryInput("type")).toStrictEqual({
       abc: "def",
+    });
+  });
+
+  it("parses and returns key value pair input", async () => {
+    configureGetInputMock({ type: 'abc=def cba=fed' });
+
+    expect(getOptionalDictionaryInput("type")).toStrictEqual({
+      abc: "def",
+      cba: "fed",
+    });
+  });
+
+  it("parses and returns key value pair input with json", async () => {
+    configureGetInputMock({ type: 'abc=def cba={ "123": "432"}' });
+
+    expect(getOptionalDictionaryInput("type")).toStrictEqual({
+      abc: "def",
+      cba: "{\"123\":\"432\"}",
     });
   });
 

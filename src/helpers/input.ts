@@ -82,12 +82,17 @@ export function getOptionalDictionaryInput(
     return {};
   }
 
-  const input = tryParseJson(inputString);
-  if (typeof input !== "object") {
-    throw new Error(`Action input '${inputName}' must be a valid JSON object`);
+  const jsonInput = tryParseJson(inputString);
+  if (typeof jsonInput !== "object") {
+    const keyValueInput = tryParseKeyValuePair(inputString);
+    if (typeof keyValueInput === "object") {
+      return keyValueInput;
+    }
+
+    throw new Error(`Action input '${inputName}' must be a valid JSON object or key value pair`);
   }
 
-  return input;
+  return jsonInput;
 }
 
 export function getOptionalStringDictionaryInput(
@@ -129,6 +134,33 @@ function getInput(
   }
 
   return inputValue;
+}
+
+function tryParseKeyValuePair(value: string) {
+  const regex = /([^=\s]+)=({.*?}|[^=\s]+)/g;
+  const result: Record<string, string | object> = {};
+
+  let match;
+  while ((match = regex.exec(value)) !== null) {
+    const key = match[1].trim();
+    let val = match[2].trim();
+
+    if (val.startsWith('{') && val.endsWith('}')) {
+      try {
+        result[key] = JSON.stringify(JSON.parse(val));
+      } catch (error) {
+        result[key] = val;
+      }
+    } else {
+      result[key] = val;
+    }
+  }
+
+  if (Object.keys(result).length === 0) {
+    return undefined;
+  }
+
+  return result;
 }
 
 function tryParseJson(value: string) {
