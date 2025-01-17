@@ -1,10 +1,14 @@
 # Deployment Stacks
 
-This snippet demonstrates the default usage of the `azure/bicep-deploy@v1` GitHub Action to create a deployment stack. It deploys a "Development" environment in the `westus2` region at the subscription scope, using `main.bicep` as the template and `main.bicepparam` for parameters. The deployment also deletes untracked resources and resource groups as needed, applies deny settings to prevent write and delete actions, and includes a description for the stack.
+## Snippets
+
+### With .bicepparam
+
+This snippet demonstrates the default usage of the `azure/bicep-deploy@v2` GitHub Action to create a deployment stack. It deploys a "Development" environment in the `westus2` region at the subscription scope, using `main.bicep` as the template and `main.bicepparam` for parameters. The deployment also deletes untracked resources and resource groups as needed, applies deny settings to prevent write and delete actions, and includes a description for the stack.
 
 ```yaml
 - name: Create
-  uses: azure/bicep-deploy@v1
+  uses: azure/bicep-deploy@v2
   with:
     type: deploymentStack
     operation: create
@@ -12,7 +16,6 @@ This snippet demonstrates the default usage of the `azure/bicep-deploy@v1` GitHu
     location: westus2
     scope: subscription
     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-    template-file: ./main.bicep
     parameters-file: ./main.bicepparam
     action-on-unmanage-resources: delete
     action-on-unmanage-resourcegroups: delete
@@ -20,11 +23,13 @@ This snippet demonstrates the default usage of the `azure/bicep-deploy@v1` GitHu
     description: "Development Environment"
 ```
 
-This snippet illustrates the default usage of the `azure/bicep-deploy@v1` action to create a deployment stack, with an emphasis on the parameters input. It initiates a "Development" stack in the `westus2` region for a specific Azure subscription. The parameters are given as a JSON object, specifying the resource name as "Development" and tagging it as "development." The configuration also includes deletion policies for unmanaged resources and resource groups, applies deny settings to restrict write and delete actions, and includes a description for the environment being created.
+### With in-line parameters
+
+This snippet illustrates the default usage of the `azure/bicep-deploy@v2` action to create a deployment stack, with an emphasis on the parameters input. It initiates a "Development" stack in the `westus2` region for a specific Azure subscription. The parameters are given as a JSON object, specifying the resource name as "Development" and tagging it as "development." The configuration also includes deletion policies for unmanaged resources and resource groups, applies deny settings to restrict write and delete actions, and includes a description for the environment being created.
 
 ```yaml
 - name: Create
-  uses: azure/bicep-deploy@v1
+  uses: azure/bicep-deploy@v2
   with:
     type: deploymentStack
     operation: create
@@ -40,7 +45,8 @@ This snippet illustrates the default usage of the `azure/bicep-deploy@v1` action
     description: "Development Environment"
 ```
 
-**Create**
+## Workflows
+### Create
 
 This workflow triggers on every push to the main branch. It checks out the repository, logs into Azure, and deploys a "Development" stack in the `westus2` region using the provided template and parameters files. It also manages any untracked resources, applies deny policies, and adds a deployment description for clarity.
 
@@ -73,7 +79,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Create
-        uses: azure/bicep-deploy@v1
+        uses: azure/bicep-deploy@v2
         with:
           type: deploymentStack
           operation: create
@@ -81,7 +87,6 @@ jobs:
           location: westus2
           scope: subscription
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          template-file: ./main.bicep
           parameters-file: ./main.bicepparam
           action-on-unmanage-resources: delete
           action-on-unmanage-resourcegroups: delete
@@ -89,7 +94,7 @@ jobs:
           description: "Development Environment"
 ```
 
-**Validate**
+### Validate
 
 This workflow runs on pull requests to the main branch. It checks out the code, logs into Azure, and validates the "Development" deployment stack in the `westus2` region using the specified template and parameters files.
 
@@ -122,7 +127,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Validate
-        uses: azure/bicep-deploy@v1
+        uses: azure/bicep-deploy@v2
         with:
           type: deploymentStack
           operation: validate
@@ -130,11 +135,10 @@ jobs:
           location: westus2
           scope: subscription
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          template-file: ./main.bicep
           parameters-file: ./main.bicepparam
 ```
 
-**Delete**
+### Delete
 
 This workflow runs on manual dispatch. It checks out the code, logs into Azure, and deletes a "Development" deployment stack in the `westus2` region using the specified template and parameters files.
 
@@ -164,7 +168,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Delete
-        uses: azure/bicep-deploy@v1
+        uses: azure/bicep-deploy@v2
         with:
           type: deploymentStack
           operation: delete
@@ -172,6 +176,5 @@ jobs:
           location: westus2
           scope: subscription
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          template-file: ./main.bicep
           parameters-file: ./main.bicepparam
 ```

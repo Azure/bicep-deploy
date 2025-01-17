@@ -24,7 +24,7 @@ Deployment
 
 ```yaml
 - name: Deployment
-  uses: azure/bicep-deploy@v1
+  uses: azure/bicep-deploy@v2
   with:
     type: deployment
     operation: create
@@ -40,7 +40,7 @@ Deployment Stack
 
 ```yaml
 - name: Deployment
-  uses: azure/bicep-deploy@v1
+  uses: azure/bicep-deploy@v2
   with:
     type: deploymentStack
     operation: create
