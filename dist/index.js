@@ -59342,6 +59342,7 @@ function parseConfig() {
                     ]),
                     excludedActions: (0, input_1.getOptionalStringArrayInput)("deny-settings-excluded-actions"),
                     excludedPrincipals: (0, input_1.getOptionalStringArrayInput)("deny-settings-excluded-principals"),
+                    applyToChildScopes: (0, input_1.getOptionalBooleanInput)("deny-settings-apply-to-child-scopes"),
                 },
             };
         }

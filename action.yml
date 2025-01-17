@@ -77,6 +77,9 @@ inputs:
   deny-settings-excluded-principals:
     description: "Specifies the excluded principals for the deny settings."
     required: false
+  deny-settings-apply-to-child-scopes:
+    description: "When specified, the deny setting mode configuration also applies to the child scope of the managed resources."
+    required: false
   bypass-stack-out-of-sync-error:
     description: "Specifies whether to bypass the stack out of sync error. Choose from 'true' or 'false'."
     required: false

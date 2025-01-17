@@ -94,6 +94,7 @@ export type DeploymentStackConfig = CommonConfig & {
     mode: "denyDelete" | "denyWriteAndDelete" | "none";
     excludedActions: string[];
     excludedPrincipals: string[];
+    applyToChildScopes?: boolean;
   };
   bypassStackOutOfSyncError: boolean;
 };
@@ -189,6 +190,9 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
           ),
           excludedPrincipals: getOptionalStringArrayInput(
             "deny-settings-excluded-principals",
+          ),
+          applyToChildScopes: getOptionalBooleanInput(
+            "deny-settings-apply-to-child-scopes",
           ),
         },
       };

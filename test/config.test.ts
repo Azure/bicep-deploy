@@ -315,6 +315,7 @@ describe("input parsing", () => {
       "deny-settings-mode": "none",
       "deny-settings-excluded-actions": "abc,def",
       "deny-settings-excluded-principals": "ghi,jkl",
+      "deny-settings-apply-to-child-scopes": "true",
       "bypass-stack-out-of-sync-error": "true",
     });
 
@@ -348,6 +349,7 @@ describe("input parsing", () => {
         mode: "none",
         excludedActions: ["abc", "def"],
         excludedPrincipals: ["ghi", "jkl"],
+        applyToChildScopes: true,
       },
       bypassStackOutOfSyncError: true,
     });
