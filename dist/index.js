@@ -59447,6 +59447,27 @@ const azure_1 = __nccwpck_require__(5886);
 const logging_1 = __nccwpck_require__(5504);
 const whatif_1 = __nccwpck_require__(5180);
 const defaultName = "azure-bicep-deploy";
+// workaround until we're able to pick up https://github.com/Azure/azure-sdk-for-js/pull/25500
+class CustomPollingError {
+    constructor(details, response) {
+        this.details = details;
+        this.response = response;
+    }
+}
+// workaround until we're able to pick up https://github.com/Azure/azure-sdk-for-js/pull/25500
+function getCreateOperationOptions() {
+    return {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onResponse: (rawResponse, flatResponse) => {
+            if (flatResponse &&
+                flatResponse.error &&
+                flatResponse.error.code &&
+                flatResponse.error.message) {
+                throw new CustomPollingError(flatResponse, rawResponse);
+            }
+        },
+    };
+}
 function getDeploymentClient(scope) {
     const { tenantId } = scope;
     const subscriptionId = "subscriptionId" in scope ? scope.subscriptionId : undefined;
@@ -59548,22 +59569,22 @@ async function deploymentCreate(config, files) {
     const deployment = getDeployment(config, files);
     switch (scope.type) {
         case "resourceGroup":
-            return await client.deployments.beginCreateOrUpdateAndWait(scope.resourceGroup, name, deployment);
+            return await client.deployments.beginCreateOrUpdateAndWait(scope.resourceGroup, name, deployment, getCreateOperationOptions());
         case "subscription":
             return await client.deployments.beginCreateOrUpdateAtSubscriptionScopeAndWait(name, {
                 ...deployment,
                 location: requireLocation(config),
-            });
+            }, getCreateOperationOptions());
         case "managementGroup":
             return await client.deployments.beginCreateOrUpdateAtManagementGroupScopeAndWait(scope.managementGroup, name, {
                 ...deployment,
                 location: requireLocation(config),
-            });
+            }, getCreateOperationOptions());
         case "tenant":
             return await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(name, {
                 ...deployment,
                 location: requireLocation(config),
-            });
+            }, getCreateOperationOptions());
     }
 }
 async function deploymentValidate(config, files) {
@@ -59731,6 +59752,15 @@ async function tryWithErrorHandling(action, onError) {
     }
     catch (ex) {
         if (ex instanceof core_rest_pipeline_1.RestError) {
+            const correlationId = ex.response?.headers.get("x-ms-correlation-request-id");
+            (0, logging_1.logError)(`Request failed. CorrelationId: ${correlationId}`);
+            const { error } = ex.details;
+            if (error) {
+                onError(error);
+                return;
+            }
+        }
+        if (ex instanceof CustomPollingError) {
             const correlationId = ex.response?.headers.get("x-ms-correlation-request-id");
             (0, logging_1.logError)(`Request failed. CorrelationId: ${correlationId}`);
             const { error } = ex.details;
@@ -60602,7 +60632,9 @@ function fixSdkDeltaFormattingBug(value) {
     // Instead of returning "foo", we get {0: 'f', 1: 'o', 2: 'o' }. This function works around this bug, by
     // trying to detect this heuristically, and convert back into the correct string format.
     // See https://github.com/Azure/bicep-deploy/issues/71 for more info.
-    if (typeof value !== "object") {
+    if (value === null ||
+        typeof value !== "object" ||
+        Object.keys(value).length === 0) {
         return value;
     }
     let fixedString = "";
@@ -60627,8 +60659,6 @@ function formatPropertyModify(builder, before, after, children, indentLevel) {
         formatPropertyChanges(builder, sortChanges(children), indentLevel);
     }
     else {
-        before = fixSdkDeltaFormattingBug(before);
-        after = fixSdkDeltaFormattingBug(after);
         formatPropertyDelete(builder, before, indentLevel);
         // Space before =>
         if (isNonEmptyObject(before)) {
@@ -60705,6 +60735,7 @@ function shouldConsiderPropertyChangePath(propertyChange) {
     return !propertyChange.children;
 }
 function formatJsonValue(builder, value, path = "", maxPathLength = 0, indentLevel = 0) {
+    value = fixSdkDeltaFormattingBug(value);
     if (isLeaf(value)) {
         formatJsonPath(builder, path, maxPathLength - path.length + 1, indentLevel);
         formatLeaf(builder, value);
