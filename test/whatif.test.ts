@@ -688,6 +688,23 @@ Scope: /subscriptions/00000000-0000-0000-0000-000000000004/resourceGroups/rg4
               7: "l",
             },
           },
+          {
+            propertyChangeType: "Delete",
+            path: "properties.deleted",
+            before: {
+              0: "y",
+              1: " ",
+              2: "u",
+              3: " ",
+              4: "d",
+              5: "o",
+              6: " ",
+              7: "d",
+              8: "i",
+              9: "s",
+              10: "?",
+            },
+          },
         ],
       },
     ];
@@ -696,7 +713,9 @@ Scope: /subscriptions/00000000-0000-0000-0000-000000000004/resourceGroups/rg4
 Scope: /subscriptions/00000000-0000-0000-0000-000000000004/resourceGroups/rg4
 <MAGENTA>
   ~ Microsoft.DocumentDB/databaseAccounts/myaccount<RESET>
-    <MAGENTA>~<RESET> properties.why<RESET>:<RESET><RED>"y u do dis?"<RESET> => <GREEN>"idk, lol"<RESET>
+    <RED>-<RESET> properties.deleted<RESET>:<RESET><RED>"y u do dis?"<RESET>
+    <MAGENTA>~<RESET> properties.why<RESET>:<RESET><RED>"y u do dis?"<RESET>
+      =><GREEN>"idk, lol"<RESET>
 <MAGENTA><RESET>
 `;
 
