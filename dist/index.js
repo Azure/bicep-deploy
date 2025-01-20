@@ -15505,7 +15505,7 @@ var child_process__namespace = /*#__PURE__*/_interopNamespaceDefault(child_proce
 /**
  * Current version of the `@azure/identity` package.
  */
-const SDK_VERSION = `4.5.0`;
+const SDK_VERSION = `4.6.0`;
 /**
  * The default client ID for authentication
  * @internal
