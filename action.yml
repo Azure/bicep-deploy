@@ -3,8 +3,8 @@ description: "GitHub Action for deploying to Azure"
 author: "Microsoft"
 
 branding:
-  icon: 'upload-cloud'
-  color: 'blue'
+  icon: "upload-cloud"
+  color: "blue"
 
 inputs:
   type:
@@ -54,7 +54,6 @@ inputs:
     description: "Specifies the parameters to use."
     required: false
 
-
   what-if-exclude-change-types:
     description: "Specifies the change types to exclude from the 'What If' operation."
     required: false
@@ -80,6 +79,11 @@ inputs:
   bypass-stack-out-of-sync-error:
     description: "Specifies whether to bypass the stack out of sync error. Choose from 'true' or 'false'."
     required: false
+
+  deployment-mode:
+    description: "Specifies the deployment mode. Choose from 'Incremental' or 'Complete'. Must be provided if the type is 'deployment'."
+    required: false
+    default: "Incremental"
 
   description:
     description: "Specifies the description of the deploymentStack."

@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+import { DeploymentMode } from "@azure/arm-resources";
 import {
   getRequiredEnumInput,
   getOptionalStringInput,
@@ -69,12 +70,13 @@ type WhatIfChangeType =
 
 export type DeploymentsConfig = CommonConfig & {
   type: "deployment";
+  mode: DeploymentMode;
   operation: "create" | "validate" | "whatIf";
   scope:
-    | TenantScope
-    | ManagementGroupScope
-    | SubscriptionScope
-    | ResourceGroupScope;
+  | TenantScope
+  | ManagementGroupScope
+  | SubscriptionScope
+  | ResourceGroupScope;
   whatIf: {
     excludeChangeTypes: WhatIfChangeType[];
   };
@@ -113,6 +115,8 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
 
   switch (type) {
     case "deployment": {
+      const mode = getRequiredEnumInput("deployment-mode", ["Incremental", "Complete"]);
+
       return {
         type,
         name,
@@ -121,6 +125,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         parametersFile,
         parameters,
         tags,
+        mode,
         maskedOutputs,
         operation: getRequiredEnumInput("operation", [
           "create",

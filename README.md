@@ -94,6 +94,7 @@ The inputs for this action provide flexibility and control for managing deployme
 | `bypass-stack-out-of-sync-error`     | Specifies whether to bypass the stack out of sync error.            | `true`, `false`                                                                                                                                  |
 | `description`                        | Specifies the description of the deploymentStack.                   | Free-text                                                                                                                                        |
 | `tags`                               | Specifies the tags for the deploymentStack.                         | Free-text                                                                                                                                        |
+| `deployment-mode`                    | Specifies the deployment mode, if type is set to `deployment`       | `Incremental`, `Complete`                                                                                                                        |
 | `masked-outputs`                     | Specifies output names to mask values for.                          | Free-text                                                                                                                                        |
 
 ## Outputs

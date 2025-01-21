@@ -289,12 +289,12 @@ function getDeployment(
   return {
     location: config.location,
     properties: {
-      mode: "Incremental",
+      mode: config.mode ?? "Incremental",
       template: templateContents,
       templateLink: templateSpecId
         ? {
-            id: templateSpecId,
-          }
+          id: templateSpecId,
+        }
         : undefined,
       parameters: parametersContents["parameters"],
       expressionEvaluationOptions: {
@@ -412,8 +412,8 @@ function getStack(
       template: templateContents,
       templateLink: templateSpecId
         ? {
-            id: templateSpecId,
-          }
+          id: templateSpecId,
+        }
         : undefined,
       parameters: parametersContents["parameters"],
       description: config.description,

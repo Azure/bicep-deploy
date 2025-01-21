@@ -41,7 +41,9 @@ describe("input validation", () => {
   });
 
   it("requires operation to be provided", async () => {
-    configureGetInputMock({ type: "deployment" });
+    configureGetInputMock({
+      type: "deployment", "deployment-mode": "Incremental"
+    });
 
     expect(() => parseConfig()).toThrow(
       "Action input 'operation' is required but not provided",
@@ -49,7 +51,9 @@ describe("input validation", () => {
   });
 
   it("requires valid operation for deployment", async () => {
-    configureGetInputMock({ type: "deployment", operation: "delete" });
+    configureGetInputMock({
+      type: "deployment", operation: "delete", "deployment-mode": "Incremental"
+    });
 
     expect(() => parseConfig()).toThrow(
       "Action input 'operation' must be one of the following values: 'create', 'validate', 'whatIf'",
@@ -57,10 +61,24 @@ describe("input validation", () => {
   });
 
   it("requires valid operation for deploymentStacks", async () => {
-    configureGetInputMock({ type: "deploymentStack", operation: "whatIf" });
+    configureGetInputMock({
+      type: "deploymentStack", operation: "whatIf", "deployment-mode": "Incremental"
+    });
 
     expect(() => parseConfig()).toThrow(
       "Action input 'operation' must be one of the following values: 'create', 'validate', 'delete'",
+    );
+  });
+
+  it("requires deployment-mode", async () => {
+    configureGetInputMock({
+      type: "deployment",
+      operation: "create",
+      scope: "resourceGroup",
+    });
+
+    expect(() => parseConfig()).toThrow(
+      "Action input 'deployment-mode' is required but not provided",
     );
   });
 
@@ -69,6 +87,7 @@ describe("input validation", () => {
       type: "deployment",
       operation: "create",
       scope: "subscription",
+      "deployment-mode": "Incremental"
     });
 
     expect(() => parseConfig()).toThrow(
@@ -81,6 +100,7 @@ describe("input validation", () => {
       type: "deployment",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental"
     });
 
     expect(() => parseConfig()).toThrow(
@@ -94,6 +114,7 @@ describe("input validation", () => {
       operation: "create",
       scope: "resourceGroup",
       "subscription-id": "foo",
+      "deployment-mode": "Incremental"
     });
 
     expect(() => parseConfig()).toThrow(
@@ -106,6 +127,7 @@ describe("input validation", () => {
       type: "deployment",
       operation: "create",
       scope: "managementGroup",
+      "deployment-mode": "Incremental"
     });
 
     expect(() => parseConfig()).toThrow(
@@ -118,6 +140,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "tenant",
+      "deployment-mode": "Incremental"
     });
 
     expect(() => parseConfig()).toThrow(
@@ -130,6 +153,7 @@ describe("input validation", () => {
       type: "deployment",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
       "what-if-exclude-change-types": "blah",
@@ -145,6 +169,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
     });
@@ -159,6 +184,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
       "action-on-unmanage-resources": "sadf",
@@ -174,6 +200,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
       "action-on-unmanage-resources": "detach",
@@ -190,6 +217,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
       "action-on-unmanage-resources": "detach",
@@ -206,6 +234,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
       "action-on-unmanage-resources": "detach",
@@ -221,6 +250,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
       "action-on-unmanage-resources": "detach",
@@ -237,6 +267,7 @@ describe("input validation", () => {
       type: "deploymentStack",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "foo",
       "resource-group-name": "mockRg",
       "action-on-unmanage-resources": "detach",
@@ -256,6 +287,7 @@ describe("input parsing", () => {
       name: "mockName",
       operation: "create",
       scope: "resourceGroup",
+      "deployment-mode": "Incremental",
       "subscription-id": "mockSub",
       "resource-group-name": "mockRg",
       location: "mockLocation",
@@ -292,6 +324,54 @@ describe("input parsing", () => {
       whatIf: {
         excludeChangeTypes: ["noChange"],
       },
+      mode: 'Incremental'
+    });
+  });
+
+  it("parses deployment inputs with complete mode", async () => {
+    configureGetInputMock({
+      type: "deployment",
+      name: "mockName",
+      operation: "create",
+      scope: "resourceGroup",
+      "deployment-mode": "Complete",
+      "subscription-id": "mockSub",
+      "resource-group-name": "mockRg",
+      location: "mockLocation",
+      "template-file": "/path/to/mockTemplateFile",
+      "parameters-file": "/path/to/mockParametersFile",
+      parameters: '{"foo": "bar2"}',
+      description: "mockDescription",
+      tags: '{"foo": "bar"}',
+      "masked-outputs": "abc,def",
+      "what-if-exclude-change-types": "noChange",
+    });
+
+    const config = parseConfig();
+
+    expect(config).toEqual<DeploymentsConfig>({
+      type: "deployment",
+      name: "mockName",
+      operation: "create",
+      scope: {
+        type: "resourceGroup",
+        subscriptionId: "mockSub",
+        resourceGroup: "mockRg",
+      },
+      location: "mockLocation",
+      templateFile: "/path/to/mockTemplateFile",
+      parametersFile: "/path/to/mockParametersFile",
+      parameters: {
+        foo: "bar2",
+      },
+      tags: {
+        foo: "bar",
+      },
+      maskedOutputs: ["abc", "def"],
+      whatIf: {
+        excludeChangeTypes: ["noChange"],
+      },
+      mode: 'Complete'
     });
   });
 
@@ -316,6 +396,7 @@ describe("input parsing", () => {
       "deny-settings-excluded-actions": "abc,def",
       "deny-settings-excluded-principals": "ghi,jkl",
       "bypass-stack-out-of-sync-error": "true",
+      "deployment-mode": "Incremental"
     });
 
     const config = parseConfig();

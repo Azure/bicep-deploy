@@ -48,6 +48,7 @@ describe("deployment execution", () => {
       whatIf: {
         excludeChangeTypes: ["noChange"],
       },
+      mode: "Incremental",
     };
 
     const files: ParsedFiles = {
@@ -156,6 +157,7 @@ describe("deployment execution", () => {
       whatIf: {
         excludeChangeTypes: ["noChange"],
       },
+      mode: "Incremental",
     };
 
     const files: ParsedFiles = {
