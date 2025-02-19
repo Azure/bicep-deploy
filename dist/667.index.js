@@ -3,7 +3,7 @@ exports.id = 667;
 exports.ids = [667];
 exports.modules = {
 
-/***/ 7667:
+/***/ 87667:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
 // ESM COMPAT FLAG
@@ -21,17 +21,17 @@ var external_node_process_ = __webpack_require__(1708);
 // EXTERNAL MODULE: external "node:buffer"
 var external_node_buffer_ = __webpack_require__(4573);
 // EXTERNAL MODULE: external "node:path"
-var external_node_path_ = __webpack_require__(6760);
+var external_node_path_ = __webpack_require__(76760);
 // EXTERNAL MODULE: external "node:url"
-var external_node_url_ = __webpack_require__(3136);
+var external_node_url_ = __webpack_require__(73136);
 // EXTERNAL MODULE: external "node:child_process"
-var external_node_child_process_ = __webpack_require__(1421);
+var external_node_child_process_ = __webpack_require__(31421);
 // EXTERNAL MODULE: external "node:fs/promises"
-var promises_ = __webpack_require__(1455);
+var promises_ = __webpack_require__(51455);
 // EXTERNAL MODULE: external "node:os"
-var external_node_os_ = __webpack_require__(8161);
+var external_node_os_ = __webpack_require__(48161);
 // EXTERNAL MODULE: external "node:fs"
-var external_node_fs_ = __webpack_require__(3024);
+var external_node_fs_ = __webpack_require__(73024);
 ;// CONCATENATED MODULE: ./node_modules/is-docker/index.js
 
 
@@ -138,7 +138,7 @@ function defineLazyProperty(object, propertyName, valueGetter) {
 }
 
 // EXTERNAL MODULE: external "node:util"
-var external_node_util_ = __webpack_require__(7975);
+var external_node_util_ = __webpack_require__(57975);
 ;// CONCATENATED MODULE: ./node_modules/default-browser-id/index.js
 
 

@@ -29,7 +29,7 @@ describe("input validation", () => {
     configureGetInputMock({ type: "deployment", tags: "invalid" });
 
     expect(() => parseConfig()).toThrow(
-      "Action input 'tags' must be a valid JSON object",
+      "Action input 'tags' must be a valid JSON or YAML object",
     );
   });
 
@@ -37,7 +37,7 @@ describe("input validation", () => {
     configureGetInputMock({ type: "deployment", tags: '{"foo": {}}' });
 
     expect(() => parseConfig()).toThrow(
-      "Action input 'tags' must be a valid JSON object",
+      "Action input 'tags' must be a valid JSON or YAML object",
     );
   });
 
@@ -341,7 +341,21 @@ describe("input parsing", () => {
       location: "mockLocation",
       "template-file": "/path/to/mockTemplateFile",
       "parameters-file": "/path/to/mockParametersFile",
-      parameters: '{"foo": "bar2"}',
+      parameters: `
+{
+  "stringParam": "foo",
+  "intParam": 123,
+  "boolParam": true,
+  "arrayParam": [
+    "val1",
+    "val2",
+    "val3"
+  ],
+  "objectParam": {
+    "prop1": "val1",
+    "prop2": "val2"
+  }
+}`,
       description: "mockDescription",
       tags: '{"foo": "bar"}',
       "masked-outputs": "abc,def",
@@ -370,7 +384,14 @@ describe("input parsing", () => {
       templateFile: path.resolve("/path/to/mockTemplateFile"),
       parametersFile: path.resolve("/path/to/mockParametersFile"),
       parameters: {
-        foo: "bar2",
+        stringParam: "foo",
+        intParam: 123,
+        boolParam: true,
+        arrayParam: ["val1", "val2", "val3"],
+        objectParam: {
+          prop1: "val1",
+          prop2: "val2",
+        },
       },
       description: "mockDescription",
       tags: {
@@ -389,6 +410,71 @@ describe("input parsing", () => {
         applyToChildScopes: true,
       },
       bypassStackOutOfSyncError: true,
+      environment: "azureUSGovernment",
+    });
+  });
+
+  it("supports YAML syntax for parameters", async () => {
+    configureGetInputMock({
+      type: "deployment",
+      name: "mockName",
+      operation: "create",
+      scope: "resourceGroup",
+      "subscription-id": "mockSub",
+      "resource-group-name": "mockRg",
+      location: "mockLocation",
+      "template-file": "/path/to/mockTemplateFile",
+      "parameters-file": "/path/to/mockParametersFile",
+      parameters: `
+stringParam: foo
+intParam: 123
+boolParam: true
+arrayParam:
+  - val1
+  - val2
+  - val3
+objectParam:
+  prop1: val1
+  prop2: val2
+`,
+      description: "mockDescription",
+      tags: '{"foo": "bar"}',
+      "masked-outputs": "abc,def",
+      "what-if-exclude-change-types": "noChange",
+      environment: "azureUSGovernment",
+    });
+
+    const config = parseConfig();
+
+    expect(config).toEqual<DeploymentsConfig>({
+      type: "deployment",
+      name: "mockName",
+      operation: "create",
+      scope: {
+        type: "resourceGroup",
+        subscriptionId: "mockSub",
+        resourceGroup: "mockRg",
+      },
+      location: "mockLocation",
+      templateFile: "/path/to/mockTemplateFile",
+      parametersFile: "/path/to/mockParametersFile",
+      parameters: {
+        stringParam: "foo",
+        intParam: 123,
+        boolParam: true,
+        arrayParam: ["val1", "val2", "val3"],
+        objectParam: {
+          prop1: "val1",
+          prop2: "val2",
+        },
+      },
+      tags: {
+        foo: "bar",
+      },
+      maskedOutputs: ["abc", "def"],
+      whatIf: {
+        excludeChangeTypes: ["noChange"],
+      },
       environment: "azureUSGovernment",
     });
   });
