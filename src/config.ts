@@ -81,7 +81,7 @@ export type DeploymentsConfig = CommonConfig & {
     | SubscriptionScope
     | ResourceGroupScope;
   whatIf: {
-    excludeChangeTypes: WhatIfChangeType[];
+    excludeChangeTypes?: WhatIfChangeType[];
   };
 };
 
@@ -97,8 +97,8 @@ export type DeploymentStackConfig = CommonConfig & {
   };
   denySettings: {
     mode: "denyDelete" | "denyWriteAndDelete" | "none";
-    excludedActions: string[];
-    excludedPrincipals: string[];
+    excludedActions?: string[];
+    excludedPrincipals?: string[];
     applyToChildScopes?: boolean;
   };
   bypassStackOutOfSyncError: boolean;

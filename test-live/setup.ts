@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { parse } from "yaml";
+import * as yaml from "yaml";
 import * as process from "process";
 
 const mockCore = {
@@ -23,7 +23,7 @@ type ActionResult = {
 };
 
 function configureMocks(inputYaml: string) {
-  const yamlInputs = parse(inputYaml);
+  const yamlInputs = yaml.parse(inputYaml);
   const result: ActionResult = { outputs: {}, errors: [] };
 
   mockCore.getInput.mockImplementation(inputName => {

@@ -54,10 +54,10 @@ describe("getOptionalStringInput", () => {
 });
 
 describe("getOptionalStringArrayInput", () => {
-  it("returns empty for missing input", async () => {
+  it("returns undefined for missing input", async () => {
     configureGetInputMock({});
 
-    expect(getOptionalStringArrayInput("type")).toStrictEqual([]);
+    expect(getOptionalStringArrayInput("type")).toStrictEqual(undefined);
   });
 
   it("accepts a single input", async () => {
@@ -90,10 +90,12 @@ describe("getOptionalStringArrayInput", () => {
 });
 
 describe("getOptionalEnumArrayInput", () => {
-  it("returns empty for missing input", async () => {
+  it("returns undefined for missing input", async () => {
     configureGetInputMock({});
 
-    expect(getOptionalEnumArrayInput("type", ["foo", "bar"])).toStrictEqual([]);
+    expect(getOptionalEnumArrayInput("type", ["foo", "bar"])).toStrictEqual(
+      undefined,
+    );
   });
 
   it("accepts a single input", async () => {
@@ -158,17 +160,17 @@ describe("getOptionalBooleanInput", () => {
 });
 
 describe("getOptionalDictionaryInput", () => {
-  it("returns empty object for missing input", async () => {
+  it("returns undefined for missing input", async () => {
     configureGetInputMock({});
 
-    expect(getOptionalDictionaryInput("type")).toStrictEqual({});
+    expect(getOptionalDictionaryInput("type")).toStrictEqual(undefined);
   });
 
   it("throws for unexpected input", async () => {
     configureGetInputMock({ type: "notanobject" });
 
     expect(() => getOptionalDictionaryInput("type")).toThrow(
-      "Action input 'type' must be a valid JSON object",
+      "Action input 'type' must be a valid JSON or YAML object",
     );
   });
 
@@ -183,41 +185,53 @@ describe("getOptionalDictionaryInput", () => {
   it("handles multi-line and complex input", async () => {
     configureGetInputMock({
       type: `{
-  "intParam": {
-    "value": 42
-  },
-  "stringParam": {
-    "value": "hello world"
-  },
+  "intParam": 42,
+  "stringParam": "hello world",
   "objectParam": {
-    "value": {
-      "prop1": "value1",
-      "prop2": "value2"
-    }
+    "prop1": "value1",
+    "prop2": "value2"
   }
 }`,
     });
 
     expect(getOptionalDictionaryInput("type")).toStrictEqual({
-      intParam: { value: 42 },
-      stringParam: { value: "hello world" },
-      objectParam: { value: { prop1: "value1", prop2: "value2" } },
+      intParam: 42,
+      stringParam: "hello world",
+      objectParam: { prop1: "value1", prop2: "value2" },
+    });
+  });
+
+  it("handles YAML input", async () => {
+    configureGetInputMock({
+      type: `
+intParam: 42
+stringParam: hello world
+objectParam:
+  prop1: value1
+  prop2: value2
+`,
+    });
+
+    expect(getOptionalDictionaryInput("type")).toStrictEqual({
+      intParam: 42,
+      stringParam: "hello world",
+      objectParam: { prop1: "value1", prop2: "value2" },
     });
   });
 });
 
 describe("getOptionalStringDictionaryInput", () => {
-  it("returns empty object for missing input", async () => {
+  it("returns undefined for missing input", async () => {
     configureGetInputMock({});
 
-    expect(getOptionalStringDictionaryInput("type")).toStrictEqual({});
+    expect(getOptionalStringDictionaryInput("type")).toStrictEqual(undefined);
   });
 
   it("throws for unexpected input", async () => {
     configureGetInputMock({ type: "notanobject" });
 
     expect(() => getOptionalStringDictionaryInput("type")).toThrow(
-      "Action input 'type' must be a valid JSON object",
+      "Action input 'type' must be a valid JSON or YAML object",
     );
   });
 
@@ -233,7 +247,7 @@ describe("getOptionalStringDictionaryInput", () => {
     configureGetInputMock({ type: '{ "abc": { "def": "ghi" } }' });
 
     expect(() => getOptionalStringDictionaryInput("type")).toThrow(
-      "Action input 'type' must be a valid JSON object containing only string values",
+      "Action input 'type' must be a valid JSON or YAML object containing only string values",
     );
   });
 });
