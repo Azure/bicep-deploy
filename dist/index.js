@@ -15505,7 +15505,7 @@ var child_process__namespace = /*#__PURE__*/_interopNamespaceDefault(child_proce
 /**
  * Current version of the `@azure/identity` package.
  */
-const SDK_VERSION = `4.5.0`;
+const SDK_VERSION = `4.6.0`;
 /**
  * The default client ID for authentication
  * @internal
@@ -60132,10 +60132,13 @@ function getOptionalBooleanInput(inputName) {
 }
 function getOptionalStringArrayInput(inputName) {
     const inputString = getOptionalStringInput(inputName);
-    return inputString ? parseCommaSeparated(inputString) : [];
+    return inputString ? parseCommaSeparated(inputString) : undefined;
 }
 function getOptionalEnumArrayInput(inputName, allowedValues) {
     const values = getOptionalStringArrayInput(inputName);
+    if (!values) {
+        return undefined;
+    }
     const allowedValuesString = allowedValues;
     for (const value of values) {
         if (allowedValuesString.indexOf(value) === -1) {

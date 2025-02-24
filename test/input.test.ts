@@ -54,10 +54,10 @@ describe("getOptionalStringInput", () => {
 });
 
 describe("getOptionalStringArrayInput", () => {
-  it("returns empty for missing input", async () => {
+  it("returns undefined for missing input", async () => {
     configureGetInputMock({});
 
-    expect(getOptionalStringArrayInput("type")).toStrictEqual([]);
+    expect(getOptionalStringArrayInput("type")).toStrictEqual(undefined);
   });
 
   it("accepts a single input", async () => {
@@ -90,10 +90,12 @@ describe("getOptionalStringArrayInput", () => {
 });
 
 describe("getOptionalEnumArrayInput", () => {
-  it("returns empty for missing input", async () => {
+  it("returns undefined for missing input", async () => {
     configureGetInputMock({});
 
-    expect(getOptionalEnumArrayInput("type", ["foo", "bar"])).toStrictEqual([]);
+    expect(getOptionalEnumArrayInput("type", ["foo", "bar"])).toStrictEqual(
+      undefined,
+    );
   });
 
   it("accepts a single input", async () => {

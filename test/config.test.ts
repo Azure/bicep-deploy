@@ -6,6 +6,7 @@ import {
   DeploymentStackConfig,
   parseConfig,
 } from "../src/config";
+import path from "path";
 
 describe("input validation", () => {
   it("requires type", async () => {
@@ -314,8 +315,8 @@ describe("input parsing", () => {
         resourceGroup: "mockRg",
       },
       location: "mockLocation",
-      templateFile: "/path/to/mockTemplateFile",
-      parametersFile: "/path/to/mockParametersFile",
+      templateFile: path.resolve("/path/to/mockTemplateFile"),
+      parametersFile: path.resolve("/path/to/mockParametersFile"),
       parameters: {
         foo: "bar2",
       },
@@ -366,8 +367,8 @@ describe("input parsing", () => {
         subscriptionId: "mockSub",
       },
       location: "mockLocation",
-      templateFile: "/path/to/mockTemplateFile",
-      parametersFile: "/path/to/mockParametersFile",
+      templateFile: path.resolve("/path/to/mockTemplateFile"),
+      parametersFile: path.resolve("/path/to/mockParametersFile"),
       parameters: {
         foo: "bar2",
       },

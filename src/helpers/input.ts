@@ -50,17 +50,22 @@ export function getOptionalBooleanInput(inputName: string): boolean {
   }
 }
 
-export function getOptionalStringArrayInput(inputName: string): string[] {
+export function getOptionalStringArrayInput(
+  inputName: string,
+): string[] | undefined {
   const inputString = getOptionalStringInput(inputName);
 
-  return inputString ? parseCommaSeparated(inputString) : [];
+  return inputString ? parseCommaSeparated(inputString) : undefined;
 }
 
 export function getOptionalEnumArrayInput<TEnum extends string>(
   inputName: string,
   allowedValues: TEnum[],
-): TEnum[] {
+): TEnum[] | undefined {
   const values = getOptionalStringArrayInput(inputName);
+  if (!values) {
+    return undefined;
+  }
 
   const allowedValuesString = allowedValues as string[];
   for (const value of values) {
