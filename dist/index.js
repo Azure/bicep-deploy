@@ -15505,7 +15505,7 @@ var child_process__namespace = /*#__PURE__*/_interopNamespaceDefault(child_proce
 /**
  * Current version of the `@azure/identity` package.
  */
-const SDK_VERSION = `4.6.0`;
+const SDK_VERSION = `4.5.0`;
 /**
  * The default client ID for authentication
  * @internal
@@ -60981,8 +60981,8 @@ async function run() {
     }
     catch (error) {
         // Fail the workflow run if an error occurs
-        if (error instanceof Error)
-            core.setFailed(error.message);
+        const message = error instanceof Error ? error.message : `${error}`;
+        core.setFailed(message);
     }
 }
 
