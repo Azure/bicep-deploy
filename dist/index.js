@@ -60140,10 +60140,13 @@ function getOptionalBooleanInput(inputName) {
 }
 function getOptionalStringArrayInput(inputName) {
     const inputString = getOptionalStringInput(inputName);
-    return inputString ? parseCommaSeparated(inputString) : [];
+    return inputString ? parseCommaSeparated(inputString) : undefined;
 }
 function getOptionalEnumArrayInput(inputName, allowedValues) {
     const values = getOptionalStringArrayInput(inputName);
+    if (!values) {
+        return undefined;
+    }
     const allowedValuesString = allowedValues;
     for (const value of values) {
         if (allowedValuesString.indexOf(value) === -1) {
@@ -60989,8 +60992,8 @@ async function run() {
     }
     catch (error) {
         // Fail the workflow run if an error occurs
-        if (error instanceof Error)
-            core.setFailed(error.message);
+        const message = error instanceof Error ? error.message : `${error}`;
+        core.setFailed(message);
     }
 }
 

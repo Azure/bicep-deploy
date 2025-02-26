@@ -40,12 +40,6 @@ inputs:
   template-file:
     description: "Specifies the path to the template file."
     required: false
-  template-spec:
-    description: "Specifies the template spec resource ID."
-    required: false
-  template-uri:
-    description: "Specifies the HTTP URI of the template."
-    required: false
 
   parameters-file:
     description: "Specifies the path to the parameters file."
