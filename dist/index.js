@@ -60764,7 +60764,8 @@ function shouldConsiderPropertyChangePath(propertyChange) {
 function formatJsonValue(builder, value, path = "", maxPathLength = 0, indentLevel = 0) {
     value = fixSdkDeltaFormattingBug(value);
     if (isLeaf(value)) {
-        formatJsonPath(builder, path, maxPathLength - path.length + 1, indentLevel);
+        const pathLength = maxPathLength - path.length + 1;
+        formatJsonPath(builder, path, pathLength > 0 ? pathLength : 0, indentLevel);
         formatLeaf(builder, value);
     }
     else if (isNonEmptyArray(value)) {
