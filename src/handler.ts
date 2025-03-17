@@ -1,7 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import { setOutput, setFailed, setSecret } from "@actions/core";
-import { CloudError, Deployment, ErrorResponse } from "@azure/arm-resources";
+import {
+  CloudError,
+  Deployment,
+  DeploymentDiagnosticsDefinition,
+  ErrorResponse,
+} from "@azure/arm-resources";
 import { DeploymentStack } from "@azure/arm-resourcesdeploymentstacks";
 import { PipelineResponse, RestError } from "@azure/core-rest-pipeline";
 import { OperationOptions } from "@azure/core-client";
@@ -18,7 +23,7 @@ import {
 } from "./config";
 import { ParsedFiles } from "./helpers/file";
 import { createDeploymentClient, createStacksClient } from "./helpers/azure";
-import { logError, logInfoRaw } from "./helpers/logging";
+import { logError, logInfo, logInfoRaw, logWarning } from "./helpers/logging";
 import { formatWhatIfOperationResult } from "./helpers/whatif";
 
 const defaultName = "azure-bicep-deploy";
@@ -101,7 +106,10 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
           }
           case "validate": {
             await tryWithErrorHandling(
-              () => deploymentValidate(config, files),
+              async () => {
+                const result = await deploymentValidate(config, files);
+                logDiagnostics(result?.properties?.diagnostics ?? []);
+              },
               error => {
                 logError(JSON.stringify(error, null, 2));
                 setFailed("Validation failed");
@@ -113,6 +121,7 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
             const result = await deploymentWhatIf(config, files);
             const formatted = formatWhatIfOperationResult(result, "ansii");
             logInfoRaw(formatted);
+            logDiagnostics(result.diagnostics ?? []);
             break;
           }
         }
@@ -555,5 +564,28 @@ function getScope(files: ParsedFiles): ScopeType | undefined {
       return "resourceGroup";
     default:
       throw new Error(`Failed to determine deployment scope from Bicep file.`);
+  }
+}
+
+function logDiagnostics(diagnostics: DeploymentDiagnosticsDefinition[]) {
+  if (diagnostics.length === 0) {
+    return;
+  }
+
+  logInfo("Diagnostics returned by the API");
+
+  for (const diagnostic of diagnostics) {
+    const message = `[${diagnostic.level}] ${diagnostic.code}: ${diagnostic.message}`;
+    switch (diagnostic.level.toLowerCase()) {
+      case "error":
+        logError(message);
+        break;
+      case "warning":
+        logWarning(message);
+        break;
+      default:
+        logInfo(message);
+        break;
+    }
   }
 }

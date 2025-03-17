@@ -590,6 +590,12 @@ function getApiVersion(resourceChange: WhatIfChange): string | undefined {
 }
 
 function getScope(resourceChange: WhatIfChange): string {
+  if (!resourceChange.resourceId) {
+    throw new Error(
+      "Extensible resource what-if is not currently supported by this Action. Please raise an issue: https://github.com/Azure/bicep-deploy/issues.",
+    );
+  }
+
   const [scope] = splitResourceId(resourceChange.resourceId);
   return scope;
 }
@@ -599,6 +605,12 @@ function getScopeUppercase(resourceChange: WhatIfChange): string {
 }
 
 function getRelativeResourceId(resourceChange: WhatIfChange): string {
+  if (!resourceChange.resourceId) {
+    throw new Error(
+      "Extensible resource what-if is not currently supported by this Action. Please raise an issue: https://github.com/Azure/bicep-deploy/issues.",
+    );
+  }
+
   const [, relativeResourceId] = splitResourceId(resourceChange.resourceId);
   return relativeResourceId;
 }
