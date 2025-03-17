@@ -656,7 +656,8 @@ function formatJsonValue(
   value = fixSdkDeltaFormattingBug(value);
 
   if (isLeaf(value)) {
-    formatJsonPath(builder, path, maxPathLength - path.length + 1, indentLevel);
+    const pathLength = maxPathLength - path.length + 1;
+    formatJsonPath(builder, path, pathLength > 0 ? pathLength : 0, indentLevel);
     formatLeaf(builder, value);
   } else if (isNonEmptyArray(value)) {
     formatJsonPath(builder, path, 1, indentLevel);

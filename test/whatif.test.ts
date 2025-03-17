@@ -728,4 +728,63 @@ Scope: /subscriptions/00000000-0000-0000-0000-000000000004/resourceGroups/rg4
         .join("\n"),
     ).toContain(expected);
   });
+
+  it("handles https://github.com/Azure/bicep-deploy/issues/162 correctly", () => {
+    const changes: WhatIfChange[] = [
+      {
+        resourceId:
+          "/subscriptions/a1bfa635-f2bf-42f1-86b5-848c674fc321/providers/Microsoft.Authorization/roleDefinitions/8c890531-237b-58a7-964b-6aa90045ff37",
+        changeType: "Create",
+        after: {
+          apiVersion: "2022-04-01",
+          id: "/subscriptions/a1bfa635-f2bf-42f1-86b5-848c674fc321/providers/Microsoft.Authorization/roleDefinitions/8c890531-237b-58a7-964b-6aa90045ff37",
+          name: "8c890531-237b-58a7-964b-6aa90045ff37",
+          properties: {
+            assignableScopes: [
+              "/subscriptions/a1bfa635-f2bf-42f1-86b5-848c674fc321",
+            ],
+            description: "Subscription Level Deployment of a Role Definition",
+            permissions: [
+              {
+                actions: ["*"],
+              },
+            ],
+            roleName: "Custom Role - RG Reader",
+            type: "customRole",
+          },
+          type: "Microsoft.Authorization/roleDefinitions",
+        },
+      },
+    ];
+
+    const expected = `
+Scope: /subscriptions/a1bfa635-f2bf-42f1-86b5-848c674fc321
+<GREEN>
+  + Microsoft.Authorization/roleDefinitions/8c890531-237b-58a7-964b-6aa90045ff37<RESET> [2022-04-01]<GREEN>
+
+      apiVersion<RESET>:<GREEN>             "2022-04-01"
+      id<RESET>:<GREEN>                     "/subscriptions/a1bfa635-f2bf-42f1-86b5-848c674fc321/providers/Microsoft.Authorization/roleDefinitions/8c890531-237b-58a7-964b-6aa90045ff37"
+      name<RESET>:<GREEN>                   "8c890531-237b-58a7-964b-6aa90045ff37"
+      properties.assignableScopes<RESET>:<GREEN> <RESET>[<GREEN>
+        0<RESET>:<GREEN> "/subscriptions/a1bfa635-f2bf-42f1-86b5-848c674fc321"
+      <RESET>]<GREEN>      properties.description<RESET>:<GREEN> "Subscription Level Deployment of a Role Definition"
+      properties.permissions<RESET>:<GREEN> <RESET>[<GREEN>
+        0<RESET>:<GREEN>
+
+          actions<RESET>:<GREEN>"*"
+      <RESET>]<GREEN>      properties.roleName<RESET>:<GREEN>    "Custom Role - RG Reader"
+      properties.type<RESET>:<GREEN>        "customRole"
+      type<RESET>:<GREEN>                   "Microsoft.Authorization/roleDefinitions"
+<RESET>
+`;
+
+    const result = formatWhatIfOperationResult({ changes }, "debug");
+
+    expect(
+      result
+        .split("\n")
+        .map(x => x.trimEnd())
+        .join("\n"),
+    ).toContain(expected);
+  });
 });
