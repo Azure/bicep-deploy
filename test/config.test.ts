@@ -174,6 +174,21 @@ describe("input validation", () => {
     );
   });
 
+  it("validates validation-level inputs for deployment", async () => {
+    configureGetInputMock({
+      type: "deployment",
+      operation: "create",
+      scope: "resourceGroup",
+      "subscription-id": "foo",
+      "resource-group-name": "mockRg",
+      "validation-level": "blah",
+    });
+
+    expect(() => parseConfig()).toThrow(
+      "Action input 'validation-level' must be one of the following values: 'Provider', 'Template', 'ProviderNoRbac'",
+    );
+  });
+
   it("requires action-on-unmanage-resources for deploymentStack", async () => {
     configureGetInputMock({
       type: "deploymentStack",
@@ -300,6 +315,7 @@ describe("input parsing", () => {
       tags: '{"foo": "bar"}',
       "masked-outputs": "abc,def",
       "what-if-exclude-change-types": "noChange",
+      "validation-level": "ProviderNoRbac",
       environment: "azureUSGovernment",
     });
 
@@ -328,6 +344,7 @@ describe("input parsing", () => {
         excludeChangeTypes: ["noChange"],
       },
       environment: "azureUSGovernment",
+      validationLevel: "ProviderNoRbac",
     });
   });
 

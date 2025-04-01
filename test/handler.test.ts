@@ -65,6 +65,7 @@ describe("deployment execution", () => {
       expressionEvaluationOptions: {
         scope: "inner",
       },
+      validationLevel: "Provider",
     };
 
     const expectedPayload: Deployment = {
@@ -177,6 +178,7 @@ describe("deployment execution", () => {
       expressionEvaluationOptions: {
         scope: "inner",
       },
+      validationLevel: "Provider",
     };
 
     const expectedPayload: Deployment = {

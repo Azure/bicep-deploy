@@ -343,6 +343,9 @@ function getDeployment(
       expressionEvaluationOptions: {
         scope: "inner",
       },
+      validationLevel: config.validationLevel
+        ? config.validationLevel
+        : "Provider",
     },
     tags: config.tags,
   };
