@@ -77,4 +77,21 @@ parameters-file: test/files/basic/main.bicepparam
 
     expect(failure).not.toBeDefined();
   });
+
+  it("runs what-if with validation-level", async () => {
+    const { failure } = await runAction(
+      data => `
+type: deployment
+operation: whatIf
+name: 'e2e-validate'
+scope: resourceGroup
+subscription-id: ${data.subscriptionId}
+resource-group-name: ${data.resourceGroup}
+parameters-file: test/files/basic/main.bicepparam
+validation-level: ProviderNoRbac
+`,
+    );
+
+    expect(failure).not.toBeDefined();
+  });
 });

@@ -52,6 +52,10 @@ inputs:
     description: "Specifies the change types to exclude from the 'What If' operation."
     required: false
 
+  validation-level:
+    description: "Specifies the validation level for the deployment. Choose from 'Provider', 'Template', or 'ProviderNoRbac'. Default validation level is Provider. Use ProviderNoRbac for validating using ReadOnly permissions"
+    required: false
+
   action-on-unmanage-resources:
     description: "Specifies the action to take on unmanaged resources. Choose from 'delete' or 'detach'."
     required: false
