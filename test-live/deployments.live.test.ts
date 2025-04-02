@@ -9,7 +9,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("e2e tests", () => {
+describe("deployments live tests", () => {
   it("runs validation", async () => {
     const { failure } = await runAction(
       data => `

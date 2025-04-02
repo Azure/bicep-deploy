@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 import * as fs from "fs/promises";
 import * as path from "path";
+import * as os from "os";
 import { Bicep, CompileResponseDiagnostic } from "bicep-node";
-import { tmpdir } from "os";
 
 import { FileConfig } from "../config";
 import { logError, logInfo, logWarning } from "./logging";
@@ -16,11 +16,17 @@ export type ParsedFiles = {
   templateSpecId?: string;
 };
 
+async function installBicep() {
+  const bicepTmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bicep-"));
+
+  return await Bicep.install(bicepTmpDir);
+}
+
 async function compileBicepParams(
   paramFilePath: string,
   parameters?: Record<string, unknown>,
 ) {
-  const bicepPath = await Bicep.install(tmpdir());
+  const bicepPath = await installBicep();
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compileParams({
@@ -43,7 +49,7 @@ async function compileBicepParams(
 }
 
 async function compileBicep(templateFilePath: string) {
-  const bicepPath = await Bicep.install(tmpdir());
+  const bicepPath = await installBicep();
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compile({

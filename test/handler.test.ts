@@ -404,7 +404,7 @@ describe("stack execution", () => {
       );
       expect(
         mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait,
-      ).toHaveBeenCalledWith(config.name, expectedPayload);
+      ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
       expect(mockActionsCore.setOutput).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -521,7 +521,12 @@ describe("stack execution", () => {
       );
       expect(
         mockStacksOps.beginCreateOrUpdateAtResourceGroupAndWait,
-      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+      ).toHaveBeenCalledWith(
+        scope.resourceGroup,
+        config.name,
+        expectedPayload,
+        expect.anything(),
+      );
       expect(mockActionsCore.setOutput).toHaveBeenCalledWith(
         "mockOutput",
         "foo",

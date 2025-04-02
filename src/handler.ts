@@ -360,6 +360,7 @@ async function stackCreate(config: DeploymentStackConfig, files: ParsedFiles) {
         scope.resourceGroup,
         name,
         stack,
+        getCreateOperationOptions(),
       );
     case "subscription":
       return await client.deploymentStacks.beginCreateOrUpdateAtSubscriptionAndWait(
@@ -368,6 +369,7 @@ async function stackCreate(config: DeploymentStackConfig, files: ParsedFiles) {
           ...stack,
           location: requireLocation(config),
         },
+        getCreateOperationOptions(),
       );
     case "managementGroup":
       return await client.deploymentStacks.beginCreateOrUpdateAtManagementGroupAndWait(
@@ -377,6 +379,7 @@ async function stackCreate(config: DeploymentStackConfig, files: ParsedFiles) {
           ...stack,
           location: requireLocation(config),
         },
+        getCreateOperationOptions(),
       );
   }
 }
