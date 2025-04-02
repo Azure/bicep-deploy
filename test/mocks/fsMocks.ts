@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 const mockFsPromises = {
   readFile: jest.fn(),
+  mkdtemp: jest.fn(),
 };
 
 export function configureReadFile(mock: (filePath: string) => string) {
