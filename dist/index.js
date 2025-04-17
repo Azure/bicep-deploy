@@ -45461,17 +45461,17 @@ async function stackCreate(config, files) {
     const stack = getStack(config, files);
     switch (scope.type) {
         case "resourceGroup":
-            return await client.deploymentStacks.beginCreateOrUpdateAtResourceGroupAndWait(scope.resourceGroup, name, stack);
+            return await client.deploymentStacks.beginCreateOrUpdateAtResourceGroupAndWait(scope.resourceGroup, name, stack, getCreateOperationOptions());
         case "subscription":
             return await client.deploymentStacks.beginCreateOrUpdateAtSubscriptionAndWait(name, {
                 ...stack,
                 location: requireLocation(config),
-            });
+            }, getCreateOperationOptions());
         case "managementGroup":
             return await client.deploymentStacks.beginCreateOrUpdateAtManagementGroupAndWait(scope.managementGroup, name, {
                 ...stack,
                 location: requireLocation(config),
-            });
+            }, getCreateOperationOptions());
     }
 }
 async function stackValidate(config, files) {
@@ -45753,11 +45753,15 @@ exports.resolvePath = resolvePath;
 // Licensed under the MIT License.
 const fs = __importStar(__nccwpck_require__(91943));
 const path = __importStar(__nccwpck_require__(16928));
+const os = __importStar(__nccwpck_require__(70857));
 const bicep_node_1 = __nccwpck_require__(799);
-const os_1 = __nccwpck_require__(70857);
 const logging_1 = __nccwpck_require__(5504);
+async function installBicep() {
+    const bicepTmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bicep-"));
+    return await bicep_node_1.Bicep.install(bicepTmpDir);
+}
 async function compileBicepParams(paramFilePath, parameters) {
-    const bicepPath = await bicep_node_1.Bicep.install((0, os_1.tmpdir)());
+    const bicepPath = await installBicep();
     const result = await withBicep(bicepPath, bicep => bicep.compileParams({
         path: paramFilePath,
         parameterOverrides: parameters ?? {},
@@ -45773,7 +45777,7 @@ async function compileBicepParams(paramFilePath, parameters) {
     };
 }
 async function compileBicep(templateFilePath) {
-    const bicepPath = await bicep_node_1.Bicep.install((0, os_1.tmpdir)());
+    const bicepPath = await installBicep();
     const result = await withBicep(bicepPath, bicep => bicep.compile({
         path: templateFilePath,
     }));
