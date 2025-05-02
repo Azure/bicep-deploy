@@ -49,6 +49,7 @@ describe("deployment execution", () => {
         excludeChangeTypes: ["noChange"],
       },
       environment: "azureCloud",
+      validationLevel: "ProviderNoRbac",
     };
 
     const files: ParsedFiles = {
@@ -65,7 +66,7 @@ describe("deployment execution", () => {
       expressionEvaluationOptions: {
         scope: "inner",
       },
-      validationLevel: "Provider",
+      validationLevel: "ProviderNoRbac",
     };
 
     const expectedPayload: Deployment = {
@@ -162,6 +163,7 @@ describe("deployment execution", () => {
         excludeChangeTypes: ["noChange"],
       },
       environment: "azureCloud",
+      validationLevel: "ProviderNoRbac",
     };
 
     const files: ParsedFiles = {
@@ -178,7 +180,7 @@ describe("deployment execution", () => {
       expressionEvaluationOptions: {
         scope: "inner",
       },
-      validationLevel: "Provider",
+      validationLevel: "ProviderNoRbac",
     };
 
     const expectedPayload: Deployment = {
