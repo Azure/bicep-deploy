@@ -185,7 +185,7 @@ describe("input validation", () => {
     });
 
     expect(() => parseConfig()).toThrow(
-      "Action input 'validation-level' must be one of the following values: 'Provider', 'Template', 'ProviderNoRbac'",
+      "Action input 'validation-level' must be one of the following values: 'provider', 'template', 'providerNoRbac'",
     );
   });
 
@@ -315,7 +315,7 @@ describe("input parsing", () => {
       tags: '{"foo": "bar"}',
       "masked-outputs": "abc,def",
       "what-if-exclude-change-types": "noChange",
-      "validation-level": "ProviderNoRbac",
+      "validation-level": "providerNoRbac",
       environment: "azureUSGovernment",
     });
 
@@ -344,7 +344,7 @@ describe("input parsing", () => {
         excludeChangeTypes: ["noChange"],
       },
       environment: "azureUSGovernment",
-      validationLevel: "ProviderNoRbac",
+      validationLevel: "providerNoRbac",
     });
   });
 

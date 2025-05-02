@@ -53,7 +53,7 @@ inputs:
     required: false
 
   validation-level:
-    description: "Specifies the validation level for the deployment. Choose from 'Provider', 'Template', or 'ProviderNoRbac'. Default validation level is Provider. Use ProviderNoRbac for validating using ReadOnly permissions"
+    description: "Specifies the validation level. Only supported for deployment what-if and validate operations. Choose from 'provider', 'template', or 'providerNoRbac'."
     required: false
 
   action-on-unmanage-resources:

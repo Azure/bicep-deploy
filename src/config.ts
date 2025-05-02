@@ -83,7 +83,7 @@ export type DeploymentsConfig = CommonConfig & {
   whatIf: {
     excludeChangeTypes?: WhatIfChangeType[];
   };
-  validationLevel?: "Provider" | "Template" | "ProviderNoRbac";
+  validationLevel?: "provider" | "template" | "providerNoRbac";
 };
 
 export type DeploymentStackConfig = CommonConfig & {
@@ -158,9 +158,9 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
           ),
         },
         validationLevel: getOptionalEnumInput("validation-level", [
-          "Provider",
-          "Template",
-          "ProviderNoRbac",
+          "provider",
+          "template",
+          "providerNoRbac",
         ]),
       };
     }
