@@ -94,6 +94,7 @@ The inputs for this action provide flexibility and control for managing deployme
 | `description`                         | Specifies the description of the deploymentStack.                                                             | Free-text                                                                                                                                        |
 | `tags`                                | Specifies the tags for the deploymentStack.                                                                   | Free-text                                                                                                                                        |
 | `masked-outputs`                      | Specifies output names to mask values for.                                                                    | Free-text                                                                                                                                        |
+| `validation-level`                    | Specifies the validation level. Only supported for deployment what-if and validate operations.                | `provider`, `template`, `providerNoRbac`                                                                                                         |
 
 ## Outputs
 

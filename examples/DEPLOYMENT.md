@@ -124,6 +124,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resource-group-name: example
           parameters-file: ./main.bicepparam
+          validation-level: providerNoRbac
 
       - name: What-If
         uses: azure/bicep-deploy@v2
@@ -135,4 +136,5 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resource-group-name: example
           parameters-file: ./main.bicepparam
+          validation-level: providerNoRbac
 ```
