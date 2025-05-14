@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import * as core from "@actions/core";
+import * as yaml from "yaml";
 
 import { resolvePath } from "./file";
 
@@ -81,15 +82,17 @@ export function getOptionalEnumArrayInput<TEnum extends string>(
 
 export function getOptionalDictionaryInput(
   inputName: string,
-): Record<string, unknown> {
+): Record<string, unknown> | undefined {
   const inputString = getOptionalStringInput(inputName);
   if (!inputString) {
-    return {};
+    return undefined;
   }
 
-  const input = tryParseJson(inputString);
+  const input = tryParseJson(inputString) ?? tryParseYaml(inputString);
   if (typeof input !== "object") {
-    throw new Error(`Action input '${inputName}' must be a valid JSON object`);
+    throw new Error(
+      `Action input '${inputName}' must be a valid JSON or YAML object`,
+    );
   }
 
   return input;
@@ -97,13 +100,16 @@ export function getOptionalDictionaryInput(
 
 export function getOptionalStringDictionaryInput(
   inputName: string,
-): Record<string, string> {
+): Record<string, string> | undefined {
   const input = getOptionalDictionaryInput(inputName);
+  if (!input) {
+    return undefined;
+  }
 
   Object.keys(input).forEach(key => {
     if (typeof input[key] !== "string") {
       throw new Error(
-        `Action input '${inputName}' must be a valid JSON object containing only string values`,
+        `Action input '${inputName}' must be a valid JSON or YAML object containing only string values`,
       );
     }
   });
@@ -139,6 +145,14 @@ function getInput(
 function tryParseJson(value: string) {
   try {
     return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function tryParseYaml(value: string) {
+  try {
+    return yaml.parse(value);
   } catch {
     return undefined;
   }

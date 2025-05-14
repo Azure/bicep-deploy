@@ -70,4 +70,29 @@ deny-settings-mode: denyWriteAndDelete
     expect(failure).toContain("Validation failed");
     expect(JSON.parse(errors[1])["code"]).toBe("InvalidTemplateDeployment");
   });
+
+  it("handles inline yaml parameters", async () => {
+    const { failure } = await runAction(
+      data => `
+type: deploymentStack
+operation: validate
+name: 'e2e-validate'
+scope: resourceGroup
+subscription-id: ${data.subscriptionId}
+resource-group-name: ${data.resourceGroup}
+template-file: test/files/basic/main.bicep
+parameters: |
+  intParam: 42
+  stringParam: hello world
+  objectParam:
+    prop1: value1
+    prop2: value2
+action-on-unmanage-resources: delete
+action-on-unmanage-resourcegroups: delete
+deny-settings-mode: denyWriteAndDelete
+`,
+    );
+
+    expect(failure).not.toBeDefined();
+  });
 });

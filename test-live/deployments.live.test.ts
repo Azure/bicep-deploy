@@ -77,4 +77,26 @@ parameters-file: test/files/basic/main.bicepparam
 
     expect(failure).not.toBeDefined();
   });
+
+  it("handles inline yaml parameters", async () => {
+    const { failure } = await runAction(
+      data => `
+type: deployment
+operation: validate
+name: 'e2e-validate'
+scope: resourceGroup
+subscription-id: ${data.subscriptionId}
+resource-group-name: ${data.resourceGroup}
+template-file: test/files/basic/main.bicep
+parameters: |
+  intParam: 42
+  stringParam: hello world
+  objectParam:
+    prop1: value1
+    prop2: value2
+`,
+    );
+
+    expect(failure).not.toBeDefined();
+  });
 });
