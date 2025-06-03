@@ -4,7 +4,7 @@
 
 ### With .bicepparam
 
-This snippet showcases the default usage of the `azure/bicep-deploy@v2` action for creating an Azure deployment. It initiates a deployment named "Development" in the `westus2` region at the resource group scope. The deployment uses `main.bicep` as the template file and `main.bicepparam` for parameters, targeting a specific Azure resource group.
+This snippet showcases the default usage of the `azure/bicep-deploy@v2` action for creating an Azure resource group-level deployment when using a .bicepparam file. It initiates a deployment named "Development" at the resource group scope. The deployment uses `main.bicepparam` for parameters (which has a `uses` reference to a bicep template file), targeting a specific Azure resource group.
 
 ```yaml
 - name: Sample
@@ -17,6 +17,24 @@ This snippet showcases the default usage of the `azure/bicep-deploy@v2` action f
     subscription-id: 00000000-0000-0000-0000-000000000000
     resource-group-name: example
     parameters-file: ./main.bicepparam
+```
+
+### With parameters.json file
+
+This snippet demonstrates the usage of the `azure/bicep-deploy@v2` action for creating an Azure deployment at the resource group level when using a parameters.json file. It initiates a deployment named "Development", targeting a specific resource group called "example." The deployment uses `main.bicep` as the template file, and the parameters are provided through a JSON file named `parameters.json`.
+
+```yaml
+- name: Deployment
+  uses: azure/bicep-deploy@v2
+  with:
+    type: deployment
+    operation: create
+    name: Development
+    scope: resourceGroup
+    subscription-id: 00000000-0000-0000-0000-000000000000
+    resource-group-name: example
+    template-file: ./src/main.bicep
+    parameters-file: ./src/parameters.json
 ```
 
 ### With in-line parameters
@@ -40,7 +58,7 @@ This snippet demonstrates the default usage of the `azure/bicep-deploy@v2` actio
 ## Workflows
 ### Create
 
-This workflow automates the deployment process by triggering on pushes to the main branch. It runs on an Ubuntu runner, checks out the repository, logs into Azure with federated credentials, and deploys using the specified ARM or Bicep templates and parameters, targeting a specific Azure resource group and location.
+This workflow automates the deployment process by triggering on pushes to the main branch. It runs on an Ubuntu runner, checks out the repository, logs into Azure with federated credentials, and deploys using the specified ARM or Bicep templates and parameters, targeting a specific Azure resource group.
 
 ```yaml
 name: Deployment (Create)
@@ -84,7 +102,7 @@ jobs:
 
 ### Validate & What-If
 
-This workflow triggers on pull requests to the main branch. It runs on an Ubuntu runner, checks out the repository, logs into Azure with federated credentials, and performs both a "Validate" and a "What-If" operation using the specified ARM or Bicep templates and parameters, targeting a specific Azure resource group and location.
+This workflow triggers on pull requests to the main branch. It runs on an Ubuntu runner, checks out the repository, logs into Azure with federated credentials, and performs both a "Validate" and a "What-If" operation using the specified ARM or Bicep templates and parameters, targeting a specific Azure resource group.
 
 ```yaml
 name: Deployment (Validate)
