@@ -7,34 +7,37 @@ branding:
   color: "blue"
 
 inputs:
+  # Required inputs
   type:
     description: "Specifies the execution type, which can be either 'deployment' or 'deploymentStack'."
     required: true
   operation:
     description: "Specifies the operation to perform. For deployment, choose from 'create', 'validate', 'whatIf'. For deploymentStack, choose from 'create', 'delete', 'validate'."
     required: true
+  scope:
+    description: "Specifies the scope of the deployment or deploymentStack. For deployment, choose from 'resourceGroup', 'subscription', 'managementGroup', 'tenant'. For deploymentStack, choose from 'resourceGroup', 'subscription', 'managementGroup'."
+    required: true
 
+  # Optional inputs
   name:
     description: "Specifies the name of the deployment or deploymentStack."
-    required: true
+    required: false
+
   location:
     description: "Specifies the location of the deployment or deploymentStack. Must be provided if the 'scope' parameter is 'subscription', 'managementGroup' or 'tenant'."
     required: false
 
-  scope:
-    description: "Specifies the scope of the deployment or deploymentStack. For deployment, choose from 'resourceGroup', 'subscription', 'managementGroup', 'tenant'. For deploymentStack, choose from 'resourceGroup', 'subscription', 'managementGroup'."
-    required: true
   tenant-id:
-    description: "Specifies the tenant ID."
+    description: "Specifies the tenant ID. Required if the 'scope' parameter is 'tenant'."
     required: false
   management-group-id:
-    description: "Specifies the management group ID."
+    description: "Specifies the management group ID. Required if the 'scope' parameter is 'managementGroup'."
     required: false
   subscription-id:
-    description: "Specifies the subscription ID."
+    description: "Specifies the subscription ID. Required if the 'scope' parameter is 'subscription' or 'resourceGroup'."
     required: false
   resource-group-name:
-    description: "Specifies the resource group name."
+    description: "Specifies the resource group name. Required if the 'scope' parameter is 'resourceGroup'."
     required: false
 
   template-file:
@@ -42,12 +45,21 @@ inputs:
     required: false
 
   parameters-file:
-    description: "Specifies the path to the parameters file."
+    description: "Specifies the path to the parameters file (.json or .bicepparam)."
     required: false
   parameters:
-    description: "Specifies the parameters to use."
+    description: "Specifies the inline parameters to use (as json object)."
     required: false
 
+  masked-outputs:
+    description: "Specifies output names to mask values for."
+    required: false
+
+  environment:
+    description: "Specifies the Azure environment to use. Choose from 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'."
+    required: false
+
+  # What-if and validate specific inputs
   what-if-exclude-change-types:
     description: "Specifies the change types to exclude from the 'What If' operation."
     required: false
@@ -56,6 +68,7 @@ inputs:
     description: "Specifies the validation level. Only supported for deployment what-if and validate operations. Choose from 'provider', 'template', or 'providerNoRbac'."
     required: false
 
+  # DeploymentStack specific inputs
   action-on-unmanage-resources:
     description: "Specifies the action to take on unmanaged resources. Choose from 'delete' or 'detach'."
     required: false
@@ -87,14 +100,6 @@ inputs:
 
   tags:
     description: "Specifies the tags for the deploymentStack."
-    required: false
-
-  masked-outputs:
-    description: "Specifies output names to mask values for."
-    required: false
-
-  environment:
-    description: "Specifies the environment to use. Choose from 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'."
     required: false
 
 runs:
