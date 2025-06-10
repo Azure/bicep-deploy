@@ -45,6 +45,7 @@ export type ResourceGroupScope = CommonScope & {
 };
 
 export type FileConfig = {
+  templateFileRequired: boolean;
   templateFile?: string;
   parametersFile?: string;
   parameters?: Record<string, unknown>;
@@ -131,6 +132,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         type,
         name,
         location,
+        templateFileRequired: true, // files are always required for deployment
         templateFile,
         parametersFile,
         parameters,
@@ -175,6 +177,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         type,
         name,
         location,
+        templateFileRequired: operation !== "delete", // template file not required when deleting stack
         templateFile,
         parametersFile,
         parameters,

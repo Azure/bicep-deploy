@@ -331,6 +331,7 @@ describe("input parsing", () => {
         resourceGroup: "mockRg",
       },
       location: "mockLocation",
+      templateFileRequired: true,
       templateFile: path.resolve("/path/to/mockTemplateFile"),
       parametersFile: path.resolve("/path/to/mockParametersFile"),
       parameters: {
@@ -398,6 +399,7 @@ describe("input parsing", () => {
         subscriptionId: "mockSub",
       },
       location: "mockLocation",
+      templateFileRequired: false,
       templateFile: path.resolve("/path/to/mockTemplateFile"),
       parametersFile: path.resolve("/path/to/mockParametersFile"),
       parameters: {
@@ -473,6 +475,7 @@ objectParam:
         resourceGroup: "mockRg",
       },
       location: "mockLocation",
+      templateFileRequired: true,
       templateFile: "/path/to/mockTemplateFile",
       parametersFile: "/path/to/mockParametersFile",
       parameters: {
@@ -533,6 +536,7 @@ objectParam:
         subscriptionId: undefined,
       },
       tags: undefined,
+      templateFileRequired: false,
       templateFile: undefined,
     });
   });
