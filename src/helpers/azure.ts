@@ -2,7 +2,13 @@
 // Licensed under the MIT License.
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { DeploymentStacksClient } from "@azure/arm-resourcesdeploymentstacks";
-import { DefaultAzureCredential } from "@azure/identity";
+import {
+  ChainedTokenCredential,
+  EnvironmentCredential,
+  AzureCliCredential,
+  AzurePowerShellCredential,
+  TokenCredential,
+} from "@azure/identity";
 import { AdditionalPolicyConfig } from "@azure/core-client";
 import { debug, isDebug } from "@actions/core";
 
@@ -22,10 +28,8 @@ export function createDeploymentClient(
   subscriptionId?: string,
   tenantId?: string,
 ): ResourceManagementClient {
-  const credentials = new DefaultAzureCredential({ tenantId });
-
   return new ResourceManagementClient(
-    credentials,
+    getCredential(tenantId),
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId,
     {
@@ -45,10 +49,8 @@ export function createStacksClient(
   subscriptionId?: string,
   tenantId?: string,
 ): DeploymentStacksClient {
-  const credentials = new DefaultAzureCredential({ tenantId });
-
   return new DeploymentStacksClient(
-    credentials,
+    getCredential(tenantId),
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId,
     {
@@ -97,3 +99,11 @@ const debugLoggingPolicy: AdditionalPolicyConfig = {
     },
   },
 };
+
+function getCredential(tenantId?: string): TokenCredential {
+  return new ChainedTokenCredential(
+    new EnvironmentCredential(),
+    new AzureCliCredential({ tenantId }),
+    new AzurePowerShellCredential({ tenantId }),
+  );
+}

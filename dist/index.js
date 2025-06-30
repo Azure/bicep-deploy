@@ -45673,8 +45673,7 @@ const endpoints = {
     azureUSGovernment: "https://management.usgovcloudapi.net",
 };
 function createDeploymentClient(config, subscriptionId, tenantId) {
-    const credentials = new identity_1.DefaultAzureCredential({ tenantId });
-    return new arm_resources_1.ResourceManagementClient(credentials, 
+    return new arm_resources_1.ResourceManagementClient(getCredential(tenantId), 
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId, {
         userAgentOptions: {
@@ -45687,8 +45686,7 @@ function createDeploymentClient(config, subscriptionId, tenantId) {
     });
 }
 function createStacksClient(config, subscriptionId, tenantId) {
-    const credentials = new identity_1.DefaultAzureCredential({ tenantId });
-    return new arm_resourcesdeploymentstacks_1.DeploymentStacksClient(credentials, 
+    return new arm_resourcesdeploymentstacks_1.DeploymentStacksClient(getCredential(tenantId), 
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId, {
         userAgentOptions: {
@@ -45727,6 +45725,9 @@ const debugLoggingPolicy = {
         },
     },
 };
+function getCredential(tenantId) {
+    return new identity_1.ChainedTokenCredential(new identity_1.EnvironmentCredential(), new identity_1.AzureCliCredential({ tenantId }), new identity_1.AzurePowerShellCredential({ tenantId }));
+}
 
 
 /***/ }),
