@@ -45660,7 +45660,7 @@ exports.createDeploymentClient = createDeploymentClient;
 exports.createStacksClient = createStacksClient;
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-const arm_resources_1 = __nccwpck_require__(19563);
+const arm_resourcesdeployments_1 = __nccwpck_require__(99301);
 const arm_resourcesdeploymentstacks_1 = __nccwpck_require__(59821);
 const identity_1 = __nccwpck_require__(35261);
 const core_1 = __nccwpck_require__(37484);
@@ -45673,7 +45673,7 @@ const endpoints = {
     azureUSGovernment: "https://management.usgovcloudapi.net",
 };
 function createDeploymentClient(config, subscriptionId, tenantId) {
-    return new arm_resources_1.ResourceManagementClient(getCredential(tenantId), 
+    return new arm_resourcesdeployments_1.DeploymentsClient(getCredential(tenantId), 
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId, {
         userAgentOptions: {
@@ -47218,7 +47218,7 @@ module.exports = require("zlib");
 
 /***/ }),
 
-/***/ 19563:
+/***/ 29234:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47231,20 +47231,128 @@ module.exports = require("zlib");
  * Changes may cause incorrect behavior and will be lost if the code is regenerated.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResourceManagementClient = exports.getContinuationToken = void 0;
+exports.DeploymentsClient = void 0;
+const tslib_1 = __nccwpck_require__(61860);
+const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
+const coreRestPipeline = tslib_1.__importStar(__nccwpck_require__(20778));
+const index_js_1 = __nccwpck_require__(2112);
+class DeploymentsClient extends coreClient.ServiceClient {
+    constructor(credentials, subscriptionIdOrOptions, options) {
+        var _a, _b, _c;
+        if (credentials === undefined) {
+            throw new Error("'credentials' cannot be null");
+        }
+        let subscriptionId;
+        if (typeof subscriptionIdOrOptions === "string") {
+            subscriptionId = subscriptionIdOrOptions;
+        }
+        else if (typeof subscriptionIdOrOptions === "object") {
+            options = subscriptionIdOrOptions;
+        }
+        // Initializing default values for options
+        if (!options) {
+            options = {};
+        }
+        const defaults = {
+            requestContentType: "application/json; charset=utf-8",
+            credential: credentials,
+        };
+        const packageDetails = `azsdk-js-arm-resourcesdeployments/1.0.0-beta.1`;
+        const userAgentPrefix = options.userAgentOptions && options.userAgentOptions.userAgentPrefix
+            ? `${options.userAgentOptions.userAgentPrefix} ${packageDetails}`
+            : `${packageDetails}`;
+        const optionsWithDefaults = Object.assign(Object.assign(Object.assign({}, defaults), options), { userAgentOptions: {
+                userAgentPrefix,
+            }, endpoint: (_b = (_a = options.endpoint) !== null && _a !== void 0 ? _a : options.baseUri) !== null && _b !== void 0 ? _b : "https://management.azure.com" });
+        super(optionsWithDefaults);
+        let bearerTokenAuthenticationPolicyFound = false;
+        if ((options === null || options === void 0 ? void 0 : options.pipeline) && options.pipeline.getOrderedPolicies().length > 0) {
+            const pipelinePolicies = options.pipeline.getOrderedPolicies();
+            bearerTokenAuthenticationPolicyFound = pipelinePolicies.some((pipelinePolicy) => pipelinePolicy.name ===
+                coreRestPipeline.bearerTokenAuthenticationPolicyName);
+        }
+        if (!options ||
+            !options.pipeline ||
+            options.pipeline.getOrderedPolicies().length == 0 ||
+            !bearerTokenAuthenticationPolicyFound) {
+            this.pipeline.removePolicy({
+                name: coreRestPipeline.bearerTokenAuthenticationPolicyName,
+            });
+            this.pipeline.addPolicy(coreRestPipeline.bearerTokenAuthenticationPolicy({
+                credential: credentials,
+                scopes: (_c = optionsWithDefaults.credentialScopes) !== null && _c !== void 0 ? _c : `${optionsWithDefaults.endpoint}/.default`,
+                challengeCallbacks: {
+                    authorizeRequestOnChallenge: coreClient.authorizeRequestOnClaimChallenge,
+                },
+            }));
+        }
+        // Parameter assignments
+        this.subscriptionId = subscriptionId;
+        // Assigning values to Constant parameters
+        this.$host = options.$host || "https://management.azure.com";
+        this.apiVersion = options.apiVersion || "2025-04-01";
+        this.deployments = new index_js_1.DeploymentsImpl(this);
+        this.deploymentOperations = new index_js_1.DeploymentOperationsImpl(this);
+        this.addCustomApiVersionPolicy(options.apiVersion);
+    }
+    /** A function that adds a policy that sets the api-version (or equivalent) to reflect the library version. */
+    addCustomApiVersionPolicy(apiVersion) {
+        if (!apiVersion) {
+            return;
+        }
+        const apiVersionPolicy = {
+            name: "CustomApiVersionPolicy",
+            async sendRequest(request, next) {
+                const param = request.url.split("?");
+                if (param.length > 1) {
+                    const newParams = param[1].split("&").map((item) => {
+                        if (item.indexOf("api-version") > -1) {
+                            return "api-version=" + apiVersion;
+                        }
+                        else {
+                            return item;
+                        }
+                    });
+                    request.url = param[0] + "?" + newParams.join("&");
+                }
+                return next(request);
+            },
+        };
+        this.pipeline.addPolicy(apiVersionPolicy);
+    }
+}
+exports.DeploymentsClient = DeploymentsClient;
+//# sourceMappingURL=deploymentsClient.js.map
+
+/***/ }),
+
+/***/ 99301:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+/*
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT License.
+ *
+ * Code generated by Microsoft (R) AutoRest Code Generator.
+ * Changes may cause incorrect behavior and will be lost if the code is regenerated.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentsClient = exports.getContinuationToken = void 0;
 const tslib_1 = __nccwpck_require__(61860);
 /// <reference lib="esnext.asynciterable" />
-var pagingHelper_js_1 = __nccwpck_require__(98627);
+var pagingHelper_js_1 = __nccwpck_require__(69117);
 Object.defineProperty(exports, "getContinuationToken", ({ enumerable: true, get: function () { return pagingHelper_js_1.getContinuationToken; } }));
-tslib_1.__exportStar(__nccwpck_require__(86006), exports);
-var resourceManagementClient_js_1 = __nccwpck_require__(69767);
-Object.defineProperty(exports, "ResourceManagementClient", ({ enumerable: true, get: function () { return resourceManagementClient_js_1.ResourceManagementClient; } }));
-tslib_1.__exportStar(__nccwpck_require__(71254), exports);
+tslib_1.__exportStar(__nccwpck_require__(90744), exports);
+var deploymentsClient_js_1 = __nccwpck_require__(29234);
+Object.defineProperty(exports, "DeploymentsClient", ({ enumerable: true, get: function () { return deploymentsClient_js_1.DeploymentsClient; } }));
+tslib_1.__exportStar(__nccwpck_require__(48872), exports);
 //# sourceMappingURL=index.js.map
 
 /***/ }),
 
-/***/ 10130:
+/***/ 23512:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47275,7 +47383,7 @@ function createLroSpec(inputs) {
 
 /***/ }),
 
-/***/ 86006:
+/***/ 90744:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -47288,7 +47396,25 @@ function createLroSpec(inputs) {
  * Changes may cause incorrect behavior and will be lost if the code is regenerated.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.KnownTagsPatchOperation = exports.KnownExportTemplateOutputFormat = exports.KnownExtendedLocationType = exports.KnownLevel = exports.KnownProviderAuthorizationConsentState = exports.KnownAliasPathAttributes = exports.KnownAliasPathTokenType = exports.KnownProvisioningState = exports.KnownValidationLevel = exports.KnownExpressionEvaluationOptionsScopeType = void 0;
+exports.KnownLevel = exports.KnownProviderAuthorizationConsentState = exports.KnownAliasPathAttributes = exports.KnownAliasPathTokenType = exports.KnownProvisioningState = exports.KnownDeploymentIdentityType = exports.KnownValidationLevel = exports.KnownExpressionEvaluationOptionsScopeType = exports.KnownExtensionConfigPropertyType = void 0;
+/** Known values of {@link ExtensionConfigPropertyType} that the service accepts. */
+var KnownExtensionConfigPropertyType;
+(function (KnownExtensionConfigPropertyType) {
+    /** Property type representing a string value. */
+    KnownExtensionConfigPropertyType["String"] = "String";
+    /** Property type representing an integer value. */
+    KnownExtensionConfigPropertyType["Int"] = "Int";
+    /** Property type representing a boolean value. */
+    KnownExtensionConfigPropertyType["Bool"] = "Bool";
+    /** Property type representing an array value. */
+    KnownExtensionConfigPropertyType["Array"] = "Array";
+    /** Property type representing an object value. */
+    KnownExtensionConfigPropertyType["Object"] = "Object";
+    /** Property type representing a secure string value. */
+    KnownExtensionConfigPropertyType["SecureString"] = "SecureString";
+    /** Property type representing a secure object value. */
+    KnownExtensionConfigPropertyType["SecureObject"] = "SecureObject";
+})(KnownExtensionConfigPropertyType || (exports.KnownExtensionConfigPropertyType = KnownExtensionConfigPropertyType = {}));
 /** Known values of {@link ExpressionEvaluationOptionsScopeType} that the service accepts. */
 var KnownExpressionEvaluationOptionsScopeType;
 (function (KnownExpressionEvaluationOptionsScopeType) {
@@ -47309,6 +47435,14 @@ var KnownValidationLevel;
     /** Static analysis of the template is performed and resource declarations are sent to resource providers for semantic validation. Skips validating that the caller has RBAC write permissions on each resource. */
     KnownValidationLevel["ProviderNoRbac"] = "ProviderNoRbac";
 })(KnownValidationLevel || (exports.KnownValidationLevel = KnownValidationLevel = {}));
+/** Known values of {@link DeploymentIdentityType} that the service accepts. */
+var KnownDeploymentIdentityType;
+(function (KnownDeploymentIdentityType) {
+    /** None */
+    KnownDeploymentIdentityType["None"] = "None";
+    /** UserAssigned */
+    KnownDeploymentIdentityType["UserAssigned"] = "UserAssigned";
+})(KnownDeploymentIdentityType || (exports.KnownDeploymentIdentityType = KnownDeploymentIdentityType = {}));
 /** Known values of {@link ProvisioningState} that the service accepts. */
 var KnownProvisioningState;
 (function (KnownProvisioningState) {
@@ -47387,35 +47521,11 @@ var KnownLevel;
     /** Error */
     KnownLevel["Error"] = "Error";
 })(KnownLevel || (exports.KnownLevel = KnownLevel = {}));
-/** Known values of {@link ExtendedLocationType} that the service accepts. */
-var KnownExtendedLocationType;
-(function (KnownExtendedLocationType) {
-    /** EdgeZone */
-    KnownExtendedLocationType["EdgeZone"] = "EdgeZone";
-})(KnownExtendedLocationType || (exports.KnownExtendedLocationType = KnownExtendedLocationType = {}));
-/** Known values of {@link ExportTemplateOutputFormat} that the service accepts. */
-var KnownExportTemplateOutputFormat;
-(function (KnownExportTemplateOutputFormat) {
-    /** Json */
-    KnownExportTemplateOutputFormat["Json"] = "Json";
-    /** Bicep */
-    KnownExportTemplateOutputFormat["Bicep"] = "Bicep";
-})(KnownExportTemplateOutputFormat || (exports.KnownExportTemplateOutputFormat = KnownExportTemplateOutputFormat = {}));
-/** Known values of {@link TagsPatchOperation} that the service accepts. */
-var KnownTagsPatchOperation;
-(function (KnownTagsPatchOperation) {
-    /** The 'replace' option replaces the entire set of existing tags with a new set. */
-    KnownTagsPatchOperation["Replace"] = "Replace";
-    /** The 'merge' option allows adding tags with new names and updating the values of tags with existing names. */
-    KnownTagsPatchOperation["Merge"] = "Merge";
-    /** The 'delete' option allows selectively deleting tags based on given names or name\/value pairs. */
-    KnownTagsPatchOperation["Delete"] = "Delete";
-})(KnownTagsPatchOperation || (exports.KnownTagsPatchOperation = KnownTagsPatchOperation = {}));
 //# sourceMappingURL=index.js.map
 
 /***/ }),
 
-/***/ 6060:
+/***/ 18162:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -47428,87 +47538,8 @@ var KnownTagsPatchOperation;
  * Changes may cause incorrect behavior and will be lost if the code is regenerated.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProviderResourceTypeListResult = exports.ProviderListResult = exports.ProviderConsentDefinition = exports.ProviderRegistrationRequest = exports.Permission = exports.RoleDefinition = exports.ProviderPermission = exports.ProviderPermissionListResult = exports.DeploymentWhatIf = exports.WhatIfPropertyChange = exports.WhatIfChange = exports.WhatIfOperationResult = exports.DeploymentWhatIfSettings = exports.ScopedDeploymentWhatIf = exports.ScopedDeployment = exports.DeploymentListResult = exports.DeploymentExportResult = exports.DeploymentValidateResult = exports.DeploymentDiagnosticsDefinition = exports.ResourceReference = exports.OnErrorDeploymentExtended = exports.BasicDependency = exports.Dependency = exports.ApiProfile = exports.ZoneMapping = exports.AliasPathMetadata = exports.AliasPattern = exports.AliasPath = exports.Alias = exports.ProviderExtendedLocation = exports.ProviderResourceType = exports.Provider = exports.DeploymentPropertiesExtended = exports.DeploymentExtended = exports.ExpressionEvaluationOptions = exports.OnErrorDeployment = exports.DebugSetting = exports.ParametersLink = exports.KeyVaultReference = exports.KeyVaultParameterReference = exports.DeploymentParameter = exports.TemplateLink = exports.DeploymentProperties = exports.Deployment = exports.ErrorAdditionalInfo = exports.ErrorResponse = exports.CloudError = exports.OperationDisplay = exports.Operation = exports.OperationListResult = void 0;
-exports.TagsDeleteAtScopeHeaders = exports.TagsUpdateAtScopeHeaders = exports.TagsCreateOrUpdateAtScopeHeaders = exports.ResourceGroupsDeleteHeaders = exports.DeploymentsWhatIfHeaders = exports.DeploymentsWhatIfAtSubscriptionScopeHeaders = exports.DeploymentsWhatIfAtManagementGroupScopeHeaders = exports.DeploymentsWhatIfAtTenantScopeHeaders = exports.GenericResourceExpanded = exports.GenericResource = exports.DeploymentWhatIfProperties = exports.SubResource = exports.ResourceProviderOperationDisplayProperties = exports.ResourceGroupFilter = exports.GenericResourceFilter = exports.DeploymentExtendedFilter = exports.TagsPatchResource = exports.Tags = exports.TagsResource = exports.TemplateHashResult = exports.DeploymentOperationsListResult = exports.HttpMessage = exports.TargetResource = exports.StatusMessage = exports.DeploymentOperationProperties = exports.DeploymentOperation = exports.TagsListResult = exports.TagDetails = exports.TagCount = exports.TagValue = exports.ResourcesMoveInfo = exports.ResourceGroupListResult = exports.ResourceGroupExportResult = exports.ExportTemplateRequest = exports.ResourceGroupPatchable = exports.ResourceGroupProperties = exports.ResourceGroup = exports.ExtendedLocation = exports.Resource = exports.IdentityUserAssignedIdentitiesValue = exports.Identity = exports.Sku = exports.Plan = exports.ResourceListResult = void 0;
-exports.OperationListResult = {
-    type: {
-        name: "Composite",
-        className: "OperationListResult",
-        modelProperties: {
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "Operation",
-                        },
-                    },
-                },
-            },
-            nextLink: {
-                serializedName: "nextLink",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.Operation = {
-    type: {
-        name: "Composite",
-        className: "Operation",
-        modelProperties: {
-            name: {
-                serializedName: "name",
-                type: {
-                    name: "String",
-                },
-            },
-            display: {
-                serializedName: "display",
-                type: {
-                    name: "Composite",
-                    className: "OperationDisplay",
-                },
-            },
-        },
-    },
-};
-exports.OperationDisplay = {
-    type: {
-        name: "Composite",
-        className: "OperationDisplay",
-        modelProperties: {
-            provider: {
-                serializedName: "provider",
-                type: {
-                    name: "String",
-                },
-            },
-            resource: {
-                serializedName: "resource",
-                type: {
-                    name: "String",
-                },
-            },
-            operation: {
-                serializedName: "operation",
-                type: {
-                    name: "String",
-                },
-            },
-            description: {
-                serializedName: "description",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
+exports.HttpMessage = exports.TargetResource = exports.StatusMessage = exports.DeploymentOperationProperties = exports.DeploymentOperation = exports.DeploymentWhatIf = exports.WhatIfPropertyChange = exports.WhatIfChange = exports.WhatIfOperationResult = exports.DeploymentWhatIfSettings = exports.ScopedDeploymentWhatIf = exports.ScopedDeployment = exports.DeploymentListResult = exports.DeploymentExportResult = exports.DeploymentValidateResult = exports.DeploymentDiagnosticsDefinition = exports.ResourceReference = exports.OnErrorDeploymentExtended = exports.DeploymentExtensionDefinition = exports.BasicDependency = exports.Dependency = exports.ApiProfile = exports.ZoneMapping = exports.AliasPathMetadata = exports.AliasPattern = exports.AliasPath = exports.Alias = exports.ProviderExtendedLocation = exports.ProviderResourceType = exports.Provider = exports.DeploymentPropertiesExtended = exports.DeploymentExtended = exports.UserAssignedIdentity = exports.DeploymentIdentity = exports.ExpressionEvaluationOptions = exports.OnErrorDeployment = exports.DebugSetting = exports.DeploymentExtensionConfigItem = exports.ParametersLink = exports.DeploymentExternalInputDefinition = exports.DeploymentExternalInput = exports.KeyVaultReference = exports.KeyVaultParameterReference = exports.DeploymentParameter = exports.TemplateLink = exports.DeploymentProperties = exports.Deployment = exports.ErrorAdditionalInfo = exports.ErrorResponse = exports.CloudError = void 0;
+exports.DeploymentsWhatIfHeaders = exports.DeploymentsWhatIfAtSubscriptionScopeHeaders = exports.DeploymentsWhatIfAtManagementGroupScopeHeaders = exports.DeploymentsWhatIfAtTenantScopeHeaders = exports.DeploymentWhatIfProperties = exports.SubResource = exports.ResourceProviderOperationDisplayProperties = exports.DeploymentExtendedFilter = exports.TemplateHashResult = exports.DeploymentOperationsListResult = void 0;
 exports.CloudError = {
     type: {
         name: "Composite",
@@ -47627,6 +47658,13 @@ exports.Deployment = {
                     value: { type: { name: "String" } },
                 },
             },
+            identity: {
+                serializedName: "identity",
+                type: {
+                    name: "Composite",
+                    className: "DeploymentIdentity",
+                },
+            },
         },
     },
 };
@@ -47658,11 +47696,49 @@ exports.DeploymentProperties = {
                     },
                 },
             },
+            externalInputs: {
+                serializedName: "externalInputs",
+                type: {
+                    name: "Dictionary",
+                    value: {
+                        type: { name: "Composite", className: "DeploymentExternalInput" },
+                    },
+                },
+            },
+            externalInputDefinitions: {
+                serializedName: "externalInputDefinitions",
+                type: {
+                    name: "Dictionary",
+                    value: {
+                        type: {
+                            name: "Composite",
+                            className: "DeploymentExternalInputDefinition",
+                        },
+                    },
+                },
+            },
             parametersLink: {
                 serializedName: "parametersLink",
                 type: {
                     name: "Composite",
                     className: "ParametersLink",
+                },
+            },
+            extensionConfigs: {
+                serializedName: "extensionConfigs",
+                type: {
+                    name: "Dictionary",
+                    value: {
+                        type: {
+                            name: "Dictionary",
+                            value: {
+                                type: {
+                                    name: "Composite",
+                                    className: "DeploymentExtensionConfigItem",
+                                },
+                            },
+                        },
+                    },
                 },
             },
             mode: {
@@ -47759,6 +47835,12 @@ exports.DeploymentParameter = {
                     className: "KeyVaultParameterReference",
                 },
             },
+            expression: {
+                serializedName: "expression",
+                type: {
+                    name: "String",
+                },
+            },
         },
     },
 };
@@ -47805,6 +47887,42 @@ exports.KeyVaultReference = {
         },
     },
 };
+exports.DeploymentExternalInput = {
+    type: {
+        name: "Composite",
+        className: "DeploymentExternalInput",
+        modelProperties: {
+            value: {
+                serializedName: "value",
+                required: true,
+                type: {
+                    name: "any",
+                },
+            },
+        },
+    },
+};
+exports.DeploymentExternalInputDefinition = {
+    type: {
+        name: "Composite",
+        className: "DeploymentExternalInputDefinition",
+        modelProperties: {
+            kind: {
+                serializedName: "kind",
+                required: true,
+                type: {
+                    name: "String",
+                },
+            },
+            config: {
+                serializedName: "config",
+                type: {
+                    name: "any",
+                },
+            },
+        },
+    },
+};
 exports.ParametersLink = {
     type: {
         name: "Composite",
@@ -47821,6 +47939,34 @@ exports.ParametersLink = {
                 serializedName: "contentVersion",
                 type: {
                     name: "String",
+                },
+            },
+        },
+    },
+};
+exports.DeploymentExtensionConfigItem = {
+    type: {
+        name: "Composite",
+        className: "DeploymentExtensionConfigItem",
+        modelProperties: {
+            type: {
+                serializedName: "type",
+                readOnly: true,
+                type: {
+                    name: "String",
+                },
+            },
+            value: {
+                serializedName: "value",
+                type: {
+                    name: "any",
+                },
+            },
+            keyVaultReference: {
+                serializedName: "keyVaultReference",
+                type: {
+                    name: "Composite",
+                    className: "KeyVaultParameterReference",
                 },
             },
         },
@@ -47870,6 +48016,52 @@ exports.ExpressionEvaluationOptions = {
                 serializedName: "scope",
                 type: {
                     name: "String",
+                },
+            },
+        },
+    },
+};
+exports.DeploymentIdentity = {
+    type: {
+        name: "Composite",
+        className: "DeploymentIdentity",
+        modelProperties: {
+            type: {
+                serializedName: "type",
+                required: true,
+                type: {
+                    name: "String",
+                },
+            },
+            userAssignedIdentities: {
+                serializedName: "userAssignedIdentities",
+                type: {
+                    name: "Dictionary",
+                    value: {
+                        type: { name: "Composite", className: "UserAssignedIdentity" },
+                    },
+                },
+            },
+        },
+    },
+};
+exports.UserAssignedIdentity = {
+    type: {
+        name: "Composite",
+        className: "UserAssignedIdentity",
+        modelProperties: {
+            principalId: {
+                serializedName: "principalId",
+                readOnly: true,
+                type: {
+                    name: "Uuid",
+                },
+            },
+            clientId: {
+                serializedName: "clientId",
+                readOnly: true,
+                type: {
+                    name: "Uuid",
                 },
             },
         },
@@ -48011,6 +48203,19 @@ exports.DeploymentPropertiesExtended = {
                 type: {
                     name: "Composite",
                     className: "ParametersLink",
+                },
+            },
+            extensions: {
+                serializedName: "extensions",
+                readOnly: true,
+                type: {
+                    name: "Sequence",
+                    element: {
+                        type: {
+                            name: "Composite",
+                            className: "DeploymentExtensionDefinition",
+                        },
+                    },
                 },
             },
             mode: {
@@ -48539,6 +48744,55 @@ exports.BasicDependency = {
         },
     },
 };
+exports.DeploymentExtensionDefinition = {
+    type: {
+        name: "Composite",
+        className: "DeploymentExtensionDefinition",
+        modelProperties: {
+            alias: {
+                serializedName: "alias",
+                readOnly: true,
+                type: {
+                    name: "String",
+                },
+            },
+            name: {
+                serializedName: "name",
+                readOnly: true,
+                type: {
+                    name: "String",
+                },
+            },
+            version: {
+                serializedName: "version",
+                readOnly: true,
+                type: {
+                    name: "String",
+                },
+            },
+            configId: {
+                serializedName: "configId",
+                readOnly: true,
+                type: {
+                    name: "String",
+                },
+            },
+            config: {
+                serializedName: "config",
+                readOnly: true,
+                type: {
+                    name: "Dictionary",
+                    value: {
+                        type: {
+                            name: "Composite",
+                            className: "DeploymentExtensionConfigItem",
+                        },
+                    },
+                },
+            },
+        },
+    },
+};
 exports.OnErrorDeploymentExtended = {
     type: {
         name: "Composite",
@@ -48574,6 +48828,35 @@ exports.ResourceReference = {
         modelProperties: {
             id: {
                 serializedName: "id",
+                readOnly: true,
+                type: {
+                    name: "String",
+                },
+            },
+            extension: {
+                serializedName: "extension",
+                type: {
+                    name: "Composite",
+                    className: "DeploymentExtensionDefinition",
+                },
+            },
+            resourceType: {
+                serializedName: "resourceType",
+                readOnly: true,
+                type: {
+                    name: "String",
+                },
+            },
+            identifiers: {
+                serializedName: "identifiers",
+                readOnly: true,
+                type: {
+                    name: "Dictionary",
+                    value: { type: { name: "any" } },
+                },
+            },
+            apiVersion: {
+                serializedName: "apiVersion",
                 readOnly: true,
                 type: {
                     name: "String",
@@ -48873,6 +49156,13 @@ exports.WhatIfChange = {
                     value: { type: { name: "any" } },
                 },
             },
+            extension: {
+                serializedName: "extension",
+                type: {
+                    name: "Composite",
+                    className: "DeploymentExtensionDefinition",
+                },
+            },
             changeType: {
                 serializedName: "changeType",
                 required: true,
@@ -48989,828 +49279,6 @@ exports.DeploymentWhatIf = {
                 type: {
                     name: "Composite",
                     className: "DeploymentWhatIfProperties",
-                },
-            },
-        },
-    },
-};
-exports.ProviderPermissionListResult = {
-    type: {
-        name: "Composite",
-        className: "ProviderPermissionListResult",
-        modelProperties: {
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "ProviderPermission",
-                        },
-                    },
-                },
-            },
-            nextLink: {
-                serializedName: "nextLink",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ProviderPermission = {
-    type: {
-        name: "Composite",
-        className: "ProviderPermission",
-        modelProperties: {
-            applicationId: {
-                serializedName: "applicationId",
-                type: {
-                    name: "String",
-                },
-            },
-            roleDefinition: {
-                serializedName: "roleDefinition",
-                type: {
-                    name: "Composite",
-                    className: "RoleDefinition",
-                },
-            },
-            managedByRoleDefinition: {
-                serializedName: "managedByRoleDefinition",
-                type: {
-                    name: "Composite",
-                    className: "RoleDefinition",
-                },
-            },
-            providerAuthorizationConsentState: {
-                serializedName: "providerAuthorizationConsentState",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.RoleDefinition = {
-    type: {
-        name: "Composite",
-        className: "RoleDefinition",
-        modelProperties: {
-            id: {
-                serializedName: "id",
-                type: {
-                    name: "String",
-                },
-            },
-            name: {
-                serializedName: "name",
-                type: {
-                    name: "String",
-                },
-            },
-            isServiceRole: {
-                serializedName: "isServiceRole",
-                type: {
-                    name: "Boolean",
-                },
-            },
-            permissions: {
-                serializedName: "permissions",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "Permission",
-                        },
-                    },
-                },
-            },
-            scopes: {
-                serializedName: "scopes",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "String",
-                        },
-                    },
-                },
-            },
-        },
-    },
-};
-exports.Permission = {
-    type: {
-        name: "Composite",
-        className: "Permission",
-        modelProperties: {
-            actions: {
-                serializedName: "actions",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "String",
-                        },
-                    },
-                },
-            },
-            notActions: {
-                serializedName: "notActions",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "String",
-                        },
-                    },
-                },
-            },
-            dataActions: {
-                serializedName: "dataActions",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "String",
-                        },
-                    },
-                },
-            },
-            notDataActions: {
-                serializedName: "notDataActions",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "String",
-                        },
-                    },
-                },
-            },
-        },
-    },
-};
-exports.ProviderRegistrationRequest = {
-    type: {
-        name: "Composite",
-        className: "ProviderRegistrationRequest",
-        modelProperties: {
-            thirdPartyProviderConsent: {
-                serializedName: "thirdPartyProviderConsent",
-                type: {
-                    name: "Composite",
-                    className: "ProviderConsentDefinition",
-                },
-            },
-        },
-    },
-};
-exports.ProviderConsentDefinition = {
-    type: {
-        name: "Composite",
-        className: "ProviderConsentDefinition",
-        modelProperties: {
-            consentToAuthorization: {
-                serializedName: "consentToAuthorization",
-                type: {
-                    name: "Boolean",
-                },
-            },
-        },
-    },
-};
-exports.ProviderListResult = {
-    type: {
-        name: "Composite",
-        className: "ProviderListResult",
-        modelProperties: {
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "Provider",
-                        },
-                    },
-                },
-            },
-            nextLink: {
-                serializedName: "nextLink",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ProviderResourceTypeListResult = {
-    type: {
-        name: "Composite",
-        className: "ProviderResourceTypeListResult",
-        modelProperties: {
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "ProviderResourceType",
-                        },
-                    },
-                },
-            },
-            nextLink: {
-                serializedName: "nextLink",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ResourceListResult = {
-    type: {
-        name: "Composite",
-        className: "ResourceListResult",
-        modelProperties: {
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "GenericResourceExpanded",
-                        },
-                    },
-                },
-            },
-            nextLink: {
-                serializedName: "nextLink",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.Plan = {
-    type: {
-        name: "Composite",
-        className: "Plan",
-        modelProperties: {
-            name: {
-                serializedName: "name",
-                type: {
-                    name: "String",
-                },
-            },
-            publisher: {
-                serializedName: "publisher",
-                type: {
-                    name: "String",
-                },
-            },
-            product: {
-                serializedName: "product",
-                type: {
-                    name: "String",
-                },
-            },
-            promotionCode: {
-                serializedName: "promotionCode",
-                type: {
-                    name: "String",
-                },
-            },
-            version: {
-                serializedName: "version",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.Sku = {
-    type: {
-        name: "Composite",
-        className: "Sku",
-        modelProperties: {
-            name: {
-                serializedName: "name",
-                type: {
-                    name: "String",
-                },
-            },
-            tier: {
-                serializedName: "tier",
-                type: {
-                    name: "String",
-                },
-            },
-            size: {
-                serializedName: "size",
-                type: {
-                    name: "String",
-                },
-            },
-            family: {
-                serializedName: "family",
-                type: {
-                    name: "String",
-                },
-            },
-            model: {
-                serializedName: "model",
-                type: {
-                    name: "String",
-                },
-            },
-            capacity: {
-                serializedName: "capacity",
-                type: {
-                    name: "Number",
-                },
-            },
-        },
-    },
-};
-exports.Identity = {
-    type: {
-        name: "Composite",
-        className: "Identity",
-        modelProperties: {
-            principalId: {
-                serializedName: "principalId",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            tenantId: {
-                serializedName: "tenantId",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            type: {
-                serializedName: "type",
-                type: {
-                    name: "Enum",
-                    allowedValues: [
-                        "SystemAssigned",
-                        "UserAssigned",
-                        "SystemAssigned, UserAssigned",
-                        "None",
-                    ],
-                },
-            },
-            userAssignedIdentities: {
-                serializedName: "userAssignedIdentities",
-                type: {
-                    name: "Dictionary",
-                    value: {
-                        type: {
-                            name: "Composite",
-                            className: "IdentityUserAssignedIdentitiesValue",
-                        },
-                    },
-                },
-            },
-        },
-    },
-};
-exports.IdentityUserAssignedIdentitiesValue = {
-    type: {
-        name: "Composite",
-        className: "IdentityUserAssignedIdentitiesValue",
-        modelProperties: {
-            principalId: {
-                serializedName: "principalId",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            clientId: {
-                serializedName: "clientId",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.Resource = {
-    type: {
-        name: "Composite",
-        className: "Resource",
-        modelProperties: {
-            id: {
-                serializedName: "id",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            name: {
-                serializedName: "name",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            type: {
-                serializedName: "type",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            location: {
-                serializedName: "location",
-                type: {
-                    name: "String",
-                },
-            },
-            extendedLocation: {
-                serializedName: "extendedLocation",
-                type: {
-                    name: "Composite",
-                    className: "ExtendedLocation",
-                },
-            },
-            tags: {
-                serializedName: "tags",
-                type: {
-                    name: "Dictionary",
-                    value: { type: { name: "String" } },
-                },
-            },
-        },
-    },
-};
-exports.ExtendedLocation = {
-    type: {
-        name: "Composite",
-        className: "ExtendedLocation",
-        modelProperties: {
-            type: {
-                serializedName: "type",
-                type: {
-                    name: "String",
-                },
-            },
-            name: {
-                serializedName: "name",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ResourceGroup = {
-    type: {
-        name: "Composite",
-        className: "ResourceGroup",
-        modelProperties: {
-            id: {
-                serializedName: "id",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            name: {
-                serializedName: "name",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            type: {
-                serializedName: "type",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            properties: {
-                serializedName: "properties",
-                type: {
-                    name: "Composite",
-                    className: "ResourceGroupProperties",
-                },
-            },
-            location: {
-                serializedName: "location",
-                required: true,
-                type: {
-                    name: "String",
-                },
-            },
-            managedBy: {
-                serializedName: "managedBy",
-                type: {
-                    name: "String",
-                },
-            },
-            tags: {
-                serializedName: "tags",
-                type: {
-                    name: "Dictionary",
-                    value: { type: { name: "String" } },
-                },
-            },
-        },
-    },
-};
-exports.ResourceGroupProperties = {
-    type: {
-        name: "Composite",
-        className: "ResourceGroupProperties",
-        modelProperties: {
-            provisioningState: {
-                serializedName: "provisioningState",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ResourceGroupPatchable = {
-    type: {
-        name: "Composite",
-        className: "ResourceGroupPatchable",
-        modelProperties: {
-            name: {
-                serializedName: "name",
-                type: {
-                    name: "String",
-                },
-            },
-            properties: {
-                serializedName: "properties",
-                type: {
-                    name: "Composite",
-                    className: "ResourceGroupProperties",
-                },
-            },
-            managedBy: {
-                serializedName: "managedBy",
-                type: {
-                    name: "String",
-                },
-            },
-            tags: {
-                serializedName: "tags",
-                type: {
-                    name: "Dictionary",
-                    value: { type: { name: "String" } },
-                },
-            },
-        },
-    },
-};
-exports.ExportTemplateRequest = {
-    type: {
-        name: "Composite",
-        className: "ExportTemplateRequest",
-        modelProperties: {
-            resources: {
-                serializedName: "resources",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "String",
-                        },
-                    },
-                },
-            },
-            options: {
-                serializedName: "options",
-                type: {
-                    name: "String",
-                },
-            },
-            outputFormat: {
-                serializedName: "outputFormat",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ResourceGroupExportResult = {
-    type: {
-        name: "Composite",
-        className: "ResourceGroupExportResult",
-        modelProperties: {
-            template: {
-                serializedName: "template",
-                type: {
-                    name: "Dictionary",
-                    value: { type: { name: "any" } },
-                },
-            },
-            output: {
-                serializedName: "output",
-                type: {
-                    name: "String",
-                },
-            },
-            error: {
-                serializedName: "error",
-                type: {
-                    name: "Composite",
-                    className: "ErrorResponse",
-                },
-            },
-        },
-    },
-};
-exports.ResourceGroupListResult = {
-    type: {
-        name: "Composite",
-        className: "ResourceGroupListResult",
-        modelProperties: {
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "ResourceGroup",
-                        },
-                    },
-                },
-            },
-            nextLink: {
-                serializedName: "nextLink",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ResourcesMoveInfo = {
-    type: {
-        name: "Composite",
-        className: "ResourcesMoveInfo",
-        modelProperties: {
-            resources: {
-                serializedName: "resources",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "String",
-                        },
-                    },
-                },
-            },
-            targetResourceGroup: {
-                serializedName: "targetResourceGroup",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.TagValue = {
-    type: {
-        name: "Composite",
-        className: "TagValue",
-        modelProperties: {
-            id: {
-                serializedName: "id",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            tagValue: {
-                serializedName: "tagValue",
-                type: {
-                    name: "String",
-                },
-            },
-            count: {
-                serializedName: "count",
-                type: {
-                    name: "Composite",
-                    className: "TagCount",
-                },
-            },
-        },
-    },
-};
-exports.TagCount = {
-    type: {
-        name: "Composite",
-        className: "TagCount",
-        modelProperties: {
-            type: {
-                serializedName: "type",
-                type: {
-                    name: "String",
-                },
-            },
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Number",
-                },
-            },
-        },
-    },
-};
-exports.TagDetails = {
-    type: {
-        name: "Composite",
-        className: "TagDetails",
-        modelProperties: {
-            id: {
-                serializedName: "id",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            tagName: {
-                serializedName: "tagName",
-                type: {
-                    name: "String",
-                },
-            },
-            count: {
-                serializedName: "count",
-                type: {
-                    name: "Composite",
-                    className: "TagCount",
-                },
-            },
-            values: {
-                serializedName: "values",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "TagValue",
-                        },
-                    },
-                },
-            },
-        },
-    },
-};
-exports.TagsListResult = {
-    type: {
-        name: "Composite",
-        className: "TagsListResult",
-        modelProperties: {
-            value: {
-                serializedName: "value",
-                type: {
-                    name: "Sequence",
-                    element: {
-                        type: {
-                            name: "Composite",
-                            className: "TagDetails",
-                        },
-                    },
-                },
-            },
-            nextLink: {
-                serializedName: "nextLink",
-                readOnly: true,
-                type: {
-                    name: "String",
                 },
             },
         },
@@ -49979,6 +49447,32 @@ exports.TargetResource = {
                     name: "String",
                 },
             },
+            extension: {
+                serializedName: "extension",
+                type: {
+                    name: "Composite",
+                    className: "DeploymentExtensionDefinition",
+                },
+            },
+            identifiers: {
+                serializedName: "identifiers",
+                type: {
+                    name: "Dictionary",
+                    value: { type: { name: "any" } },
+                },
+            },
+            apiVersion: {
+                serializedName: "apiVersion",
+                type: {
+                    name: "String",
+                },
+            },
+            symbolicName: {
+                serializedName: "symbolicName",
+                type: {
+                    name: "String",
+                },
+            },
         },
     },
 };
@@ -50044,78 +49538,6 @@ exports.TemplateHashResult = {
         },
     },
 };
-exports.TagsResource = {
-    type: {
-        name: "Composite",
-        className: "TagsResource",
-        modelProperties: {
-            id: {
-                serializedName: "id",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            name: {
-                serializedName: "name",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            type: {
-                serializedName: "type",
-                readOnly: true,
-                type: {
-                    name: "String",
-                },
-            },
-            properties: {
-                serializedName: "properties",
-                type: {
-                    name: "Composite",
-                    className: "Tags",
-                },
-            },
-        },
-    },
-};
-exports.Tags = {
-    type: {
-        name: "Composite",
-        className: "Tags",
-        modelProperties: {
-            tags: {
-                serializedName: "tags",
-                type: {
-                    name: "Dictionary",
-                    value: { type: { name: "String" } },
-                },
-            },
-        },
-    },
-};
-exports.TagsPatchResource = {
-    type: {
-        name: "Composite",
-        className: "TagsPatchResource",
-        modelProperties: {
-            operation: {
-                serializedName: "operation",
-                type: {
-                    name: "String",
-                },
-            },
-            properties: {
-                serializedName: "properties",
-                type: {
-                    name: "Composite",
-                    className: "Tags",
-                },
-            },
-        },
-    },
-};
 exports.DeploymentExtendedFilter = {
     type: {
         name: "Composite",
@@ -50123,52 +49545,6 @@ exports.DeploymentExtendedFilter = {
         modelProperties: {
             provisioningState: {
                 serializedName: "provisioningState",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.GenericResourceFilter = {
-    type: {
-        name: "Composite",
-        className: "GenericResourceFilter",
-        modelProperties: {
-            resourceType: {
-                serializedName: "resourceType",
-                type: {
-                    name: "String",
-                },
-            },
-            tagname: {
-                serializedName: "tagname",
-                type: {
-                    name: "String",
-                },
-            },
-            tagvalue: {
-                serializedName: "tagvalue",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.ResourceGroupFilter = {
-    type: {
-        name: "Composite",
-        className: "ResourceGroupFilter",
-        modelProperties: {
-            tagName: {
-                serializedName: "tagName",
-                type: {
-                    name: "String",
-                },
-            },
-            tagValue: {
-                serializedName: "tagValue",
                 type: {
                     name: "String",
                 },
@@ -50237,75 +49613,6 @@ exports.DeploymentWhatIfProperties = {
                 type: {
                     name: "Composite",
                     className: "DeploymentWhatIfSettings",
-                },
-            } }),
-    },
-};
-exports.GenericResource = {
-    type: {
-        name: "Composite",
-        className: "GenericResource",
-        modelProperties: Object.assign(Object.assign({}, exports.Resource.type.modelProperties), { plan: {
-                serializedName: "plan",
-                type: {
-                    name: "Composite",
-                    className: "Plan",
-                },
-            }, properties: {
-                serializedName: "properties",
-                type: {
-                    name: "Dictionary",
-                    value: { type: { name: "any" } },
-                },
-            }, kind: {
-                constraints: {
-                    Pattern: new RegExp("^[-\\w\\._,\\(\\)]+$"),
-                },
-                serializedName: "kind",
-                type: {
-                    name: "String",
-                },
-            }, managedBy: {
-                serializedName: "managedBy",
-                type: {
-                    name: "String",
-                },
-            }, sku: {
-                serializedName: "sku",
-                type: {
-                    name: "Composite",
-                    className: "Sku",
-                },
-            }, identity: {
-                serializedName: "identity",
-                type: {
-                    name: "Composite",
-                    className: "Identity",
-                },
-            } }),
-    },
-};
-exports.GenericResourceExpanded = {
-    type: {
-        name: "Composite",
-        className: "GenericResourceExpanded",
-        modelProperties: Object.assign(Object.assign({}, exports.GenericResource.type.modelProperties), { createdTime: {
-                serializedName: "createdTime",
-                readOnly: true,
-                type: {
-                    name: "DateTime",
-                },
-            }, changedTime: {
-                serializedName: "changedTime",
-                readOnly: true,
-                type: {
-                    name: "DateTime",
-                },
-            }, provisioningState: {
-                serializedName: "provisioningState",
-                readOnly: true,
-                type: {
-                    name: "String",
                 },
             } }),
     },
@@ -50390,67 +49697,11 @@ exports.DeploymentsWhatIfHeaders = {
         },
     },
 };
-exports.ResourceGroupsDeleteHeaders = {
-    type: {
-        name: "Composite",
-        className: "ResourceGroupsDeleteHeaders",
-        modelProperties: {
-            location: {
-                serializedName: "location",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.TagsCreateOrUpdateAtScopeHeaders = {
-    type: {
-        name: "Composite",
-        className: "TagsCreateOrUpdateAtScopeHeaders",
-        modelProperties: {
-            location: {
-                serializedName: "location",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.TagsUpdateAtScopeHeaders = {
-    type: {
-        name: "Composite",
-        className: "TagsUpdateAtScopeHeaders",
-        modelProperties: {
-            location: {
-                serializedName: "location",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
-exports.TagsDeleteAtScopeHeaders = {
-    type: {
-        name: "Composite",
-        className: "TagsDeleteAtScopeHeaders",
-        modelProperties: {
-            location: {
-                serializedName: "location",
-                type: {
-                    name: "String",
-                },
-            },
-        },
-    },
-};
 //# sourceMappingURL=mappers.js.map
 
 /***/ }),
 
-/***/ 5188:
+/***/ 24746:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -50463,8 +49714,8 @@ exports.TagsDeleteAtScopeHeaders = {
  * Changes may cause incorrect behavior and will be lost if the code is regenerated.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.operationId = exports.parameters10 = exports.parameters9 = exports.tagValue = exports.tagName = exports.resourceGroupName1 = exports.parameters8 = exports.parameters7 = exports.forceDeletionTypes = exports.parameters6 = exports.resourceId = exports.parameters5 = exports.apiVersion1 = exports.resourceName = exports.resourceType = exports.parentResourcePath = exports.sourceResourceGroupName = exports.parameters4 = exports.expand = exports.properties = exports.resourceProviderNamespace = exports.template = exports.resourceGroupName = exports.parameters3 = exports.subscriptionId = exports.groupId = exports.parameters2 = exports.parameters1 = exports.top = exports.filter = exports.parameters = exports.contentType = exports.deploymentName = exports.scope = exports.nextLink = exports.apiVersion = exports.$host = exports.accept = void 0;
-const mappers_js_1 = __nccwpck_require__(6060);
+exports.operationId = exports.nextLink = exports.template = exports.resourceGroupName = exports.parameters3 = exports.subscriptionId = exports.groupId = exports.parameters2 = exports.parameters1 = exports.top = exports.filter = exports.parameters = exports.contentType = exports.apiVersion = exports.deploymentName = exports.scope = exports.$host = exports.accept = void 0;
+const mappers_js_1 = __nccwpck_require__(18162);
 exports.accept = {
     parameterPath: "accept",
     mapper: {
@@ -50480,28 +49731,6 @@ exports.$host = {
     parameterPath: "$host",
     mapper: {
         serializedName: "$host",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-    skipEncoding: true,
-};
-exports.apiVersion = {
-    parameterPath: "apiVersion",
-    mapper: {
-        defaultValue: "2024-11-01",
-        isConstant: true,
-        serializedName: "api-version",
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.nextLink = {
-    parameterPath: "nextLink",
-    mapper: {
-        serializedName: "nextLink",
         required: true,
         type: {
             name: "String",
@@ -50530,6 +49759,17 @@ exports.deploymentName = {
         },
         serializedName: "deploymentName",
         required: true,
+        type: {
+            name: "String",
+        },
+    },
+};
+exports.apiVersion = {
+    parameterPath: "apiVersion",
+    mapper: {
+        defaultValue: "2025-04-01",
+        isConstant: true,
+        serializedName: "api-version",
         type: {
             name: "String",
         },
@@ -50630,167 +49870,16 @@ exports.template = {
         },
     },
 };
-exports.resourceProviderNamespace = {
-    parameterPath: "resourceProviderNamespace",
+exports.nextLink = {
+    parameterPath: "nextLink",
     mapper: {
-        serializedName: "resourceProviderNamespace",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.properties = {
-    parameterPath: ["options", "properties"],
-    mapper: mappers_js_1.ProviderRegistrationRequest,
-};
-exports.expand = {
-    parameterPath: ["options", "expand"],
-    mapper: {
-        serializedName: "$expand",
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.parameters4 = {
-    parameterPath: "parameters",
-    mapper: mappers_js_1.ResourcesMoveInfo,
-};
-exports.sourceResourceGroupName = {
-    parameterPath: "sourceResourceGroupName",
-    mapper: {
-        constraints: {
-            Pattern: new RegExp("^[-\\w\\._\\(\\)]+$"),
-            MaxLength: 90,
-            MinLength: 1,
-        },
-        serializedName: "sourceResourceGroupName",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.parentResourcePath = {
-    parameterPath: "parentResourcePath",
-    mapper: {
-        serializedName: "parentResourcePath",
+        serializedName: "nextLink",
         required: true,
         type: {
             name: "String",
         },
     },
     skipEncoding: true,
-};
-exports.resourceType = {
-    parameterPath: "resourceType",
-    mapper: {
-        serializedName: "resourceType",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-    skipEncoding: true,
-};
-exports.resourceName = {
-    parameterPath: "resourceName",
-    mapper: {
-        serializedName: "resourceName",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.apiVersion1 = {
-    parameterPath: "apiVersion",
-    mapper: {
-        serializedName: "api-version",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.parameters5 = {
-    parameterPath: "parameters",
-    mapper: mappers_js_1.GenericResource,
-};
-exports.resourceId = {
-    parameterPath: "resourceId",
-    mapper: {
-        serializedName: "resourceId",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-    skipEncoding: true,
-};
-exports.parameters6 = {
-    parameterPath: "parameters",
-    mapper: mappers_js_1.ResourceGroup,
-};
-exports.forceDeletionTypes = {
-    parameterPath: ["options", "forceDeletionTypes"],
-    mapper: {
-        serializedName: "forceDeletionTypes",
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.parameters7 = {
-    parameterPath: "parameters",
-    mapper: mappers_js_1.ResourceGroupPatchable,
-};
-exports.parameters8 = {
-    parameterPath: "parameters",
-    mapper: mappers_js_1.ExportTemplateRequest,
-};
-exports.resourceGroupName1 = {
-    parameterPath: "resourceGroupName",
-    mapper: {
-        constraints: {
-            MaxLength: 90,
-            MinLength: 1,
-        },
-        serializedName: "resourceGroupName",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.tagName = {
-    parameterPath: "tagName",
-    mapper: {
-        serializedName: "tagName",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.tagValue = {
-    parameterPath: "tagValue",
-    mapper: {
-        serializedName: "tagValue",
-        required: true,
-        type: {
-            name: "String",
-        },
-    },
-};
-exports.parameters9 = {
-    parameterPath: "parameters",
-    mapper: mappers_js_1.TagsResource,
-};
-exports.parameters10 = {
-    parameterPath: "parameters",
-    mapper: mappers_js_1.TagsPatchResource,
 };
 exports.operationId = {
     parameterPath: "operationId",
@@ -50806,7 +49895,61 @@ exports.operationId = {
 
 /***/ }),
 
-/***/ 49853:
+/***/ 87007:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/*
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT License.
+ *
+ * Code generated by Microsoft (R) AutoRest Code Generator.
+ * Changes may cause incorrect behavior and will be lost if the code is regenerated.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+//# sourceMappingURL=deploymentOperations.js.map
+
+/***/ }),
+
+/***/ 22388:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/*
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT License.
+ *
+ * Code generated by Microsoft (R) AutoRest Code Generator.
+ * Changes may cause incorrect behavior and will be lost if the code is regenerated.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+//# sourceMappingURL=deployments.js.map
+
+/***/ }),
+
+/***/ 48872:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+/*
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT License.
+ *
+ * Code generated by Microsoft (R) AutoRest Code Generator.
+ * Changes may cause incorrect behavior and will be lost if the code is regenerated.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const tslib_1 = __nccwpck_require__(61860);
+tslib_1.__exportStar(__nccwpck_require__(22388), exports);
+tslib_1.__exportStar(__nccwpck_require__(87007), exports);
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ 97703:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -50821,10 +49964,10 @@ exports.operationId = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeploymentOperationsImpl = void 0;
 const tslib_1 = __nccwpck_require__(61860);
-const pagingHelper_js_1 = __nccwpck_require__(98627);
+const pagingHelper_js_1 = __nccwpck_require__(69117);
 const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
+const Mappers = tslib_1.__importStar(__nccwpck_require__(18162));
+const Parameters = tslib_1.__importStar(__nccwpck_require__(24746));
 /// <reference lib="esnext.asynciterable" />
 /** Class containing DeploymentOperations operations. */
 class DeploymentOperationsImpl {
@@ -51508,9 +50651,9 @@ const listAtScopeNextOperationSpec = {
     },
     urlParameters: [
         Parameters.$host,
-        Parameters.nextLink,
         Parameters.scope,
         Parameters.deploymentName,
+        Parameters.nextLink,
     ],
     headerParameters: [Parameters.accept],
     serializer,
@@ -51528,8 +50671,8 @@ const listAtTenantScopeNextOperationSpec = {
     },
     urlParameters: [
         Parameters.$host,
-        Parameters.nextLink,
         Parameters.deploymentName,
+        Parameters.nextLink,
     ],
     headerParameters: [Parameters.accept],
     serializer,
@@ -51547,9 +50690,9 @@ const listAtManagementGroupScopeNextOperationSpec = {
     },
     urlParameters: [
         Parameters.$host,
-        Parameters.nextLink,
         Parameters.deploymentName,
         Parameters.groupId,
+        Parameters.nextLink,
     ],
     headerParameters: [Parameters.accept],
     serializer,
@@ -51567,9 +50710,9 @@ const listAtSubscriptionScopeNextOperationSpec = {
     },
     urlParameters: [
         Parameters.$host,
-        Parameters.nextLink,
         Parameters.deploymentName,
         Parameters.subscriptionId,
+        Parameters.nextLink,
     ],
     headerParameters: [Parameters.accept],
     serializer,
@@ -51587,10 +50730,10 @@ const listNextOperationSpec = {
     },
     urlParameters: [
         Parameters.$host,
-        Parameters.nextLink,
         Parameters.deploymentName,
         Parameters.subscriptionId,
         Parameters.resourceGroupName,
+        Parameters.nextLink,
     ],
     headerParameters: [Parameters.accept],
     serializer,
@@ -51599,7 +50742,7 @@ const listNextOperationSpec = {
 
 /***/ }),
 
-/***/ 48710:
+/***/ 36332:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -51614,12 +50757,12 @@ const listNextOperationSpec = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeploymentsImpl = void 0;
 const tslib_1 = __nccwpck_require__(61860);
-const pagingHelper_js_1 = __nccwpck_require__(98627);
+const pagingHelper_js_1 = __nccwpck_require__(69117);
 const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
+const Mappers = tslib_1.__importStar(__nccwpck_require__(18162));
+const Parameters = tslib_1.__importStar(__nccwpck_require__(24746));
 const core_lro_1 = __nccwpck_require__(91754);
-const lroImpl_js_1 = __nccwpck_require__(10130);
+const lroImpl_js_1 = __nccwpck_require__(23512);
 /// <reference lib="esnext.asynciterable" />
 /** Class containing Deployments operations. */
 class DeploymentsImpl {
@@ -54299,7 +53442,7 @@ const listAtScopeNextOperationSpec = {
             bodyMapper: Mappers.CloudError,
         },
     },
-    urlParameters: [Parameters.$host, Parameters.nextLink, Parameters.scope],
+    urlParameters: [Parameters.$host, Parameters.scope, Parameters.nextLink],
     headerParameters: [Parameters.accept],
     serializer,
 };
@@ -54329,7 +53472,7 @@ const listAtManagementGroupScopeNextOperationSpec = {
             bodyMapper: Mappers.CloudError,
         },
     },
-    urlParameters: [Parameters.$host, Parameters.nextLink, Parameters.groupId],
+    urlParameters: [Parameters.$host, Parameters.groupId, Parameters.nextLink],
     headerParameters: [Parameters.accept],
     serializer,
 };
@@ -54346,8 +53489,8 @@ const listAtSubscriptionScopeNextOperationSpec = {
     },
     urlParameters: [
         Parameters.$host,
-        Parameters.nextLink,
         Parameters.subscriptionId,
+        Parameters.nextLink,
     ],
     headerParameters: [Parameters.accept],
     serializer,
@@ -54365,9 +53508,9 @@ const listByResourceGroupNextOperationSpec = {
     },
     urlParameters: [
         Parameters.$host,
-        Parameters.nextLink,
         Parameters.subscriptionId,
         Parameters.resourceGroupName,
+        Parameters.nextLink,
     ],
     headerParameters: [Parameters.accept],
     serializer,
@@ -54376,7 +53519,7 @@ const listByResourceGroupNextOperationSpec = {
 
 /***/ }),
 
-/***/ 47490:
+/***/ 2112:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -54390,2920 +53533,13 @@ const listByResourceGroupNextOperationSpec = {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const tslib_1 = __nccwpck_require__(61860);
-tslib_1.__exportStar(__nccwpck_require__(91834), exports);
-tslib_1.__exportStar(__nccwpck_require__(48710), exports);
-tslib_1.__exportStar(__nccwpck_require__(53248), exports);
-tslib_1.__exportStar(__nccwpck_require__(42856), exports);
-tslib_1.__exportStar(__nccwpck_require__(85699), exports);
-tslib_1.__exportStar(__nccwpck_require__(31876), exports);
-tslib_1.__exportStar(__nccwpck_require__(70127), exports);
-tslib_1.__exportStar(__nccwpck_require__(49853), exports);
+tslib_1.__exportStar(__nccwpck_require__(36332), exports);
+tslib_1.__exportStar(__nccwpck_require__(97703), exports);
 //# sourceMappingURL=index.js.map
 
 /***/ }),
 
-/***/ 91834:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OperationsImpl = void 0;
-const tslib_1 = __nccwpck_require__(61860);
-const pagingHelper_js_1 = __nccwpck_require__(98627);
-const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
-/// <reference lib="esnext.asynciterable" />
-/** Class containing Operations operations. */
-class OperationsImpl {
-    /**
-     * Initialize a new instance of the class Operations class.
-     * @param client Reference to the service client
-     */
-    constructor(client) {
-        this.client = client;
-    }
-    /**
-     * Lists all of the available Microsoft.Resources REST API operations.
-     * @param options The options parameters.
-     */
-    list(options) {
-        const iter = this.listPagingAll(options);
-        return {
-            next() {
-                return iter.next();
-            },
-            [Symbol.asyncIterator]() {
-                return this;
-            },
-            byPage: (settings) => {
-                if (settings === null || settings === void 0 ? void 0 : settings.maxPageSize) {
-                    throw new Error("maxPageSize is not supported by this operation.");
-                }
-                return this.listPagingPage(options, settings);
-            },
-        };
-    }
-    listPagingPage(options, settings) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingPage_1() {
-            let result;
-            let continuationToken = settings === null || settings === void 0 ? void 0 : settings.continuationToken;
-            if (!continuationToken) {
-                result = yield tslib_1.__await(this._list(options));
-                let page = result.value || [];
-                continuationToken = result.nextLink;
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-            while (continuationToken) {
-                result = yield tslib_1.__await(this._listNext(continuationToken, options));
-                continuationToken = result.nextLink;
-                let page = result.value || [];
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-        });
-    }
-    listPagingAll(options) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingAll_1() {
-            var _a, e_1, _b, _c;
-            try {
-                for (var _d = true, _e = tslib_1.__asyncValues(this.listPagingPage(options)), _f; _f = yield tslib_1.__await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const page = _c;
-                    yield tslib_1.__await(yield* tslib_1.__asyncDelegator(tslib_1.__asyncValues(page)));
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield tslib_1.__await(_b.call(_e));
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-        });
-    }
-    /**
-     * Lists all of the available Microsoft.Resources REST API operations.
-     * @param options The options parameters.
-     */
-    _list(options) {
-        return this.client.sendOperationRequest({ options }, listOperationSpec);
-    }
-    /**
-     * ListNext
-     * @param nextLink The nextLink from the previous successful call to the List method.
-     * @param options The options parameters.
-     */
-    _listNext(nextLink, options) {
-        return this.client.sendOperationRequest({ nextLink, options }, listNextOperationSpec);
-    }
-}
-exports.OperationsImpl = OperationsImpl;
-// Operation Specifications
-const serializer = coreClient.createSerializer(Mappers, /* isXml */ false);
-const listOperationSpec = {
-    path: "/providers/Microsoft.Resources/operations",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.OperationListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [Parameters.$host],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listNextOperationSpec = {
-    path: "{nextLink}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.OperationListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    urlParameters: [Parameters.$host, Parameters.nextLink],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-//# sourceMappingURL=operations.js.map
-
-/***/ }),
-
-/***/ 42856:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProviderResourceTypesImpl = void 0;
-const tslib_1 = __nccwpck_require__(61860);
-const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
-/** Class containing ProviderResourceTypes operations. */
-class ProviderResourceTypesImpl {
-    /**
-     * Initialize a new instance of the class ProviderResourceTypes class.
-     * @param client Reference to the service client
-     */
-    constructor(client) {
-        this.client = client;
-    }
-    /**
-     * List the resource types for a specified resource provider.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param options The options parameters.
-     */
-    list(resourceProviderNamespace, options) {
-        return this.client.sendOperationRequest({ resourceProviderNamespace, options }, listOperationSpec);
-    }
-}
-exports.ProviderResourceTypesImpl = ProviderResourceTypesImpl;
-// Operation Specifications
-const serializer = coreClient.createSerializer(Mappers, /* isXml */ false);
-const listOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/resourceTypes",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ProviderResourceTypeListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion, Parameters.expand],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceProviderNamespace,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-//# sourceMappingURL=providerResourceTypes.js.map
-
-/***/ }),
-
-/***/ 53248:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProvidersImpl = void 0;
-const tslib_1 = __nccwpck_require__(61860);
-const pagingHelper_js_1 = __nccwpck_require__(98627);
-const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
-/// <reference lib="esnext.asynciterable" />
-/** Class containing Providers operations. */
-class ProvidersImpl {
-    /**
-     * Initialize a new instance of the class Providers class.
-     * @param client Reference to the service client
-     */
-    constructor(client) {
-        this.client = client;
-    }
-    /**
-     * Gets all resource providers for a subscription.
-     * @param options The options parameters.
-     */
-    list(options) {
-        const iter = this.listPagingAll(options);
-        return {
-            next() {
-                return iter.next();
-            },
-            [Symbol.asyncIterator]() {
-                return this;
-            },
-            byPage: (settings) => {
-                if (settings === null || settings === void 0 ? void 0 : settings.maxPageSize) {
-                    throw new Error("maxPageSize is not supported by this operation.");
-                }
-                return this.listPagingPage(options, settings);
-            },
-        };
-    }
-    listPagingPage(options, settings) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingPage_1() {
-            let result;
-            let continuationToken = settings === null || settings === void 0 ? void 0 : settings.continuationToken;
-            if (!continuationToken) {
-                result = yield tslib_1.__await(this._list(options));
-                let page = result.value || [];
-                continuationToken = result.nextLink;
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-            while (continuationToken) {
-                result = yield tslib_1.__await(this._listNext(continuationToken, options));
-                continuationToken = result.nextLink;
-                let page = result.value || [];
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-        });
-    }
-    listPagingAll(options) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingAll_1() {
-            var _a, e_1, _b, _c;
-            try {
-                for (var _d = true, _e = tslib_1.__asyncValues(this.listPagingPage(options)), _f; _f = yield tslib_1.__await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const page = _c;
-                    yield tslib_1.__await(yield* tslib_1.__asyncDelegator(tslib_1.__asyncValues(page)));
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield tslib_1.__await(_b.call(_e));
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-        });
-    }
-    /**
-     * Gets all resource providers for the tenant.
-     * @param options The options parameters.
-     */
-    listAtTenantScope(options) {
-        const iter = this.listAtTenantScopePagingAll(options);
-        return {
-            next() {
-                return iter.next();
-            },
-            [Symbol.asyncIterator]() {
-                return this;
-            },
-            byPage: (settings) => {
-                if (settings === null || settings === void 0 ? void 0 : settings.maxPageSize) {
-                    throw new Error("maxPageSize is not supported by this operation.");
-                }
-                return this.listAtTenantScopePagingPage(options, settings);
-            },
-        };
-    }
-    listAtTenantScopePagingPage(options, settings) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listAtTenantScopePagingPage_1() {
-            let result;
-            let continuationToken = settings === null || settings === void 0 ? void 0 : settings.continuationToken;
-            if (!continuationToken) {
-                result = yield tslib_1.__await(this._listAtTenantScope(options));
-                let page = result.value || [];
-                continuationToken = result.nextLink;
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-            while (continuationToken) {
-                result = yield tslib_1.__await(this._listAtTenantScopeNext(continuationToken, options));
-                continuationToken = result.nextLink;
-                let page = result.value || [];
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-        });
-    }
-    listAtTenantScopePagingAll(options) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listAtTenantScopePagingAll_1() {
-            var _a, e_2, _b, _c;
-            try {
-                for (var _d = true, _e = tslib_1.__asyncValues(this.listAtTenantScopePagingPage(options)), _f; _f = yield tslib_1.__await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const page = _c;
-                    yield tslib_1.__await(yield* tslib_1.__asyncDelegator(tslib_1.__asyncValues(page)));
-                }
-            }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield tslib_1.__await(_b.call(_e));
-                }
-                finally { if (e_2) throw e_2.error; }
-            }
-        });
-    }
-    /**
-     * Unregisters a subscription from a resource provider.
-     * @param resourceProviderNamespace The namespace of the resource provider to unregister.
-     * @param options The options parameters.
-     */
-    unregister(resourceProviderNamespace, options) {
-        return this.client.sendOperationRequest({ resourceProviderNamespace, options }, unregisterOperationSpec);
-    }
-    /**
-     * Registers a management group with a resource provider. Use this operation to register a resource
-     * provider with resource types that can be deployed at the management group scope. It does not
-     * recursively register subscriptions within the management group. Instead, you must register
-     * subscriptions individually.
-     * @param resourceProviderNamespace The namespace of the resource provider to register.
-     * @param groupId The management group ID.
-     * @param options The options parameters.
-     */
-    registerAtManagementGroupScope(resourceProviderNamespace, groupId, options) {
-        return this.client.sendOperationRequest({ resourceProviderNamespace, groupId, options }, registerAtManagementGroupScopeOperationSpec);
-    }
-    /**
-     * Get the provider permissions.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param options The options parameters.
-     */
-    providerPermissions(resourceProviderNamespace, options) {
-        return this.client.sendOperationRequest({ resourceProviderNamespace, options }, providerPermissionsOperationSpec);
-    }
-    /**
-     * Registers a subscription with a resource provider.
-     * @param resourceProviderNamespace The namespace of the resource provider to register.
-     * @param options The options parameters.
-     */
-    register(resourceProviderNamespace, options) {
-        return this.client.sendOperationRequest({ resourceProviderNamespace, options }, registerOperationSpec);
-    }
-    /**
-     * Gets all resource providers for a subscription.
-     * @param options The options parameters.
-     */
-    _list(options) {
-        return this.client.sendOperationRequest({ options }, listOperationSpec);
-    }
-    /**
-     * Gets all resource providers for the tenant.
-     * @param options The options parameters.
-     */
-    _listAtTenantScope(options) {
-        return this.client.sendOperationRequest({ options }, listAtTenantScopeOperationSpec);
-    }
-    /**
-     * Gets the specified resource provider.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param options The options parameters.
-     */
-    get(resourceProviderNamespace, options) {
-        return this.client.sendOperationRequest({ resourceProviderNamespace, options }, getOperationSpec);
-    }
-    /**
-     * Gets the specified resource provider at the tenant level.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param options The options parameters.
-     */
-    getAtTenantScope(resourceProviderNamespace, options) {
-        return this.client.sendOperationRequest({ resourceProviderNamespace, options }, getAtTenantScopeOperationSpec);
-    }
-    /**
-     * ListNext
-     * @param nextLink The nextLink from the previous successful call to the List method.
-     * @param options The options parameters.
-     */
-    _listNext(nextLink, options) {
-        return this.client.sendOperationRequest({ nextLink, options }, listNextOperationSpec);
-    }
-    /**
-     * ListAtTenantScopeNext
-     * @param nextLink The nextLink from the previous successful call to the ListAtTenantScope method.
-     * @param options The options parameters.
-     */
-    _listAtTenantScopeNext(nextLink, options) {
-        return this.client.sendOperationRequest({ nextLink, options }, listAtTenantScopeNextOperationSpec);
-    }
-}
-exports.ProvidersImpl = ProvidersImpl;
-// Operation Specifications
-const serializer = coreClient.createSerializer(Mappers, /* isXml */ false);
-const unregisterOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/unregister",
-    httpMethod: "POST",
-    responses: {
-        200: {
-            bodyMapper: Mappers.Provider,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceProviderNamespace,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const registerAtManagementGroupScopeOperationSpec = {
-    path: "/providers/Microsoft.Management/managementGroups/{groupId}/providers/{resourceProviderNamespace}/register",
-    httpMethod: "POST",
-    responses: {
-        200: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.groupId,
-        Parameters.resourceProviderNamespace,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const providerPermissionsOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/providerPermissions",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ProviderPermissionListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceProviderNamespace,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const registerOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/register",
-    httpMethod: "POST",
-    responses: {
-        200: {
-            bodyMapper: Mappers.Provider,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.properties,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceProviderNamespace,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const listOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/providers",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ProviderListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion, Parameters.expand],
-    urlParameters: [Parameters.$host, Parameters.subscriptionId],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listAtTenantScopeOperationSpec = {
-    path: "/providers",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ProviderListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion, Parameters.expand],
-    urlParameters: [Parameters.$host],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const getOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.Provider,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion, Parameters.expand],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceProviderNamespace,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const getAtTenantScopeOperationSpec = {
-    path: "/providers/{resourceProviderNamespace}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.Provider,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion, Parameters.expand],
-    urlParameters: [Parameters.$host, Parameters.resourceProviderNamespace],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listNextOperationSpec = {
-    path: "{nextLink}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ProviderListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    urlParameters: [
-        Parameters.$host,
-        Parameters.nextLink,
-        Parameters.subscriptionId,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listAtTenantScopeNextOperationSpec = {
-    path: "{nextLink}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ProviderListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    urlParameters: [Parameters.$host, Parameters.nextLink],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-//# sourceMappingURL=providers.js.map
-
-/***/ }),
-
-/***/ 31876:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResourceGroupsImpl = void 0;
-const tslib_1 = __nccwpck_require__(61860);
-const pagingHelper_js_1 = __nccwpck_require__(98627);
-const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
-const core_lro_1 = __nccwpck_require__(91754);
-const lroImpl_js_1 = __nccwpck_require__(10130);
-/// <reference lib="esnext.asynciterable" />
-/** Class containing ResourceGroups operations. */
-class ResourceGroupsImpl {
-    /**
-     * Initialize a new instance of the class ResourceGroups class.
-     * @param client Reference to the service client
-     */
-    constructor(client) {
-        this.client = client;
-    }
-    /**
-     * Gets all the resource groups for a subscription.
-     * @param options The options parameters.
-     */
-    list(options) {
-        const iter = this.listPagingAll(options);
-        return {
-            next() {
-                return iter.next();
-            },
-            [Symbol.asyncIterator]() {
-                return this;
-            },
-            byPage: (settings) => {
-                if (settings === null || settings === void 0 ? void 0 : settings.maxPageSize) {
-                    throw new Error("maxPageSize is not supported by this operation.");
-                }
-                return this.listPagingPage(options, settings);
-            },
-        };
-    }
-    listPagingPage(options, settings) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingPage_1() {
-            let result;
-            let continuationToken = settings === null || settings === void 0 ? void 0 : settings.continuationToken;
-            if (!continuationToken) {
-                result = yield tslib_1.__await(this._list(options));
-                let page = result.value || [];
-                continuationToken = result.nextLink;
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-            while (continuationToken) {
-                result = yield tslib_1.__await(this._listNext(continuationToken, options));
-                continuationToken = result.nextLink;
-                let page = result.value || [];
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-        });
-    }
-    listPagingAll(options) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingAll_1() {
-            var _a, e_1, _b, _c;
-            try {
-                for (var _d = true, _e = tslib_1.__asyncValues(this.listPagingPage(options)), _f; _f = yield tslib_1.__await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const page = _c;
-                    yield tslib_1.__await(yield* tslib_1.__asyncDelegator(tslib_1.__asyncValues(page)));
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield tslib_1.__await(_b.call(_e));
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-        });
-    }
-    /**
-     * Checks whether a resource group exists.
-     * @param resourceGroupName The name of the resource group to check. The name is case insensitive.
-     * @param options The options parameters.
-     */
-    checkExistence(resourceGroupName, options) {
-        return this.client.sendOperationRequest({ resourceGroupName, options }, checkExistenceOperationSpec);
-    }
-    /**
-     * Creates or updates a resource group.
-     * @param resourceGroupName The name of the resource group to create or update. Can include
-     *                          alphanumeric, underscore, parentheses, hyphen, period (except at end), and Unicode characters that
-     *                          match the allowed characters.
-     * @param parameters Parameters supplied to the create or update a resource group.
-     * @param options The options parameters.
-     */
-    createOrUpdate(resourceGroupName, parameters, options) {
-        return this.client.sendOperationRequest({ resourceGroupName, parameters, options }, createOrUpdateOperationSpec);
-    }
-    /**
-     * When you delete a resource group, all of its resources are also deleted. Deleting a resource group
-     * deletes all of its template deployments and currently stored operations.
-     * @param resourceGroupName The name of the resource group to delete. The name is case insensitive.
-     * @param options The options parameters.
-     */
-    async beginDelete(resourceGroupName, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { resourceGroupName, options },
-            spec: deleteOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * When you delete a resource group, all of its resources are also deleted. Deleting a resource group
-     * deletes all of its template deployments and currently stored operations.
-     * @param resourceGroupName The name of the resource group to delete. The name is case insensitive.
-     * @param options The options parameters.
-     */
-    async beginDeleteAndWait(resourceGroupName, options) {
-        const poller = await this.beginDelete(resourceGroupName, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Gets a resource group.
-     * @param resourceGroupName The name of the resource group to get. The name is case insensitive.
-     * @param options The options parameters.
-     */
-    get(resourceGroupName, options) {
-        return this.client.sendOperationRequest({ resourceGroupName, options }, getOperationSpec);
-    }
-    /**
-     * Resource groups can be updated through a simple PATCH operation to a group address. The format of
-     * the request is the same as that for creating a resource group. If a field is unspecified, the
-     * current value is retained.
-     * @param resourceGroupName The name of the resource group to update. The name is case insensitive.
-     * @param parameters Parameters supplied to update a resource group.
-     * @param options The options parameters.
-     */
-    update(resourceGroupName, parameters, options) {
-        return this.client.sendOperationRequest({ resourceGroupName, parameters, options }, updateOperationSpec);
-    }
-    /**
-     * Captures the specified resource group as a template.
-     * @param resourceGroupName The name of the resource group. The name is case insensitive.
-     * @param parameters Parameters for exporting the template.
-     * @param options The options parameters.
-     */
-    async beginExportTemplate(resourceGroupName, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { resourceGroupName, parameters, options },
-            spec: exportTemplateOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-            resourceLocationConfig: "location",
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Captures the specified resource group as a template.
-     * @param resourceGroupName The name of the resource group. The name is case insensitive.
-     * @param parameters Parameters for exporting the template.
-     * @param options The options parameters.
-     */
-    async beginExportTemplateAndWait(resourceGroupName, parameters, options) {
-        const poller = await this.beginExportTemplate(resourceGroupName, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Gets all the resource groups for a subscription.
-     * @param options The options parameters.
-     */
-    _list(options) {
-        return this.client.sendOperationRequest({ options }, listOperationSpec);
-    }
-    /**
-     * ListNext
-     * @param nextLink The nextLink from the previous successful call to the List method.
-     * @param options The options parameters.
-     */
-    _listNext(nextLink, options) {
-        return this.client.sendOperationRequest({ nextLink, options }, listNextOperationSpec);
-    }
-}
-exports.ResourceGroupsImpl = ResourceGroupsImpl;
-// Operation Specifications
-const serializer = coreClient.createSerializer(Mappers, /* isXml */ false);
-const checkExistenceOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}",
-    httpMethod: "HEAD",
-    responses: {
-        204: {},
-        404: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const createOrUpdateOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}",
-    httpMethod: "PUT",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceGroup,
-        },
-        201: {
-            bodyMapper: Mappers.ResourceGroup,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters6,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const deleteOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}",
-    httpMethod: "DELETE",
-    responses: {
-        200: {},
-        201: {},
-        202: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion, Parameters.forceDeletionTypes],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const getOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceGroup,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const updateOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}",
-    httpMethod: "PATCH",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceGroup,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters7,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const exportTemplateOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/exportTemplate",
-    httpMethod: "POST",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceGroupExportResult,
-        },
-        201: {
-            bodyMapper: Mappers.ResourceGroupExportResult,
-        },
-        202: {
-            bodyMapper: Mappers.ResourceGroupExportResult,
-        },
-        204: {
-            bodyMapper: Mappers.ResourceGroupExportResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters8,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName1,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const listOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceGroupListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion, Parameters.filter, Parameters.top],
-    urlParameters: [Parameters.$host, Parameters.subscriptionId],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listNextOperationSpec = {
-    path: "{nextLink}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceGroupListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    urlParameters: [
-        Parameters.$host,
-        Parameters.nextLink,
-        Parameters.subscriptionId,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-//# sourceMappingURL=resourceGroups.js.map
-
-/***/ }),
-
-/***/ 85699:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResourcesImpl = void 0;
-const tslib_1 = __nccwpck_require__(61860);
-const pagingHelper_js_1 = __nccwpck_require__(98627);
-const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
-const core_lro_1 = __nccwpck_require__(91754);
-const lroImpl_js_1 = __nccwpck_require__(10130);
-/// <reference lib="esnext.asynciterable" />
-/** Class containing Resources operations. */
-class ResourcesImpl {
-    /**
-     * Initialize a new instance of the class Resources class.
-     * @param client Reference to the service client
-     */
-    constructor(client) {
-        this.client = client;
-    }
-    /**
-     * Get all the resources for a resource group.
-     * @param resourceGroupName The resource group with the resources to get.
-     * @param options The options parameters.
-     */
-    listByResourceGroup(resourceGroupName, options) {
-        const iter = this.listByResourceGroupPagingAll(resourceGroupName, options);
-        return {
-            next() {
-                return iter.next();
-            },
-            [Symbol.asyncIterator]() {
-                return this;
-            },
-            byPage: (settings) => {
-                if (settings === null || settings === void 0 ? void 0 : settings.maxPageSize) {
-                    throw new Error("maxPageSize is not supported by this operation.");
-                }
-                return this.listByResourceGroupPagingPage(resourceGroupName, options, settings);
-            },
-        };
-    }
-    listByResourceGroupPagingPage(resourceGroupName, options, settings) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listByResourceGroupPagingPage_1() {
-            let result;
-            let continuationToken = settings === null || settings === void 0 ? void 0 : settings.continuationToken;
-            if (!continuationToken) {
-                result = yield tslib_1.__await(this._listByResourceGroup(resourceGroupName, options));
-                let page = result.value || [];
-                continuationToken = result.nextLink;
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-            while (continuationToken) {
-                result = yield tslib_1.__await(this._listByResourceGroupNext(resourceGroupName, continuationToken, options));
-                continuationToken = result.nextLink;
-                let page = result.value || [];
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-        });
-    }
-    listByResourceGroupPagingAll(resourceGroupName, options) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listByResourceGroupPagingAll_1() {
-            var _a, e_1, _b, _c;
-            try {
-                for (var _d = true, _e = tslib_1.__asyncValues(this.listByResourceGroupPagingPage(resourceGroupName, options)), _f; _f = yield tslib_1.__await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const page = _c;
-                    yield tslib_1.__await(yield* tslib_1.__asyncDelegator(tslib_1.__asyncValues(page)));
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield tslib_1.__await(_b.call(_e));
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-        });
-    }
-    /**
-     * Get all the resources in a subscription.
-     * @param options The options parameters.
-     */
-    list(options) {
-        const iter = this.listPagingAll(options);
-        return {
-            next() {
-                return iter.next();
-            },
-            [Symbol.asyncIterator]() {
-                return this;
-            },
-            byPage: (settings) => {
-                if (settings === null || settings === void 0 ? void 0 : settings.maxPageSize) {
-                    throw new Error("maxPageSize is not supported by this operation.");
-                }
-                return this.listPagingPage(options, settings);
-            },
-        };
-    }
-    listPagingPage(options, settings) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingPage_1() {
-            let result;
-            let continuationToken = settings === null || settings === void 0 ? void 0 : settings.continuationToken;
-            if (!continuationToken) {
-                result = yield tslib_1.__await(this._list(options));
-                let page = result.value || [];
-                continuationToken = result.nextLink;
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-            while (continuationToken) {
-                result = yield tslib_1.__await(this._listNext(continuationToken, options));
-                continuationToken = result.nextLink;
-                let page = result.value || [];
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-        });
-    }
-    listPagingAll(options) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingAll_1() {
-            var _a, e_2, _b, _c;
-            try {
-                for (var _d = true, _e = tslib_1.__asyncValues(this.listPagingPage(options)), _f; _f = yield tslib_1.__await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const page = _c;
-                    yield tslib_1.__await(yield* tslib_1.__asyncDelegator(tslib_1.__asyncValues(page)));
-                }
-            }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield tslib_1.__await(_b.call(_e));
-                }
-                finally { if (e_2) throw e_2.error; }
-            }
-        });
-    }
-    /**
-     * Get all the resources for a resource group.
-     * @param resourceGroupName The resource group with the resources to get.
-     * @param options The options parameters.
-     */
-    _listByResourceGroup(resourceGroupName, options) {
-        return this.client.sendOperationRequest({ resourceGroupName, options }, listByResourceGroupOperationSpec);
-    }
-    /**
-     * The resources to be moved must be in the same source resource group in the source subscription being
-     * used. The target resource group may be in a different subscription. When moving resources, both the
-     * source group and the target group are locked for the duration of the operation. Write and delete
-     * operations are blocked on the groups until the move completes.
-     * @param sourceResourceGroupName The name of the resource group from the source subscription
-     *                                containing the resources to be moved.
-     * @param parameters Parameters for moving resources.
-     * @param options The options parameters.
-     */
-    async beginMoveResources(sourceResourceGroupName, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { sourceResourceGroupName, parameters, options },
-            spec: moveResourcesOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * The resources to be moved must be in the same source resource group in the source subscription being
-     * used. The target resource group may be in a different subscription. When moving resources, both the
-     * source group and the target group are locked for the duration of the operation. Write and delete
-     * operations are blocked on the groups until the move completes.
-     * @param sourceResourceGroupName The name of the resource group from the source subscription
-     *                                containing the resources to be moved.
-     * @param parameters Parameters for moving resources.
-     * @param options The options parameters.
-     */
-    async beginMoveResourcesAndWait(sourceResourceGroupName, parameters, options) {
-        const poller = await this.beginMoveResources(sourceResourceGroupName, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * This operation checks whether the specified resources can be moved to the target. The resources to
-     * be moved must be in the same source resource group in the source subscription being used. The target
-     * resource group may be in a different subscription. If validation succeeds, it returns HTTP response
-     * code 204 (no content). If validation fails, it returns HTTP response code 409 (Conflict) with an
-     * error message. Retrieve the URL in the Location header value to check the result of the long-running
-     * operation.
-     * @param sourceResourceGroupName The name of the resource group from the source subscription
-     *                                containing the resources to be validated for move.
-     * @param parameters Parameters for moving resources.
-     * @param options The options parameters.
-     */
-    async beginValidateMoveResources(sourceResourceGroupName, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { sourceResourceGroupName, parameters, options },
-            spec: validateMoveResourcesOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * This operation checks whether the specified resources can be moved to the target. The resources to
-     * be moved must be in the same source resource group in the source subscription being used. The target
-     * resource group may be in a different subscription. If validation succeeds, it returns HTTP response
-     * code 204 (no content). If validation fails, it returns HTTP response code 409 (Conflict) with an
-     * error message. Retrieve the URL in the Location header value to check the result of the long-running
-     * operation.
-     * @param sourceResourceGroupName The name of the resource group from the source subscription
-     *                                containing the resources to be validated for move.
-     * @param parameters Parameters for moving resources.
-     * @param options The options parameters.
-     */
-    async beginValidateMoveResourcesAndWait(sourceResourceGroupName, parameters, options) {
-        const poller = await this.beginValidateMoveResources(sourceResourceGroupName, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Get all the resources in a subscription.
-     * @param options The options parameters.
-     */
-    _list(options) {
-        return this.client.sendOperationRequest({ options }, listOperationSpec);
-    }
-    /**
-     * Checks whether a resource exists.
-     * @param resourceGroupName The name of the resource group containing the resource to check. The name
-     *                          is case insensitive.
-     * @param resourceProviderNamespace The resource provider of the resource to check.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type.
-     * @param resourceName The name of the resource to check whether it exists.
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    checkExistence(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, options) {
-        return this.client.sendOperationRequest({
-            resourceGroupName,
-            resourceProviderNamespace,
-            parentResourcePath,
-            resourceType,
-            resourceName,
-            apiVersion,
-            options,
-        }, checkExistenceOperationSpec);
-    }
-    /**
-     * Deletes a resource.
-     * @param resourceGroupName The name of the resource group that contains the resource to delete. The
-     *                          name is case insensitive.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type.
-     * @param resourceName The name of the resource to delete.
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    async beginDelete(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: {
-                resourceGroupName,
-                resourceProviderNamespace,
-                parentResourcePath,
-                resourceType,
-                resourceName,
-                apiVersion,
-                options,
-            },
-            spec: deleteOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Deletes a resource.
-     * @param resourceGroupName The name of the resource group that contains the resource to delete. The
-     *                          name is case insensitive.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type.
-     * @param resourceName The name of the resource to delete.
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    async beginDeleteAndWait(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, options) {
-        const poller = await this.beginDelete(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Creates a resource.
-     * @param resourceGroupName The name of the resource group for the resource. The name is case
-     *                          insensitive.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type of the resource to create.
-     * @param resourceName The name of the resource to create.
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Parameters for creating or updating the resource.
-     * @param options The options parameters.
-     */
-    async beginCreateOrUpdate(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: {
-                resourceGroupName,
-                resourceProviderNamespace,
-                parentResourcePath,
-                resourceType,
-                resourceName,
-                apiVersion,
-                parameters,
-                options,
-            },
-            spec: createOrUpdateOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Creates a resource.
-     * @param resourceGroupName The name of the resource group for the resource. The name is case
-     *                          insensitive.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type of the resource to create.
-     * @param resourceName The name of the resource to create.
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Parameters for creating or updating the resource.
-     * @param options The options parameters.
-     */
-    async beginCreateOrUpdateAndWait(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, parameters, options) {
-        const poller = await this.beginCreateOrUpdate(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Updates a resource.
-     * @param resourceGroupName The name of the resource group for the resource. The name is case
-     *                          insensitive.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type of the resource to update.
-     * @param resourceName The name of the resource to update.
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Parameters for updating the resource.
-     * @param options The options parameters.
-     */
-    async beginUpdate(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: {
-                resourceGroupName,
-                resourceProviderNamespace,
-                parentResourcePath,
-                resourceType,
-                resourceName,
-                apiVersion,
-                parameters,
-                options,
-            },
-            spec: updateOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Updates a resource.
-     * @param resourceGroupName The name of the resource group for the resource. The name is case
-     *                          insensitive.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type of the resource to update.
-     * @param resourceName The name of the resource to update.
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Parameters for updating the resource.
-     * @param options The options parameters.
-     */
-    async beginUpdateAndWait(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, parameters, options) {
-        const poller = await this.beginUpdate(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Gets a resource.
-     * @param resourceGroupName The name of the resource group containing the resource to get. The name is
-     *                          case insensitive.
-     * @param resourceProviderNamespace The namespace of the resource provider.
-     * @param parentResourcePath The parent resource identity.
-     * @param resourceType The resource type of the resource.
-     * @param resourceName The name of the resource to get.
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    get(resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, apiVersion, options) {
-        return this.client.sendOperationRequest({
-            resourceGroupName,
-            resourceProviderNamespace,
-            parentResourcePath,
-            resourceType,
-            resourceName,
-            apiVersion,
-            options,
-        }, getOperationSpec);
-    }
-    /**
-     * Checks by ID whether a resource exists. This API currently works only for a limited set of Resource
-     * providers. In the event that a Resource provider does not implement this API, ARM will respond with
-     * a 405. The alternative then is to use the GET API to check for the existence of the resource.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    checkExistenceById(resourceId, apiVersion, options) {
-        return this.client.sendOperationRequest({ resourceId, apiVersion, options }, checkExistenceByIdOperationSpec);
-    }
-    /**
-     * Deletes a resource by ID.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    async beginDeleteById(resourceId, apiVersion, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { resourceId, apiVersion, options },
-            spec: deleteByIdOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Deletes a resource by ID.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    async beginDeleteByIdAndWait(resourceId, apiVersion, options) {
-        const poller = await this.beginDeleteById(resourceId, apiVersion, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Create a resource by ID.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Create or update resource parameters.
-     * @param options The options parameters.
-     */
-    async beginCreateOrUpdateById(resourceId, apiVersion, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { resourceId, apiVersion, parameters, options },
-            spec: createOrUpdateByIdOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Create a resource by ID.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Create or update resource parameters.
-     * @param options The options parameters.
-     */
-    async beginCreateOrUpdateByIdAndWait(resourceId, apiVersion, parameters, options) {
-        const poller = await this.beginCreateOrUpdateById(resourceId, apiVersion, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Updates a resource by ID.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Update resource parameters.
-     * @param options The options parameters.
-     */
-    async beginUpdateById(resourceId, apiVersion, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { resourceId, apiVersion, parameters, options },
-            spec: updateByIdOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Updates a resource by ID.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param parameters Update resource parameters.
-     * @param options The options parameters.
-     */
-    async beginUpdateByIdAndWait(resourceId, apiVersion, parameters, options) {
-        const poller = await this.beginUpdateById(resourceId, apiVersion, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Gets a resource by ID.
-     * @param resourceId The fully qualified ID of the resource, including the resource name and resource
-     *                   type. Use the format,
-     *                   /subscriptions/{guid}/resourceGroups/{resource-group-name}/{resource-provider-namespace}/{resource-type}/{resource-name}
-     * @param apiVersion The API version to use for the operation.
-     * @param options The options parameters.
-     */
-    getById(resourceId, apiVersion, options) {
-        return this.client.sendOperationRequest({ resourceId, apiVersion, options }, getByIdOperationSpec);
-    }
-    /**
-     * ListByResourceGroupNext
-     * @param resourceGroupName The resource group with the resources to get.
-     * @param nextLink The nextLink from the previous successful call to the ListByResourceGroup method.
-     * @param options The options parameters.
-     */
-    _listByResourceGroupNext(resourceGroupName, nextLink, options) {
-        return this.client.sendOperationRequest({ resourceGroupName, nextLink, options }, listByResourceGroupNextOperationSpec);
-    }
-    /**
-     * ListNext
-     * @param nextLink The nextLink from the previous successful call to the List method.
-     * @param options The options parameters.
-     */
-    _listNext(nextLink, options) {
-        return this.client.sendOperationRequest({ nextLink, options }, listNextOperationSpec);
-    }
-}
-exports.ResourcesImpl = ResourcesImpl;
-// Operation Specifications
-const serializer = coreClient.createSerializer(Mappers, /* isXml */ false);
-const listByResourceGroupOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/resources",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [
-        Parameters.apiVersion,
-        Parameters.filter,
-        Parameters.top,
-        Parameters.expand,
-    ],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const moveResourcesOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourceGroups/{sourceResourceGroupName}/moveResources",
-    httpMethod: "POST",
-    responses: {
-        200: {},
-        201: {},
-        202: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters4,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.sourceResourceGroupName,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const validateMoveResourcesOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourceGroups/{sourceResourceGroupName}/validateMoveResources",
-    httpMethod: "POST",
-    responses: {
-        200: {},
-        201: {},
-        202: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters4,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.sourceResourceGroupName,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const listOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resources",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [
-        Parameters.apiVersion,
-        Parameters.filter,
-        Parameters.top,
-        Parameters.expand,
-    ],
-    urlParameters: [Parameters.$host, Parameters.subscriptionId],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const checkExistenceOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}",
-    httpMethod: "HEAD",
-    responses: {
-        204: {},
-        404: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-        Parameters.resourceProviderNamespace,
-        Parameters.parentResourcePath,
-        Parameters.resourceType,
-        Parameters.resourceName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const deleteOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}",
-    httpMethod: "DELETE",
-    responses: {
-        200: {},
-        201: {},
-        202: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-        Parameters.resourceProviderNamespace,
-        Parameters.parentResourcePath,
-        Parameters.resourceType,
-        Parameters.resourceName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const createOrUpdateOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}",
-    httpMethod: "PUT",
-    responses: {
-        200: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        201: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        202: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        204: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters5,
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-        Parameters.resourceProviderNamespace,
-        Parameters.parentResourcePath,
-        Parameters.resourceType,
-        Parameters.resourceName,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const updateOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}",
-    httpMethod: "PATCH",
-    responses: {
-        200: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        201: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        202: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        204: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters5,
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-        Parameters.resourceProviderNamespace,
-        Parameters.parentResourcePath,
-        Parameters.resourceType,
-        Parameters.resourceName,
-    ],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const getOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-        Parameters.resourceProviderNamespace,
-        Parameters.parentResourcePath,
-        Parameters.resourceType,
-        Parameters.resourceName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const checkExistenceByIdOperationSpec = {
-    path: "/{resourceId}",
-    httpMethod: "HEAD",
-    responses: {
-        204: {},
-        404: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [Parameters.$host, Parameters.resourceId],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const deleteByIdOperationSpec = {
-    path: "/{resourceId}",
-    httpMethod: "DELETE",
-    responses: {
-        200: {},
-        201: {},
-        202: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [Parameters.$host, Parameters.resourceId],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const createOrUpdateByIdOperationSpec = {
-    path: "/{resourceId}",
-    httpMethod: "PUT",
-    responses: {
-        200: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        201: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        202: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        204: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters5,
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [Parameters.$host, Parameters.resourceId],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const updateByIdOperationSpec = {
-    path: "/{resourceId}",
-    httpMethod: "PATCH",
-    responses: {
-        200: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        201: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        202: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        204: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters5,
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [Parameters.$host, Parameters.resourceId],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const getByIdOperationSpec = {
-    path: "/{resourceId}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.GenericResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion1],
-    urlParameters: [Parameters.$host, Parameters.resourceId],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listByResourceGroupNextOperationSpec = {
-    path: "{nextLink}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    urlParameters: [
-        Parameters.$host,
-        Parameters.nextLink,
-        Parameters.subscriptionId,
-        Parameters.resourceGroupName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listNextOperationSpec = {
-    path: "{nextLink}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.ResourceListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    urlParameters: [
-        Parameters.$host,
-        Parameters.nextLink,
-        Parameters.subscriptionId,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-//# sourceMappingURL=resources.js.map
-
-/***/ }),
-
-/***/ 70127:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TagsOperationsImpl = void 0;
-const tslib_1 = __nccwpck_require__(61860);
-const pagingHelper_js_1 = __nccwpck_require__(98627);
-const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const Mappers = tslib_1.__importStar(__nccwpck_require__(6060));
-const Parameters = tslib_1.__importStar(__nccwpck_require__(5188));
-const core_lro_1 = __nccwpck_require__(91754);
-const lroImpl_js_1 = __nccwpck_require__(10130);
-/// <reference lib="esnext.asynciterable" />
-/** Class containing TagsOperations operations. */
-class TagsOperationsImpl {
-    /**
-     * Initialize a new instance of the class TagsOperations class.
-     * @param client Reference to the service client
-     */
-    constructor(client) {
-        this.client = client;
-    }
-    /**
-     * This operation performs a union of predefined tags, resource tags, resource group tags and
-     * subscription tags, and returns a summary of usage for each tag name and value under the given
-     * subscription. In case of a large number of tags, this operation may return a previously cached
-     * result.
-     * @param options The options parameters.
-     */
-    list(options) {
-        const iter = this.listPagingAll(options);
-        return {
-            next() {
-                return iter.next();
-            },
-            [Symbol.asyncIterator]() {
-                return this;
-            },
-            byPage: (settings) => {
-                if (settings === null || settings === void 0 ? void 0 : settings.maxPageSize) {
-                    throw new Error("maxPageSize is not supported by this operation.");
-                }
-                return this.listPagingPage(options, settings);
-            },
-        };
-    }
-    listPagingPage(options, settings) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingPage_1() {
-            let result;
-            let continuationToken = settings === null || settings === void 0 ? void 0 : settings.continuationToken;
-            if (!continuationToken) {
-                result = yield tslib_1.__await(this._list(options));
-                let page = result.value || [];
-                continuationToken = result.nextLink;
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-            while (continuationToken) {
-                result = yield tslib_1.__await(this._listNext(continuationToken, options));
-                continuationToken = result.nextLink;
-                let page = result.value || [];
-                (0, pagingHelper_js_1.setContinuationToken)(page, continuationToken);
-                yield yield tslib_1.__await(page);
-            }
-        });
-    }
-    listPagingAll(options) {
-        return tslib_1.__asyncGenerator(this, arguments, function* listPagingAll_1() {
-            var _a, e_1, _b, _c;
-            try {
-                for (var _d = true, _e = tslib_1.__asyncValues(this.listPagingPage(options)), _f; _f = yield tslib_1.__await(_e.next()), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const page = _c;
-                    yield tslib_1.__await(yield* tslib_1.__asyncDelegator(tslib_1.__asyncValues(page)));
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield tslib_1.__await(_b.call(_e));
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-        });
-    }
-    /**
-     * This operation allows deleting a value from the list of predefined values for an existing predefined
-     * tag name. The value being deleted must not be in use as a tag value for the given tag name for any
-     * resource.
-     * @param tagName The name of the tag.
-     * @param tagValue The value of the tag to delete.
-     * @param options The options parameters.
-     */
-    deleteValue(tagName, tagValue, options) {
-        return this.client.sendOperationRequest({ tagName, tagValue, options }, deleteValueOperationSpec);
-    }
-    /**
-     * This operation allows adding a value to the list of predefined values for an existing predefined tag
-     * name. A tag value can have a maximum of 256 characters.
-     * @param tagName The name of the tag.
-     * @param tagValue The value of the tag to create.
-     * @param options The options parameters.
-     */
-    createOrUpdateValue(tagName, tagValue, options) {
-        return this.client.sendOperationRequest({ tagName, tagValue, options }, createOrUpdateValueOperationSpec);
-    }
-    /**
-     * This operation allows adding a name to the list of predefined tag names for the given subscription.
-     * A tag name can have a maximum of 512 characters and is case-insensitive. Tag names cannot have the
-     * following prefixes which are reserved for Azure use: 'microsoft', 'azure', 'windows'.
-     * @param tagName The name of the tag to create.
-     * @param options The options parameters.
-     */
-    createOrUpdate(tagName, options) {
-        return this.client.sendOperationRequest({ tagName, options }, createOrUpdateOperationSpec);
-    }
-    /**
-     * This operation allows deleting a name from the list of predefined tag names for the given
-     * subscription. The name being deleted must not be in use as a tag name for any resource. All
-     * predefined values for the given name must have already been deleted.
-     * @param tagName The name of the tag.
-     * @param options The options parameters.
-     */
-    delete(tagName, options) {
-        return this.client.sendOperationRequest({ tagName, options }, deleteOperationSpec);
-    }
-    /**
-     * This operation performs a union of predefined tags, resource tags, resource group tags and
-     * subscription tags, and returns a summary of usage for each tag name and value under the given
-     * subscription. In case of a large number of tags, this operation may return a previously cached
-     * result.
-     * @param options The options parameters.
-     */
-    _list(options) {
-        return this.client.sendOperationRequest({ options }, listOperationSpec);
-    }
-    /**
-     * This operation allows adding or replacing the entire set of tags on the specified resource or
-     * subscription. The specified entity can have a maximum of 50 tags.
-     * @param scope The resource scope.
-     * @param parameters Wrapper resource for tags API requests and responses.
-     * @param options The options parameters.
-     */
-    async beginCreateOrUpdateAtScope(scope, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { scope, parameters, options },
-            spec: createOrUpdateAtScopeOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * This operation allows adding or replacing the entire set of tags on the specified resource or
-     * subscription. The specified entity can have a maximum of 50 tags.
-     * @param scope The resource scope.
-     * @param parameters Wrapper resource for tags API requests and responses.
-     * @param options The options parameters.
-     */
-    async beginCreateOrUpdateAtScopeAndWait(scope, parameters, options) {
-        const poller = await this.beginCreateOrUpdateAtScope(scope, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * This operation allows replacing, merging or selectively deleting tags on the specified resource or
-     * subscription. The specified entity can have a maximum of 50 tags at the end of the operation. The
-     * 'replace' option replaces the entire set of existing tags with a new set. The 'merge' option allows
-     * adding tags with new names and updating the values of tags with existing names. The 'delete' option
-     * allows selectively deleting tags based on given names or name/value pairs.
-     * @param scope The resource scope.
-     * @param parameters Wrapper resource for tags patch API request only.
-     * @param options The options parameters.
-     */
-    async beginUpdateAtScope(scope, parameters, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { scope, parameters, options },
-            spec: updateAtScopeOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * This operation allows replacing, merging or selectively deleting tags on the specified resource or
-     * subscription. The specified entity can have a maximum of 50 tags at the end of the operation. The
-     * 'replace' option replaces the entire set of existing tags with a new set. The 'merge' option allows
-     * adding tags with new names and updating the values of tags with existing names. The 'delete' option
-     * allows selectively deleting tags based on given names or name/value pairs.
-     * @param scope The resource scope.
-     * @param parameters Wrapper resource for tags patch API request only.
-     * @param options The options parameters.
-     */
-    async beginUpdateAtScopeAndWait(scope, parameters, options) {
-        const poller = await this.beginUpdateAtScope(scope, parameters, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * Gets the entire set of tags on a resource or subscription.
-     * @param scope The resource scope.
-     * @param options The options parameters.
-     */
-    getAtScope(scope, options) {
-        return this.client.sendOperationRequest({ scope, options }, getAtScopeOperationSpec);
-    }
-    /**
-     * Deletes the entire set of tags on a resource or subscription.
-     * @param scope The resource scope.
-     * @param options The options parameters.
-     */
-    async beginDeleteAtScope(scope, options) {
-        const directSendOperation = async (args, spec) => {
-            return this.client.sendOperationRequest(args, spec);
-        };
-        const sendOperationFn = async (args, spec) => {
-            var _a;
-            let currentRawResponse = undefined;
-            const providedCallback = (_a = args.options) === null || _a === void 0 ? void 0 : _a.onResponse;
-            const callback = (rawResponse, flatResponse) => {
-                currentRawResponse = rawResponse;
-                providedCallback === null || providedCallback === void 0 ? void 0 : providedCallback(rawResponse, flatResponse);
-            };
-            const updatedArgs = Object.assign(Object.assign({}, args), { options: Object.assign(Object.assign({}, args.options), { onResponse: callback }) });
-            const flatResponse = await directSendOperation(updatedArgs, spec);
-            return {
-                flatResponse,
-                rawResponse: {
-                    statusCode: currentRawResponse.status,
-                    body: currentRawResponse.parsedBody,
-                    headers: currentRawResponse.headers.toJSON(),
-                },
-            };
-        };
-        const lro = (0, lroImpl_js_1.createLroSpec)({
-            sendOperationFn,
-            args: { scope, options },
-            spec: deleteAtScopeOperationSpec,
-        });
-        const poller = await (0, core_lro_1.createHttpPoller)(lro, {
-            restoreFrom: options === null || options === void 0 ? void 0 : options.resumeFrom,
-            intervalInMs: options === null || options === void 0 ? void 0 : options.updateIntervalInMs,
-        });
-        await poller.poll();
-        return poller;
-    }
-    /**
-     * Deletes the entire set of tags on a resource or subscription.
-     * @param scope The resource scope.
-     * @param options The options parameters.
-     */
-    async beginDeleteAtScopeAndWait(scope, options) {
-        const poller = await this.beginDeleteAtScope(scope, options);
-        return poller.pollUntilDone();
-    }
-    /**
-     * ListNext
-     * @param nextLink The nextLink from the previous successful call to the List method.
-     * @param options The options parameters.
-     */
-    _listNext(nextLink, options) {
-        return this.client.sendOperationRequest({ nextLink, options }, listNextOperationSpec);
-    }
-}
-exports.TagsOperationsImpl = TagsOperationsImpl;
-// Operation Specifications
-const serializer = coreClient.createSerializer(Mappers, /* isXml */ false);
-const deleteValueOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/tagNames/{tagName}/tagValues/{tagValue}",
-    httpMethod: "DELETE",
-    responses: {
-        200: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.tagName,
-        Parameters.tagValue,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const createOrUpdateValueOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/tagNames/{tagName}/tagValues/{tagValue}",
-    httpMethod: "PUT",
-    responses: {
-        200: {
-            bodyMapper: Mappers.TagValue,
-        },
-        201: {
-            bodyMapper: Mappers.TagValue,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.tagName,
-        Parameters.tagValue,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const createOrUpdateOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/tagNames/{tagName}",
-    httpMethod: "PUT",
-    responses: {
-        200: {
-            bodyMapper: Mappers.TagDetails,
-        },
-        201: {
-            bodyMapper: Mappers.TagDetails,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.tagName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const deleteOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/tagNames/{tagName}",
-    httpMethod: "DELETE",
-    responses: {
-        200: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [
-        Parameters.$host,
-        Parameters.subscriptionId,
-        Parameters.tagName,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listOperationSpec = {
-    path: "/subscriptions/{subscriptionId}/tagNames",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.TagsListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [Parameters.$host, Parameters.subscriptionId],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const createOrUpdateAtScopeOperationSpec = {
-    path: "/{scope}/providers/Microsoft.Resources/tags/default",
-    httpMethod: "PUT",
-    responses: {
-        200: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        201: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        202: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        204: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters9,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [Parameters.$host, Parameters.scope],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const updateAtScopeOperationSpec = {
-    path: "/{scope}/providers/Microsoft.Resources/tags/default",
-    httpMethod: "PATCH",
-    responses: {
-        200: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        201: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        202: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        204: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    requestBody: Parameters.parameters10,
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [Parameters.$host, Parameters.scope],
-    headerParameters: [Parameters.accept, Parameters.contentType],
-    mediaType: "json",
-    serializer,
-};
-const getAtScopeOperationSpec = {
-    path: "/{scope}/providers/Microsoft.Resources/tags/default",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.TagsResource,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [Parameters.$host, Parameters.scope],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const deleteAtScopeOperationSpec = {
-    path: "/{scope}/providers/Microsoft.Resources/tags/default",
-    httpMethod: "DELETE",
-    responses: {
-        200: {},
-        201: {},
-        202: {},
-        204: {},
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    queryParameters: [Parameters.apiVersion],
-    urlParameters: [Parameters.$host, Parameters.scope],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-const listNextOperationSpec = {
-    path: "{nextLink}",
-    httpMethod: "GET",
-    responses: {
-        200: {
-            bodyMapper: Mappers.TagsListResult,
-        },
-        default: {
-            bodyMapper: Mappers.CloudError,
-        },
-    },
-    urlParameters: [
-        Parameters.$host,
-        Parameters.nextLink,
-        Parameters.subscriptionId,
-    ],
-    headerParameters: [Parameters.accept],
-    serializer,
-};
-//# sourceMappingURL=tagsOperations.js.map
-
-/***/ }),
-
-/***/ 44569:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=deploymentOperations.js.map
-
-/***/ }),
-
-/***/ 23330:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=deployments.js.map
-
-/***/ }),
-
-/***/ 71254:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const tslib_1 = __nccwpck_require__(61860);
-tslib_1.__exportStar(__nccwpck_require__(82374), exports);
-tslib_1.__exportStar(__nccwpck_require__(23330), exports);
-tslib_1.__exportStar(__nccwpck_require__(31068), exports);
-tslib_1.__exportStar(__nccwpck_require__(68212), exports);
-tslib_1.__exportStar(__nccwpck_require__(13055), exports);
-tslib_1.__exportStar(__nccwpck_require__(92096), exports);
-tslib_1.__exportStar(__nccwpck_require__(23627), exports);
-tslib_1.__exportStar(__nccwpck_require__(44569), exports);
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 82374:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=operations.js.map
-
-/***/ }),
-
-/***/ 68212:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=providerResourceTypes.js.map
-
-/***/ }),
-
-/***/ 31068:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=providers.js.map
-
-/***/ }),
-
-/***/ 92096:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=resourceGroups.js.map
-
-/***/ }),
-
-/***/ 13055:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=resources.js.map
-
-/***/ }),
-
-/***/ 23627:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-//# sourceMappingURL=tagsOperations.js.map
-
-/***/ }),
-
-/***/ 98627:
+/***/ 69117:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -57343,120 +53579,6 @@ function setContinuationToken(page, continuationToken) {
     pageMap.set(page, pageInfo);
 }
 //# sourceMappingURL=pagingHelper.js.map
-
-/***/ }),
-
-/***/ 69767:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-/*
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT License.
- *
- * Code generated by Microsoft (R) AutoRest Code Generator.
- * Changes may cause incorrect behavior and will be lost if the code is regenerated.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResourceManagementClient = void 0;
-const tslib_1 = __nccwpck_require__(61860);
-const coreClient = tslib_1.__importStar(__nccwpck_require__(60160));
-const coreRestPipeline = tslib_1.__importStar(__nccwpck_require__(20778));
-const index_js_1 = __nccwpck_require__(47490);
-class ResourceManagementClient extends coreClient.ServiceClient {
-    constructor(credentials, subscriptionIdOrOptions, options) {
-        var _a, _b, _c;
-        if (credentials === undefined) {
-            throw new Error("'credentials' cannot be null");
-        }
-        let subscriptionId;
-        if (typeof subscriptionIdOrOptions === "string") {
-            subscriptionId = subscriptionIdOrOptions;
-        }
-        else if (typeof subscriptionIdOrOptions === "object") {
-            options = subscriptionIdOrOptions;
-        }
-        // Initializing default values for options
-        if (!options) {
-            options = {};
-        }
-        const defaults = {
-            requestContentType: "application/json; charset=utf-8",
-            credential: credentials,
-        };
-        const packageDetails = `azsdk-js-arm-resources/6.0.0`;
-        const userAgentPrefix = options.userAgentOptions && options.userAgentOptions.userAgentPrefix
-            ? `${options.userAgentOptions.userAgentPrefix} ${packageDetails}`
-            : `${packageDetails}`;
-        const optionsWithDefaults = Object.assign(Object.assign(Object.assign({}, defaults), options), { userAgentOptions: {
-                userAgentPrefix,
-            }, endpoint: (_b = (_a = options.endpoint) !== null && _a !== void 0 ? _a : options.baseUri) !== null && _b !== void 0 ? _b : "https://management.azure.com" });
-        super(optionsWithDefaults);
-        let bearerTokenAuthenticationPolicyFound = false;
-        if ((options === null || options === void 0 ? void 0 : options.pipeline) && options.pipeline.getOrderedPolicies().length > 0) {
-            const pipelinePolicies = options.pipeline.getOrderedPolicies();
-            bearerTokenAuthenticationPolicyFound = pipelinePolicies.some((pipelinePolicy) => pipelinePolicy.name ===
-                coreRestPipeline.bearerTokenAuthenticationPolicyName);
-        }
-        if (!options ||
-            !options.pipeline ||
-            options.pipeline.getOrderedPolicies().length == 0 ||
-            !bearerTokenAuthenticationPolicyFound) {
-            this.pipeline.removePolicy({
-                name: coreRestPipeline.bearerTokenAuthenticationPolicyName,
-            });
-            this.pipeline.addPolicy(coreRestPipeline.bearerTokenAuthenticationPolicy({
-                credential: credentials,
-                scopes: (_c = optionsWithDefaults.credentialScopes) !== null && _c !== void 0 ? _c : `${optionsWithDefaults.endpoint}/.default`,
-                challengeCallbacks: {
-                    authorizeRequestOnChallenge: coreClient.authorizeRequestOnClaimChallenge,
-                },
-            }));
-        }
-        // Parameter assignments
-        this.subscriptionId = subscriptionId;
-        // Assigning values to Constant parameters
-        this.$host = options.$host || "https://management.azure.com";
-        this.apiVersion = options.apiVersion || "2024-11-01";
-        this.operations = new index_js_1.OperationsImpl(this);
-        this.deployments = new index_js_1.DeploymentsImpl(this);
-        this.providers = new index_js_1.ProvidersImpl(this);
-        this.providerResourceTypes = new index_js_1.ProviderResourceTypesImpl(this);
-        this.resources = new index_js_1.ResourcesImpl(this);
-        this.resourceGroups = new index_js_1.ResourceGroupsImpl(this);
-        this.tagsOperations = new index_js_1.TagsOperationsImpl(this);
-        this.deploymentOperations = new index_js_1.DeploymentOperationsImpl(this);
-        this.addCustomApiVersionPolicy(options.apiVersion);
-    }
-    /** A function that adds a policy that sets the api-version (or equivalent) to reflect the library version. */
-    addCustomApiVersionPolicy(apiVersion) {
-        if (!apiVersion) {
-            return;
-        }
-        const apiVersionPolicy = {
-            name: "CustomApiVersionPolicy",
-            async sendRequest(request, next) {
-                const param = request.url.split("?");
-                if (param.length > 1) {
-                    const newParams = param[1].split("&").map((item) => {
-                        if (item.indexOf("api-version") > -1) {
-                            return "api-version=" + apiVersion;
-                        }
-                        else {
-                            return item;
-                        }
-                    });
-                    request.url = param[0] + "?" + newParams.join("&");
-                }
-                return next(request);
-            },
-        };
-        this.pipeline.addPolicy(apiVersionPolicy);
-    }
-}
-exports.ResourceManagementClient = ResourceManagementClient;
-//# sourceMappingURL=resourceManagementClient.js.map
 
 /***/ }),
 

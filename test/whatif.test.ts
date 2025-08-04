@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import { formatJson, formatWhatIfOperationResult } from "../src/helpers/whatif";
-import { WhatIfChange } from "@azure/arm-resources";
+import { WhatIfChange } from "@azure/arm-resourcesdeployments";
 
 describe("formatJson tests", () => {
   it("test_leaf", () => {
