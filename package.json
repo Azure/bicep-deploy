@@ -25,7 +25,7 @@
     "build": "tsc",
     "test": "jest --config jest.config.unit.ts",
     "test:live": "jest --config jest.config.live.ts",
-    "package": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "package": "esbuild src/index.ts --minify --bundle --outfile=dist/index.js --sourcemap --platform=node --target=es2021",
     "lint": "eslint src test test-live",
     "lint:fix": "eslint src test test-live --fix"
   },
@@ -43,7 +43,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.29",
-    "@vercel/ncc": "^0.38.3",
+    "esbuild": "^0.25.8",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-jest": "^28.11.0",
