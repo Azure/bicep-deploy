@@ -81,7 +81,7 @@ export async function getJsonParameters(config: FileConfig) {
 }
 
 export async function getTemplateAndParameters(config: FileConfig) {
-  const { parametersFile, templateFile } = config;
+  const { parametersFile, templateFile, templateFileRequired } = config;
 
   if (
     parametersFile &&
@@ -109,11 +109,13 @@ export async function getTemplateAndParameters(config: FileConfig) {
     throw new Error(`Unsupported template file type: ${templateFile}`);
   }
 
-  if (!templateFile) {
+  if (templateFileRequired && !templateFile) {
     throw new Error("Template file is required");
   }
 
-  const template = await fs.readFile(templateFile, "utf8");
+  const template = templateFile
+    ? await fs.readFile(templateFile, "utf8")
+    : undefined;
 
   return parse({ template, parameters });
 }

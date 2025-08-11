@@ -15,6 +15,7 @@ import { readTestFile } from "./utils";
 describe("file parsing", () => {
   it("reads and parses template and parameters files", async () => {
     const config: FileConfig = {
+      templateFileRequired: true,
       templateFile: "/path/to/template.json",
       parametersFile: "/path/to/parameters.json",
     };
@@ -43,6 +44,7 @@ describe("file parsing", () => {
 
   it("compiles Bicepparam files", async () => {
     const config: FileConfig = {
+      templateFileRequired: true,
       parametersFile: "/path/to/main.bicepparam",
       parameters: {
         overrideMe: "foo",
@@ -79,6 +81,7 @@ describe("file parsing", () => {
 
   it("compiles Bicep files", async () => {
     const config: FileConfig = {
+      templateFileRequired: true,
       parametersFile: "/path/to/parameters.json",
       templateFile: "/path/to/main.bicep",
     };
@@ -117,6 +120,7 @@ describe("file parsing", () => {
 
   it("blocks unexpected parameter file extensions", async () => {
     const config: FileConfig = {
+      templateFileRequired: true,
       parametersFile: "/path/to/parameters.what",
       templateFile: "/path/to/main.json",
     };
@@ -130,6 +134,7 @@ describe("file parsing", () => {
 
   it("blocks unexpected template file extension", async () => {
     const config: FileConfig = {
+      templateFileRequired: true,
       parametersFile: "/path/to/parameters.json",
       templateFile: "/path/to/main.what",
     };
@@ -149,6 +154,7 @@ describe("file parsing with parameters", () => {
     });
 
     const parameters = await getJsonParameters({
+      templateFileRequired: true,
       parametersFile: "/parameters.json",
       parameters: {
         objectParam: "this param has been overridden!",
@@ -176,6 +182,7 @@ describe("file parsing with parameters", () => {
     });
 
     const parameters = await getJsonParameters({
+      templateFileRequired: true,
       parametersFile: "/parameters.json",
       parameters: {
         objectParam: "this param has been overridden!",
@@ -191,6 +198,7 @@ describe("file parsing with parameters", () => {
 
   it("works without a parameters file", async () => {
     const parameters = await getJsonParameters({
+      templateFileRequired: true,
       parameters: {
         objectParam: "this param has been overridden!",
       },
@@ -201,5 +209,13 @@ describe("file parsing with parameters", () => {
         value: "this param has been overridden!",
       },
     });
+  });
+
+  it("works when templateFileRequired is false and templateFile not provided", async () => {
+    const config: FileConfig = {
+      templateFileRequired: false,
+    };
+
+    expect(async () => await getTemplateAndParameters(config)).not.toThrow();
   });
 });
