@@ -35,7 +35,7 @@ export type ManagementGroupScope = CommonScope & {
 
 export type SubscriptionScope = CommonScope & {
   type: "subscription";
-  subscriptionId: string;
+  subscriptionId?: string;
 };
 
 export type ResourceGroupScope = CommonScope & {
@@ -45,6 +45,7 @@ export type ResourceGroupScope = CommonScope & {
 };
 
 export type FileConfig = {
+  templateFileRequired: boolean;
   templateFile?: string;
   parametersFile?: string;
   parameters?: Record<string, unknown>;
@@ -131,6 +132,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         type,
         name,
         location,
+        templateFileRequired: true, // files are always required for deployment
         templateFile,
         parametersFile,
         parameters,
@@ -165,10 +167,17 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
       };
     }
     case "deploymentStack": {
+      const operation = getRequiredEnumInput("operation", [
+        "create",
+        "validate",
+        "delete",
+      ]);
+
       return {
         type,
         name,
         location,
+        templateFileRequired: operation !== "delete", // template file not required when deleting stack
         templateFile,
         parametersFile,
         parameters,
@@ -176,12 +185,8 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         tags,
         maskedOutputs,
         environment: environment,
-        operation: getRequiredEnumInput("operation", [
-          "create",
-          "validate",
-          "delete",
-        ]),
-        scope: parseDeploymentStackScope(),
+        operation,
+        scope: parseDeploymentStackScope(operation),
         actionOnUnManage: {
           resources: getRequiredEnumInput("action-on-unmanage-resources", [
             "delete",
@@ -200,11 +205,15 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
           "bypass-stack-out-of-sync-error",
         ),
         denySettings: {
-          mode: getRequiredEnumInput("deny-settings-mode", [
-            "denyDelete",
-            "denyWriteAndDelete",
-            "none",
-          ]),
+          // `deny-settings-mode` does not exist/not required for `delete`
+          mode:
+            operation === "delete"
+              ? "none"
+              : getRequiredEnumInput("deny-settings-mode", [
+                  "denyDelete",
+                  "denyWriteAndDelete",
+                  "none",
+                ]),
           excludedActions: getOptionalStringArrayInput(
             "deny-settings-excluded-actions",
           ),
@@ -269,11 +278,14 @@ function parseDeploymentScope():
   }
 }
 
-function parseDeploymentStackScope():
-  | ManagementGroupScope
-  | SubscriptionScope
-  | ResourceGroupScope {
-  const type = getRequiredEnumInput("scope", [
+function parseDeploymentStackScope(
+  operation: "create" | "validate" | "delete",
+): ManagementGroupScope | SubscriptionScope | ResourceGroupScope {
+  // scope is optional for `delete`
+  const scopeTypeFunction =
+    operation === "delete" ? getOptionalEnumInput : getRequiredEnumInput;
+
+  const type = scopeTypeFunction("scope", [
     "managementGroup",
     "subscription",
     "resourceGroup",
@@ -281,6 +293,15 @@ function parseDeploymentStackScope():
   const tenantId = getOptionalStringInput("tenant-id");
 
   switch (type) {
+    case undefined: {
+      // if the type is undefined (not required), set subscription scope without ID
+      // to execute operation at highest possible level
+      return {
+        type: "subscription",
+        tenantId: tenantId,
+        subscriptionId: undefined,
+      };
+    }
     case "managementGroup": {
       const managementGroup = getRequiredStringInput("management-group-id");
       return {
