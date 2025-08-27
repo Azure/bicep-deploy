@@ -22,7 +22,7 @@ import {
   DeploymentExtended,
   DeploymentProperties,
   ErrorResponse,
-} from "@azure/arm-resources";
+} from "@azure/arm-resourcesdeployments";
 import {
   DeploymentStack,
   DeploymentStackProperties,

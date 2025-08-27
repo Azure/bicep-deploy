@@ -6,7 +6,7 @@ import {
   WhatIfChange,
   WhatIfOperationResult,
   WhatIfPropertyChange,
-} from "@azure/arm-resources";
+} from "@azure/arm-resourcesdeployments";
 import { Color, ColorMode, ColorStringBuilder } from "./logging";
 
 // ChatGPT was heavily utilized to generate this file, using the below Python code as a starting point:

@@ -6,7 +6,7 @@ import {
   Deployment,
   DeploymentDiagnosticsDefinition,
   ErrorResponse,
-} from "@azure/arm-resources";
+} from "@azure/arm-resourcesdeployments";
 import { DeploymentStack } from "@azure/arm-resourcesdeploymentstacks";
 import { PipelineResponse, RestError } from "@azure/core-rest-pipeline";
 import { OperationOptions } from "@azure/core-client";
