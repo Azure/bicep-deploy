@@ -130,7 +130,7 @@ describe("file parsing", () => {
     const config: FileConfig = {
       parametersFile: "/path/to/parameters.json",
       templateFile: "/path/to/main.bicep",
-      bicepVersion: "0.37.4"
+      bicepVersion: "0.37.4",
     };
 
     configureReadFile(filePath => {
