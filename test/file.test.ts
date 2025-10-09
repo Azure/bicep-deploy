@@ -3,6 +3,7 @@
 import {
   configureCompileMock,
   configureCompileParamsMock,
+  configureBicepInstallMock,
 } from "./mocks/bicepNodeMocks";
 import { configureReadFile } from "./mocks/fsMocks";
 import { FileConfig } from "../src/config";
@@ -49,6 +50,11 @@ describe("file parsing", () => {
       },
     };
 
+    configureBicepInstallMock((tmpDir, version) => {
+      expect(version).toBeUndefined();
+      return Promise.resolve("/path/to/bicep");
+    });
+
     configureCompileParamsMock(req => {
       expect(req).toStrictEqual({
         path: "/path/to/main.bicepparam",
@@ -87,6 +93,56 @@ describe("file parsing", () => {
       if (filePath === "/path/to/parameters.json")
         return readTestFile("files/basic/main.parameters.json");
       throw `Unexpected file path: ${filePath}`;
+    });
+
+    configureBicepInstallMock((tmpDir, version) => {
+      expect(version).toBeUndefined();
+      return Promise.resolve("/path/to/bicep");
+    });
+
+    configureCompileMock(req => {
+      expect(req).toStrictEqual({
+        path: "/path/to/main.bicep",
+      });
+
+      return {
+        success: true,
+        diagnostics: [],
+        contents: readTestFile("files/basic/main.json"),
+      };
+    });
+
+    const { templateContents, parametersContents } =
+      await getTemplateAndParameters(config);
+
+    expect(templateContents["$schema"]).toBe(
+      "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    );
+    expect(templateContents["parameters"]["stringParam"]).toBeDefined();
+
+    expect(parametersContents["$schema"]).toBe(
+      "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    );
+    expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
+  });
+
+  it("compiles Bicep files with specific version", async () => {
+    const config: FileConfig = {
+      parametersFile: "/path/to/parameters.json",
+      templateFile: "/path/to/main.bicep",
+      bicepVersion: "0.37.4"
+    };
+
+    configureReadFile(filePath => {
+      if (filePath === "/path/to/parameters.json")
+        return readTestFile("files/basic/main.parameters.json");
+      throw `Unexpected file path: ${filePath}`;
+    });
+
+    // Mock the Bicep.install to verify it's called with the specific version
+    configureBicepInstallMock((tmpDir, version) => {
+      expect(version).toBe("0.37.4");
+      return Promise.resolve("/path/to/bicep");
     });
 
     configureCompileMock(req => {

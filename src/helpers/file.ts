@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import * as fs from "fs/promises";
@@ -16,17 +17,21 @@ export type ParsedFiles = {
   templateSpecId?: string;
 };
 
-async function installBicep() {
+async function installBicep(bicepVersion?: string) {
   const bicepTmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bicep-"));
-
-  return await Bicep.install(bicepTmpDir);
+  if (bicepVersion == undefined) {
+    return await Bicep.install(bicepTmpDir);
+  } else {
+    return await Bicep.install(bicepTmpDir, bicepVersion);
+  }
 }
 
 async function compileBicepParams(
   paramFilePath: string,
   parameters?: Record<string, unknown>,
+  bicepVersion?: string
 ) {
-  const bicepPath = await installBicep();
+  const bicepPath = await installBicep(bicepVersion);
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compileParams({
@@ -48,8 +53,8 @@ async function compileBicepParams(
   };
 }
 
-async function compileBicep(templateFilePath: string) {
-  const bicepPath = await installBicep();
+async function compileBicep(templateFilePath: string, bicepVersion?: string) {
+  const bicepPath = await installBicep(bicepVersion);
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compile({
@@ -87,7 +92,7 @@ export async function getTemplateAndParameters(config: FileConfig) {
     parametersFile &&
     path.extname(parametersFile).toLowerCase() === ".bicepparam"
   ) {
-    return parse(await compileBicepParams(parametersFile, config.parameters));
+    return parse(await compileBicepParams(parametersFile, config.parameters, config.bicepVersion));
   }
 
   if (
@@ -100,7 +105,7 @@ export async function getTemplateAndParameters(config: FileConfig) {
   const parameters = await getJsonParameters(config);
 
   if (templateFile && path.extname(templateFile).toLowerCase() === ".bicep") {
-    const { template } = await compileBicep(templateFile);
+    const { template } = await compileBicep(templateFile, config.bicepVersion);
 
     return parse({ template, parameters });
   }

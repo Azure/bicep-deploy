@@ -495,4 +495,58 @@ objectParam:
       environment: "azureUSGovernment",
     });
   });
+
+  it("parses bicep-version input correctly", async () => {
+    configureGetInputMock({
+      type: "deployment",
+      operation: "create",
+      scope: "resourceGroup",
+      "subscription-id": "mockSub",
+      "resource-group-name": "mockRg",
+      "template-file": "/path/to/mockTemplateFile",
+      "bicep-version": "0.30.23",
+    });
+
+    const config = parseConfig();
+
+    expect(config).toEqual<DeploymentsConfig>({
+      type: "deployment",
+      name: undefined,
+      operation: "create",
+      scope: {
+        type: "resourceGroup",
+        subscriptionId: "mockSub",
+        resourceGroup: "mockRg",
+        tenantId: undefined,
+      },
+      location: undefined,
+      templateFile: path.resolve("/path/to/mockTemplateFile"),
+      parametersFile: undefined,
+      parameters: undefined,
+      bicepVersion: "0.30.23", // This should contain the specified version
+      tags: undefined,
+      maskedOutputs: undefined,
+      whatIf: {
+        excludeChangeTypes: undefined,
+      },
+      validationLevel: undefined,
+      environment: "azureCloud",
+    });
+  });
+
+  it("defaults bicep-version to undefined when not provided", async () => {
+    configureGetInputMock({
+      type: "deployment",
+      operation: "create",
+      scope: "resourceGroup",
+      "subscription-id": "mockSub",
+      "resource-group-name": "mockRg",
+      "template-file": "/path/to/mockTemplateFile",
+      // bicep-version not provided
+    });
+
+    const config = parseConfig();
+
+    expect(config.bicepVersion).toBeUndefined();
+  });
 });

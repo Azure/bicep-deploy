@@ -156,3 +156,22 @@ jobs:
           parameters-file: ./main.bicepparam
           validation-level: providerNoRbac
 ```
+
+### With specific Bicep version
+
+This snippet demonstrates using a specific version of Bicep for compilation. This is useful when you need to ensure consistency across environments or use features from a specific Bicep version.
+
+```yaml
+- name: Deployment with specific Bicep version
+  uses: azure/bicep-deploy@v2
+  with:
+    type: deployment
+    operation: create
+    name: Development
+    scope: resourceGroup
+    subscription-id: 00000000-0000-0000-0000-000000000000
+    resource-group-name: example
+    template-file: ./src/main.bicep
+    parameters-file: ./src/parameters.json
+    bicep-version: "0.37.4"
+```

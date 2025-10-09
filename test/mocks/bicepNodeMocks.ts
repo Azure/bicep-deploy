@@ -36,4 +36,10 @@ const mockBicepNode = {
   },
 };
 
+export function configureBicepInstallMock(
+  mock: (tmpDir: string, version?: string) => Promise<string>,
+) {
+  mockBicepNode.Bicep.install.mockImplementation(mock);
+}
+
 jest.mock("bicep-node", () => mockBicepNode);

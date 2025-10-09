@@ -48,6 +48,7 @@ export type FileConfig = {
   templateFile?: string;
   parametersFile?: string;
   parameters?: Record<string, unknown>;
+  bicepVersion?: string;
 };
 
 type CommonConfig = {
@@ -114,6 +115,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
   const templateFile = getOptionalFilePath("template-file");
   const parametersFile = getOptionalFilePath("parameters-file");
   const parameters = getOptionalDictionaryInput("parameters");
+  const bicepVersion = getOptionalStringInput("bicep-version");
   const description = getOptionalStringInput("description");
   const tags = getOptionalStringDictionaryInput("tags");
   const maskedOutputs = getOptionalStringArrayInput("masked-outputs");
@@ -134,6 +136,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         templateFile,
         parametersFile,
         parameters,
+        bicepVersion,
         tags,
         maskedOutputs,
         environment: environment,
@@ -172,6 +175,7 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         templateFile,
         parametersFile,
         parameters,
+        bicepVersion,
         description,
         tags,
         maskedOutputs,
