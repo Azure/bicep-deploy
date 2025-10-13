@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { Deployments } from "@azure/arm-resources";
+import { Deployments } from "@azure/arm-resourcesdeployments";
 import { DeploymentStacks } from "@azure/arm-resourcesdeploymentstacks";
 
 export const mockDeploymentsOps: Partial<jest.MockedObjectDeep<Deployments>> = {
