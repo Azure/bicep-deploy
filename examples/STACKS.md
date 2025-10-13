@@ -140,7 +140,8 @@ jobs:
 
 ### Delete
 
-This workflow runs on manual dispatch. It checks out the code, logs into Azure, and deletes a "Development" deployment stack in the `westus2` region using the specified template and parameters files.
+This workflow runs on manual dispatch. It checks out the code, logs into Azure, and deletes the "Development" deployment stack at the provided scope.
+Without a defined scope, the operation is executed at highest possible level.
 
 ```yaml
 name: Stacks (Delete)
@@ -173,8 +174,4 @@ jobs:
           type: deploymentStack
           operation: delete
           name: Development
-          location: westus2
-          scope: subscription
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          parameters-file: ./main.bicepparam
 ```

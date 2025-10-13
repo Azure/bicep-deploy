@@ -331,6 +331,7 @@ describe("input parsing", () => {
         resourceGroup: "mockRg",
       },
       location: "mockLocation",
+      templateFileRequired: true,
       templateFile: path.resolve("/path/to/mockTemplateFile"),
       parametersFile: path.resolve("/path/to/mockParametersFile"),
       parameters: {
@@ -398,6 +399,7 @@ describe("input parsing", () => {
         subscriptionId: "mockSub",
       },
       location: "mockLocation",
+      templateFileRequired: false,
       templateFile: path.resolve("/path/to/mockTemplateFile"),
       parametersFile: path.resolve("/path/to/mockParametersFile"),
       parameters: {
@@ -473,6 +475,7 @@ objectParam:
         resourceGroup: "mockRg",
       },
       location: "mockLocation",
+      templateFileRequired: true,
       templateFile: "/path/to/mockTemplateFile",
       parametersFile: "/path/to/mockParametersFile",
       parameters: {
@@ -493,6 +496,48 @@ objectParam:
         excludeChangeTypes: ["noChange"],
       },
       environment: "azureUSGovernment",
+    });
+  });
+
+  it("allows `delete` deploymentStack with only required options", async () => {
+    configureGetInputMock({
+      type: "deploymentStack",
+      operation: "delete",
+      "action-on-unmanage-resources": "delete",
+    });
+
+    const config = parseConfig();
+
+    expect(config).toEqual<DeploymentStackConfig>({
+      type: "deploymentStack",
+      operation: "delete",
+      actionOnUnManage: {
+        resources: "delete",
+        managementGroups: undefined,
+        resourceGroups: undefined,
+      },
+      bypassStackOutOfSyncError: false,
+      denySettings: {
+        mode: "none",
+        applyToChildScopes: false,
+        excludedActions: undefined,
+        excludedPrincipals: undefined,
+      },
+      description: undefined,
+      environment: "azureCloud",
+      location: undefined,
+      maskedOutputs: undefined,
+      name: undefined,
+      parameters: undefined,
+      parametersFile: undefined,
+      scope: {
+        type: "subscription",
+        tenantId: undefined,
+        subscriptionId: undefined,
+      },
+      tags: undefined,
+      templateFileRequired: false,
+      templateFile: undefined,
     });
   });
 });

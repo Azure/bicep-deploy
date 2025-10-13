@@ -50,6 +50,7 @@ describe("deployment execution", () => {
       },
       environment: "azureCloud",
       validationLevel: "providerNoRbac",
+      templateFileRequired: true,
     };
 
     const files: ParsedFiles = {
@@ -164,6 +165,7 @@ describe("deployment execution", () => {
       },
       environment: "azureCloud",
       validationLevel: "providerNoRbac",
+      templateFileRequired: true,
     };
 
     const files: ParsedFiles = {
@@ -362,6 +364,7 @@ describe("stack execution", () => {
       bypassStackOutOfSyncError: true,
       description: "mockDescription",
       environment: "azureCloud",
+      templateFileRequired: true,
     };
 
     const files: ParsedFiles = {
@@ -480,6 +483,7 @@ describe("stack execution", () => {
       bypassStackOutOfSyncError: true,
       description: "mockDescription",
       environment: "azureCloud",
+      templateFileRequired: true,
     };
 
     const files: ParsedFiles = {
