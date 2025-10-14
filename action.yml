@@ -103,7 +103,7 @@ inputs:
     required: false
 
   bicep-version:
-    description: "Specifies the version of Bicep to use for compilation. If not provided, the latest version will be used."
+    description: "Specifies the version of Bicep to use for compilation. If not provided, the latest version will be used. Example string: '0.38.5'"
     required: false
 
 runs:

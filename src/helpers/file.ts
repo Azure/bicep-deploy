@@ -19,11 +19,7 @@ export type ParsedFiles = {
 
 async function installBicep(bicepVersion?: string) {
   const bicepTmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bicep-"));
-  if (bicepVersion == undefined) {
-    return await Bicep.install(bicepTmpDir);
-  } else {
-    return await Bicep.install(bicepTmpDir, bicepVersion);
-  }
+  return await Bicep.install(bicepTmpDir, bicepVersion);
 }
 
 async function compileBicepParams(
