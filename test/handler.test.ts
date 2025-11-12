@@ -29,7 +29,6 @@ import {
   DeploymentStackProperties,
 } from "@azure/arm-resourcesdeploymentstacks";
 import { Color, colorize } from "../src/common/logging";
-import { log } from "console";
 
 describe("deployment execution", () => {
   afterEach(() => jest.clearAllMocks());
@@ -114,7 +113,11 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
+      await execute(
+        { ...config, maskedOutputs: ["mockOutput"] },
+        files,
+        logger
+      );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });
@@ -253,7 +256,11 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
+      await execute(
+        { ...config, maskedOutputs: ["mockOutput"] },
+        files,
+        logger
+      );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });
@@ -429,7 +436,11 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
+      await execute(
+        { ...config, maskedOutputs: ["mockOutput"] },
+        files,
+        logger
+      );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });
@@ -553,7 +564,11 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
+      await execute(
+        { ...config, maskedOutputs: ["mockOutput"] },
+        files,
+        logger
+      );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });

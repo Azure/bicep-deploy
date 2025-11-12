@@ -8,7 +8,10 @@ const logErrorRaw = (message: string) => core.error(message);
 
 export class ActionLogger implements Logger {
   logInfoRaw = (message: string) => core.info(message);
-  logInfo = (message: string) => this.logInfoRaw(colorize(message, Color.Blue));
-  logWarning = (message: string) => logWarningRaw(colorize(message, Color.Yellow));
-  logError = (message: string) => logErrorRaw(colorize(message, Color.Red));
+  logInfo = (message: string) =>
+    this.logInfoRaw(colorize(message, Color.Blue));
+  logWarning = (message: string) =>
+    logWarningRaw(colorize(message, Color.Yellow));
+  logError = (message: string) =>
+    logErrorRaw(colorize(message, Color.Red));
 }

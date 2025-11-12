@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import * as core from "@actions/core";
-
 export interface Logger {
-    logInfo (message: string): any;
-    logWarning (message: string): any;
-    logError (message: string): any;
-    logInfoRaw(message: string): any;
+  logInfo (message: string): void;
+  logWarning (message: string): void;
+  logError (message: string): void;
+  logInfoRaw(message: string): void;
 }
 
 export type ColorMode = "off" | "ansii" | "debug"; // debug is just used for unit testing

@@ -85,7 +85,11 @@ function getStacksClient(
   return createStacksClient(config, subscriptionId, tenantId);
 }
 
-export async function execute(config: ActionConfig, files: ParsedFiles, logger: Logger) {
+export async function execute(
+    config: ActionConfig,
+    files: ParsedFiles,
+    logger: Logger
+) {
   try {
     validateFileScope(config, files);
     switch (config.type) {
@@ -576,7 +580,10 @@ function getScope(files: ParsedFiles): ScopeType | undefined {
   }
 }
 
-function logDiagnostics(diagnostics: DeploymentDiagnosticsDefinition[], logger: Logger) {
+function logDiagnostics(
+    diagnostics: DeploymentDiagnosticsDefinition[],
+    logger: Logger
+) {
   if (diagnostics.length === 0) {
     return;
   }
