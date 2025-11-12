@@ -61,7 +61,7 @@ function configureMocks(inputYaml: string) {
 }
 
 import { run } from "../src/main";
-import { removeColors } from "../src/helpers/logging";
+import { removeColors } from "../src/common/logging";
 
 type EnvironmentData = {
   subscriptionId: string;

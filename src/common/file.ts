@@ -7,7 +7,7 @@ import * as os from "os";
 import { Bicep, CompileResponseDiagnostic } from "bicep-node";
 
 import { FileConfig } from "../config";
-import { logError, logInfo, logWarning } from "./logging";
+import { Logger } from "./logging";
 
 export type ParsedFiles = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,6 +24,7 @@ async function installBicep(bicepVersion?: string) {
 
 async function compileBicepParams(
   paramFilePath: string,
+  logger: Logger,
   parameters?: Record<string, unknown>,
   bicepVersion?: string
 ) {
@@ -34,9 +35,10 @@ async function compileBicepParams(
       path: paramFilePath,
       parameterOverrides: parameters ?? {},
     }),
+    logger,
   );
 
-  logDiagnostics(result.diagnostics);
+  logDiagnostics(result.diagnostics, logger);
 
   if (!result.success) {
     throw `Failed to compile Bicep parameters file: ${paramFilePath}`;
@@ -49,16 +51,17 @@ async function compileBicepParams(
   };
 }
 
-async function compileBicep(templateFilePath: string, bicepVersion?: string) {
+async function compileBicep(templateFilePath: string, logger: Logger, bicepVersion?: string) {
   const bicepPath = await installBicep(bicepVersion);
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compile({
       path: templateFilePath,
     }),
+    logger,
   );
 
-  logDiagnostics(result.diagnostics);
+  logDiagnostics(result.diagnostics, logger);
 
   if (!result.success) {
     throw `Failed to compile Bicep file: ${templateFilePath}`;
@@ -81,14 +84,14 @@ export async function getJsonParameters(config: FileConfig) {
   return JSON.stringify(contents);
 }
 
-export async function getTemplateAndParameters(config: FileConfig) {
+export async function getTemplateAndParameters(config: FileConfig, logger: Logger) {
   const { parametersFile, templateFile } = config;
 
   if (
     parametersFile &&
     path.extname(parametersFile).toLowerCase() === ".bicepparam"
   ) {
-    return parse(await compileBicepParams(parametersFile, config.parameters, config.bicepVersion));
+    return parse(await compileBicepParams(parametersFile, logger, config.parameters, config.bicepVersion));
   }
 
   if (
@@ -101,7 +104,7 @@ export async function getTemplateAndParameters(config: FileConfig) {
   const parameters = await getJsonParameters(config);
 
   if (templateFile && path.extname(templateFile).toLowerCase() === ".bicep") {
-    const { template } = await compileBicep(templateFile, config.bicepVersion);
+    const { template } = await compileBicep(templateFile, logger, config.bicepVersion);
 
     return parse({ template, parameters });
   }
@@ -134,12 +137,13 @@ export function parse(input: {
 async function withBicep<T>(
   bicepPath: string,
   action: (bicep: Bicep) => Promise<T>,
+  logger: Logger
 ) {
   const bicep = await Bicep.initialize(bicepPath);
 
   try {
     const version = await bicep.version();
-    logInfo(`Installed Bicep version ${version} to ${bicepPath}`);
+    logger.logInfo(`Installed Bicep version ${version} to ${bicepPath}`);
 
     return await action(bicep);
   } finally {
@@ -151,11 +155,11 @@ export function resolvePath(fileName: string) {
   return path.resolve(fileName);
 }
 
-function logDiagnostics(diagnostics: CompileResponseDiagnostic[]) {
+function logDiagnostics(diagnostics: CompileResponseDiagnostic[], logger: Logger) {
   for (const diag of diagnostics) {
     const message = `${diag.source}(${diag.range.start.line + 1},${diag.range.start.char + 1}) : ${diag.level} ${diag.code}: ${diag.message}`;
-    if (diag.level === "Error") logError(message);
-    if (diag.level === "Warning") logWarning(message);
-    if (diag.level === "Info") logInfo(message);
+    if (diag.level === "Error") logger.logError(message);
+    if (diag.level === "Warning") logger.logWarning(message);
+    if (diag.level === "Info") logger.logInfo(message);
   }
 }

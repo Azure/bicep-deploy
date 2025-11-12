@@ -14,9 +14,10 @@ import {
   ScopeType,
   SubscriptionScope,
 } from "../src/config";
+import { ActionLogger } from "../src/logging";
 import { readTestFile } from "./utils";
 import { execute, validateFileScope } from "../src/handler";
-import { ParsedFiles } from "../src/helpers/file";
+import { ParsedFiles } from "../src/common/file";
 import {
   Deployment,
   DeploymentExtended,
@@ -27,7 +28,8 @@ import {
   DeploymentStack,
   DeploymentStackProperties,
 } from "@azure/arm-resourcesdeploymentstacks";
-import { Color, colorize } from "../src/helpers/logging";
+import { Color, colorize } from "../src/common/logging";
+import { log } from "console";
 
 describe("deployment execution", () => {
   afterEach(() => jest.clearAllMocks());
@@ -59,6 +61,8 @@ describe("deployment execution", () => {
       ),
     };
 
+    const logger = new ActionLogger();
+
     const expectedProperties: DeploymentProperties = {
       mode: "Incremental",
       template: files.templateContents,
@@ -88,7 +92,7 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files);
+      await execute(config, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         config,
@@ -110,13 +114,13 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files);
+      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files);
+      await execute({ ...config, operation: "validate" }, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -133,7 +137,7 @@ describe("deployment execution", () => {
         {},
       );
 
-      await execute({ ...config, operation: "whatIf" }, files);
+      await execute({ ...config, operation: "whatIf" }, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -172,6 +176,8 @@ describe("deployment execution", () => {
         readTestFile("files/basic/main.parameters.json"),
       ),
     };
+
+    const logger = new ActionLogger();
 
     const expectedProperties: DeploymentProperties = {
       mode: "Incremental",
@@ -220,7 +226,7 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files);
+      await execute(config, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         config,
@@ -247,7 +253,7 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files);
+      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });
@@ -257,7 +263,7 @@ describe("deployment execution", () => {
         getMockRestError(mockError),
       );
 
-      await execute({ ...config, operation: "create" }, files);
+      await execute({ ...config, operation: "create" }, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "create" },
@@ -279,7 +285,7 @@ describe("deployment execution", () => {
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files);
+      await execute({ ...config, operation: "validate" }, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -298,7 +304,7 @@ describe("deployment execution", () => {
         getMockRestError(mockError),
       );
 
-      await execute({ ...config, operation: "validate" }, files);
+      await execute({ ...config, operation: "validate" }, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -319,7 +325,7 @@ describe("deployment execution", () => {
     it("what-ifs", async () => {
       mockDeploymentsOps.beginWhatIfAndWait!.mockResolvedValue({});
 
-      await execute({ ...config, operation: "whatIf" }, files);
+      await execute({ ...config, operation: "whatIf" }, files, logger);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -371,6 +377,8 @@ describe("stack execution", () => {
       ),
     };
 
+    const logger = new ActionLogger();
+
     const expectedProperties: DeploymentStackProperties = {
       actionOnUnmanage: config.actionOnUnManage,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
@@ -399,7 +407,7 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files);
+      await execute(config, files, logger);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         config,
@@ -421,13 +429,13 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files);
+      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files);
+      await execute({ ...config, operation: "validate" }, files, logger);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -440,7 +448,7 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute({ ...config, operation: "delete" }, files);
+      await execute({ ...config, operation: "delete" }, files, logger);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },
@@ -489,6 +497,8 @@ describe("stack execution", () => {
       ),
     };
 
+    const logger = new ActionLogger();
+
     const expectedProperties: DeploymentStackProperties = {
       actionOnUnmanage: config.actionOnUnManage,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
@@ -516,7 +526,7 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files);
+      await execute(config, files, logger);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         config,
@@ -543,13 +553,13 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files);
+      await execute({ ...config, maskedOutputs: ["mockOutput"] }, files, logger);
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files);
+      await execute({ ...config, operation: "validate" }, files, logger);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -562,7 +572,7 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute({ ...config, operation: "delete" }, files);
+      await execute({ ...config, operation: "delete" }, files, logger);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },

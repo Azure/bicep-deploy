@@ -2,6 +2,13 @@
 // Licensed under the MIT License.
 import * as core from "@actions/core";
 
+export interface Logger {
+    logInfo (message: string): any;
+    logWarning (message: string): any;
+    logError (message: string): any;
+    logInfoRaw(message: string): any;
+}
+
 export type ColorMode = "off" | "ansii" | "debug"; // debug is just used for unit testing
 
 export enum Color {
@@ -40,16 +47,6 @@ export function removeColors(message: string) {
 
   return message;
 }
-
-export const logInfoRaw = (message: string) => core.info(message);
-export const logInfo = (message: string) =>
-  logInfoRaw(colorize(message, Color.Blue));
-export const logWarningRaw = (message: string) => core.warning(message);
-export const logWarning = (message: string) =>
-  logWarningRaw(colorize(message, Color.Yellow));
-export const logErrorRaw = (message: string) => core.error(message);
-export const logError = (message: string) =>
-  logErrorRaw(colorize(message, Color.Red));
 
 export function getColorString(colorMode: ColorMode, color: Color): string {
   switch (colorMode) {

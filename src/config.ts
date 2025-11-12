@@ -11,7 +11,7 @@ import {
   getRequiredStringInput,
   getOptionalEnumArrayInput,
   getOptionalDictionaryInput,
-} from "./helpers/input";
+} from "./common/input";
 
 export type ScopeType =
   | "tenant"

@@ -21,10 +21,10 @@ import {
   SubscriptionScope,
   TenantScope,
 } from "./config";
-import { ParsedFiles } from "./helpers/file";
-import { createDeploymentClient, createStacksClient } from "./helpers/azure";
-import { logError, logInfo, logInfoRaw, logWarning } from "./helpers/logging";
-import { formatWhatIfOperationResult } from "./helpers/whatif";
+import { ParsedFiles } from "./common/file";
+import { createDeploymentClient, createStacksClient } from "./common/azure";
+import { Logger } from "./common/logging";
+import { formatWhatIfOperationResult } from "./common/whatif";
 
 const defaultName = "azure-bicep-deploy";
 
@@ -85,7 +85,7 @@ function getStacksClient(
   return createStacksClient(config, subscriptionId, tenantId);
 }
 
-export async function execute(config: ActionConfig, files: ParsedFiles) {
+export async function execute(config: ActionConfig, files: ParsedFiles, logger: Logger) {
   try {
     validateFileScope(config, files);
     switch (config.type) {
@@ -98,9 +98,10 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
                 setCreateOutputs(config, result?.properties?.outputs);
               },
               error => {
-                logError(JSON.stringify(error, null, 2));
+                logger.logError(JSON.stringify(error, null, 2));
                 setFailed("Create failed");
               },
+              logger,
             );
             break;
           }
@@ -108,20 +109,21 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
             await tryWithErrorHandling(
               async () => {
                 const result = await deploymentValidate(config, files);
-                logDiagnostics(result?.properties?.diagnostics ?? []);
+                logDiagnostics(result?.properties?.diagnostics ?? [], logger);
               },
               error => {
-                logError(JSON.stringify(error, null, 2));
+                logger.logError(JSON.stringify(error, null, 2));
                 setFailed("Validation failed");
               },
+              logger,
             );
             break;
           }
           case "whatIf": {
             const result = await deploymentWhatIf(config, files);
             const formatted = formatWhatIfOperationResult(result, "ansii");
-            logInfoRaw(formatted);
-            logDiagnostics(result.diagnostics ?? []);
+            logger.logInfoRaw(formatted);
+            logDiagnostics(result.diagnostics ?? [], logger);
             break;
           }
         }
@@ -136,9 +138,10 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
                 setCreateOutputs(config, result?.properties?.outputs);
               },
               error => {
-                logError(JSON.stringify(error, null, 2));
+                logger.logError(JSON.stringify(error, null, 2));
                 setFailed("Create failed");
               },
+              logger,
             );
             break;
           }
@@ -146,9 +149,10 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
             await tryWithErrorHandling(
               () => stackValidate(config, files),
               error => {
-                logError(JSON.stringify(error, null, 2));
+                logger.logError(JSON.stringify(error, null, 2));
                 setFailed("Validation failed");
               },
+              logger,
             );
             break;
           }
@@ -165,10 +169,10 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
       const correlationId = error.response.headers.get(
         "x-ms-correlation-request-id",
       );
-      logError(`Request failed. CorrelationId: ${correlationId}`);
+      logger.logError(`Request failed. CorrelationId: ${correlationId}`);
 
       const responseBody = JSON.parse(error.response.bodyAsText);
-      logError(JSON.stringify(responseBody, null, 2));
+      logger.logError(JSON.stringify(responseBody, null, 2));
     }
 
     setFailed("Operation failed");
@@ -494,6 +498,7 @@ function requireLocation(config: ActionConfig) {
 async function tryWithErrorHandling<T>(
   action: () => Promise<T>,
   onError: (error: ErrorResponse) => void,
+  logger: Logger,
 ): Promise<T | undefined> {
   try {
     return await action();
@@ -502,7 +507,7 @@ async function tryWithErrorHandling<T>(
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
-      logError(`Request failed. CorrelationId: ${correlationId}`);
+      logger.logError(`Request failed. CorrelationId: ${correlationId}`);
 
       const { error } = ex.details as CloudError;
       if (error) {
@@ -515,7 +520,7 @@ async function tryWithErrorHandling<T>(
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
-      logError(`Request failed. CorrelationId: ${correlationId}`);
+      logger.logError(`Request failed. CorrelationId: ${correlationId}`);
 
       const { error } = ex.details;
       if (error) {
@@ -571,24 +576,24 @@ function getScope(files: ParsedFiles): ScopeType | undefined {
   }
 }
 
-function logDiagnostics(diagnostics: DeploymentDiagnosticsDefinition[]) {
+function logDiagnostics(diagnostics: DeploymentDiagnosticsDefinition[], logger: Logger) {
   if (diagnostics.length === 0) {
     return;
   }
 
-  logInfo("Diagnostics returned by the API");
+  logger.logInfo("Diagnostics returned by the API");
 
   for (const diagnostic of diagnostics) {
     const message = `[${diagnostic.level}] ${diagnostic.code}: ${diagnostic.message}`;
     switch (diagnostic.level.toLowerCase()) {
       case "error":
-        logError(message);
+        logger.logError(message);
         break;
       case "warning":
-        logWarning(message);
+        logger.logWarning(message);
         break;
       default:
-        logInfo(message);
+        logger.logInfo(message);
         break;
     }
   }

@@ -9,7 +9,7 @@ import {
   getOptionalStringDictionaryInput,
   getOptionalStringInput,
   getRequiredStringInput,
-} from "../src/helpers/input";
+} from "../src/common/input";
 
 describe("getRequiredStringInput", () => {
   it("throws for missing required input", async () => {
