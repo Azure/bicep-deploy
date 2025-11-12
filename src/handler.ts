@@ -86,9 +86,9 @@ function getStacksClient(
 }
 
 export async function execute(
-    config: ActionConfig,
-    files: ParsedFiles,
-    logger: Logger
+  config: ActionConfig,
+  files: ParsedFiles,
+  logger: Logger
 ) {
   try {
     validateFileScope(config, files);
@@ -581,8 +581,8 @@ function getScope(files: ParsedFiles): ScopeType | undefined {
 }
 
 function logDiagnostics(
-    diagnostics: DeploymentDiagnosticsDefinition[],
-    logger: Logger
+  diagnostics: DeploymentDiagnosticsDefinition[],
+  logger: Logger
 ) {
   if (diagnostics.length === 0) {
     return;

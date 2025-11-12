@@ -116,7 +116,7 @@ describe("deployment execution", () => {
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
         files,
-        logger
+        logger,
       );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
@@ -259,7 +259,7 @@ describe("deployment execution", () => {
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
         files,
-        logger
+        logger,
       );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
@@ -439,7 +439,7 @@ describe("stack execution", () => {
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
         files,
-        logger
+        logger,
       );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
@@ -567,7 +567,7 @@ describe("stack execution", () => {
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
         files,
-        logger
+        logger,
       );
 
       expect(mockActionsCore.setSecret).toHaveBeenCalledWith("foo");
