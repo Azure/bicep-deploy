@@ -30,4 +30,4 @@ export const azureMock = {
   }),
 };
 
-jest.mock("../../src/helpers/azure", () => azureMock);
+jest.mock("../../src/common/azure", () => azureMock);
