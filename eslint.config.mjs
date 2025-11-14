@@ -9,7 +9,7 @@ import notice from "eslint-plugin-notice";
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 
 export default tseslint.config({
-  files: ["src/**/*.ts", "test/**/*.ts", "test-live/**/*.ts"],
+  files: ["src/**/*.ts", "test/**/*.ts", "test-live/**/*.ts", "packages/**/*.ts"],
   extends: [
     eslint.configs.recommended,
     pluginJest.configs['flat/recommended'],

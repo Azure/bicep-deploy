@@ -7,11 +7,8 @@ import {
 } from "./mocks/bicepNodeMocks";
 import { configureReadFile } from "./mocks/fsMocks";
 import { FileConfig } from "../src/config";
-import { ActionLogger } from "../src/logging";
-import {
-  getJsonParameters,
-  getTemplateAndParameters,
-} from "../src/common/file";
+import { TestLogger } from "./logging";
+import { getJsonParameters, getTemplateAndParameters } from "../src/file";
 import { readTestFile } from "./utils";
 
 describe("file parsing", () => {
@@ -29,7 +26,7 @@ describe("file parsing", () => {
       throw `Unexpected file path: ${filePath}`;
     });
 
-    const logger = new ActionLogger();
+    const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
       await getTemplateAndParameters(config, logger);
@@ -72,7 +69,7 @@ describe("file parsing", () => {
       };
     });
 
-    const logger = new ActionLogger();
+    const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
       await getTemplateAndParameters(config, logger);
@@ -117,7 +114,7 @@ describe("file parsing", () => {
       };
     });
 
-    const logger = new ActionLogger();
+    const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
       await getTemplateAndParameters(config, logger);
@@ -164,7 +161,7 @@ describe("file parsing", () => {
       };
     });
 
-    const logger = new ActionLogger();
+    const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
       await getTemplateAndParameters(config, logger);
@@ -186,7 +183,7 @@ describe("file parsing", () => {
       templateFile: "/path/to/main.json",
     };
 
-    const logger = new ActionLogger();
+    const logger = new TestLogger();
 
     await expect(
       async () => await getTemplateAndParameters(config, logger),
@@ -201,7 +198,7 @@ describe("file parsing", () => {
       templateFile: "/path/to/main.what",
     };
 
-    const logger = new ActionLogger();
+    const logger = new TestLogger();
 
     await expect(
       async () => await getTemplateAndParameters(config, logger),

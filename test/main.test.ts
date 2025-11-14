@@ -4,7 +4,7 @@ import {
   configureGetInputMock,
   mockActionsCore,
 } from "./mocks/actionCoreMocks";
-import { mockFile } from "./mocks/fileMocks";
+import { mockFile } from "../packages/bicep-deploy-common/test/mocks/fileMocks";
 import { run } from "../src/main";
 
 describe("run", () => {

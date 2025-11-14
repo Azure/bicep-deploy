@@ -10,9 +10,9 @@ import {
   TokenCredential,
 } from "@azure/identity";
 import { AdditionalPolicyConfig } from "@azure/core-client";
-import { debug, isDebug } from "@actions/core";
 
-import { ActionConfig } from "../config";
+import { Logger } from "./logging";
+import { DeployConfig } from "./config";
 
 const userAgentPrefix = "gh-azure-bicep-deploy";
 const dummySubscriptionId = "00000000-0000-0000-0000-000000000000";
@@ -24,7 +24,8 @@ const endpoints = {
 };
 
 export function createDeploymentClient(
-  config: ActionConfig,
+  config: DeployConfig,
+  logger: Logger,
   subscriptionId?: string,
   tenantId?: string,
 ): ResourceManagementClient {
@@ -36,7 +37,7 @@ export function createDeploymentClient(
       userAgentOptions: {
         userAgentPrefix: userAgentPrefix,
       },
-      additionalPolicies: [debugLoggingPolicy],
+      additionalPolicies: [createDebugLoggingPolicy(logger)],
       // Use a recent API version to take advantage of error improvements
       apiVersion: "2024-03-01",
       endpoint: endpoints[config.environment],
@@ -45,7 +46,8 @@ export function createDeploymentClient(
 }
 
 export function createStacksClient(
-  config: ActionConfig,
+  config: DeployConfig,
+  logger: Logger,
   subscriptionId?: string,
   tenantId?: string,
 ): DeploymentStacksClient {
@@ -57,48 +59,50 @@ export function createStacksClient(
       userAgentOptions: {
         userAgentPrefix: userAgentPrefix,
       },
-      additionalPolicies: [debugLoggingPolicy],
+      additionalPolicies: [createDebugLoggingPolicy(logger)],
       endpoint: endpoints[config.environment],
     },
   );
 }
 
 // Log request + response bodies to GitHub Actions debug output if enabled
-const debugLoggingPolicy: AdditionalPolicyConfig = {
-  position: "perCall",
-  policy: {
-    name: "debugLoggingPolicy",
-    async sendRequest(request, next) {
-      if (isDebug()) {
-        debug(`Request: ${request.method} ${request.url}`);
-        if (request.body) {
-          const parsed = JSON.parse(request.body.toString());
-          debug(`Body: ${JSON.stringify(parsed, null, 2)}`);
-        }
-      }
-
-      const response = await next(request);
-
-      if (isDebug()) {
-        debug(`Response: ${response.status}`);
-        if (response.bodyAsText) {
-          const parsed = JSON.parse(response.bodyAsText);
-          debug(`Body: ${JSON.stringify(parsed, null, 2)}`);
+function createDebugLoggingPolicy(logger: Logger): AdditionalPolicyConfig {
+  return {
+    position: "perCall",
+    policy: {
+      name: "debugLoggingPolicy",
+      async sendRequest(request, next) {
+        if (logger.isDebugEnabled()) {
+          logger.debug(`Request: ${request.method} ${request.url}`);
+          if (request.body) {
+            const parsed = JSON.parse(request.body.toString());
+            logger.debug(`Body: ${JSON.stringify(parsed, null, 2)}`);
+          }
         }
 
-        const correlationId = response.headers.get(
-          "x-ms-correlation-request-id",
-        );
-        debug(`CorrelationId: ${correlationId}`);
+        const response = await next(request);
 
-        const activityId = response.headers.get("x-ms-request-id");
-        debug(`ActivityId: ${activityId}`);
-      }
+        if (logger.isDebugEnabled()) {
+          logger.debug(`Response: ${response.status}`);
+          if (response.bodyAsText) {
+            const parsed = JSON.parse(response.bodyAsText);
+            logger.debug(`Body: ${JSON.stringify(parsed, null, 2)}`);
+          }
 
-      return response;
+          const correlationId = response.headers.get(
+            "x-ms-correlation-request-id",
+          );
+          logger.debug(`CorrelationId: ${correlationId}`);
+
+          const activityId = response.headers.get("x-ms-request-id");
+          logger.debug(`ActivityId: ${activityId}`);
+        }
+
+        return response;
+      },
     },
-  },
-};
+  };
+}
 
 function getCredential(tenantId?: string): TokenCredential {
   return new ChainedTokenCredential(

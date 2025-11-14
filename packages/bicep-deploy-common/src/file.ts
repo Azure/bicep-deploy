@@ -6,7 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { Bicep, CompileResponseDiagnostic } from "bicep-node";
 
-import { FileConfig } from "../config";
+import { FileConfig } from "./config";
 import { Logger } from "./logging";
 
 export type ParsedFiles = {

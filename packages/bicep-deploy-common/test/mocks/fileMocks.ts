@@ -6,4 +6,4 @@ export const mockFile = {
   resolvePath: jest.fn(),
 };
 
-jest.mock("../../src/common/file.ts", () => mockFile);
+jest.mock("../../src/file.ts", () => mockFile);

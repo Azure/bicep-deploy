@@ -1,34 +1,52 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import * as core from "@actions/core";
 import * as yaml from "yaml";
 
 import { resolvePath } from "./file";
 
-export function getRequiredStringInput(inputName: string): string {
-  return getInput(inputName, undefined, true) as string;
+export interface InputReader {
+  getInput(
+    inputName: string,
+  ): string | undefined;
 }
 
-export function getOptionalStringInput(inputName: string): string | undefined {
-  return getInput(inputName, undefined, false);
+export function getRequiredStringInput(
+  inputName: string,
+  inputReader: InputReader,
+): string {
+  return getInput(inputName, inputReader, undefined, true) as string;
+}
+
+export function getOptionalStringInput(
+  inputName: string,
+  inputReader: InputReader,
+): string | undefined {
+  return getInput(inputName, inputReader, undefined, false);
 }
 
 export function getRequiredEnumInput<TEnum extends string>(
   inputName: string,
   allowedValues: TEnum[],
+  inputReader: InputReader,
 ): TEnum {
-  return getInput(inputName, allowedValues, true) as TEnum;
+  return getInput(inputName, inputReader, allowedValues, true) as TEnum;
 }
 
 export function getOptionalEnumInput<TEnum extends string>(
   inputName: string,
   allowedValues: TEnum[],
+  inputReader: InputReader,
 ): TEnum | undefined {
-  return getInput(inputName, allowedValues, false) as TEnum | undefined;
+  return getInput(inputName, inputReader, allowedValues, false) as
+    | TEnum
+    | undefined;
 }
 
-export function getOptionalFilePath(inputName: string): string | undefined {
-  const input = getOptionalStringInput(inputName);
+export function getOptionalFilePath(
+  inputName: string,
+  inputReader: InputReader,
+): string | undefined {
+  const input = getOptionalStringInput(inputName, inputReader);
   if (!input) {
     return;
   }
@@ -36,8 +54,11 @@ export function getOptionalFilePath(inputName: string): string | undefined {
   return resolvePath(input);
 }
 
-export function getOptionalBooleanInput(inputName: string): boolean {
-  const input = getOptionalStringInput(inputName);
+export function getOptionalBooleanInput(
+  inputName: string,
+  inputReader: InputReader,
+): boolean {
+  const input = getOptionalStringInput(inputName, inputReader);
   if (!input) {
     return false;
   }
@@ -53,8 +74,9 @@ export function getOptionalBooleanInput(inputName: string): boolean {
 
 export function getOptionalStringArrayInput(
   inputName: string,
+  inputReader: InputReader,
 ): string[] | undefined {
-  const inputString = getOptionalStringInput(inputName);
+  const inputString = getOptionalStringInput(inputName, inputReader);
 
   return inputString ? parseCommaSeparated(inputString) : undefined;
 }
@@ -62,8 +84,9 @@ export function getOptionalStringArrayInput(
 export function getOptionalEnumArrayInput<TEnum extends string>(
   inputName: string,
   allowedValues: TEnum[],
+  inputReader: InputReader,
 ): TEnum[] | undefined {
-  const values = getOptionalStringArrayInput(inputName);
+  const values = getOptionalStringArrayInput(inputName, inputReader);
   if (!values) {
     return undefined;
   }
@@ -82,8 +105,9 @@ export function getOptionalEnumArrayInput<TEnum extends string>(
 
 export function getOptionalDictionaryInput(
   inputName: string,
+  inputReader: InputReader,
 ): Record<string, unknown> | undefined {
-  const inputString = getOptionalStringInput(inputName);
+  const inputString = getOptionalStringInput(inputName, inputReader);
   if (!inputString) {
     return undefined;
   }
@@ -100,8 +124,9 @@ export function getOptionalDictionaryInput(
 
 export function getOptionalStringDictionaryInput(
   inputName: string,
+  inputReader: InputReader,
 ): Record<string, string> | undefined {
-  const input = getOptionalDictionaryInput(inputName);
+  const input = getOptionalDictionaryInput(inputName, inputReader);
   if (!input) {
     return undefined;
   }
@@ -115,31 +140,6 @@ export function getOptionalStringDictionaryInput(
   });
 
   return input as Record<string, string>;
-}
-
-function getInput(
-  inputName: string,
-  allowedValues?: string[],
-  throwOnMissing = true,
-): string | undefined {
-  const inputValue = core.getInput(inputName)?.trim();
-  if (!inputValue) {
-    if (throwOnMissing) {
-      throw new Error(
-        `Action input '${inputName}' is required but not provided`,
-      );
-    } else {
-      return;
-    }
-  }
-
-  if (allowedValues && !allowedValues.includes(inputValue)) {
-    throw new Error(
-      `Action input '${inputName}' must be one of the following values: '${allowedValues.join(`', '`)}'`,
-    );
-  }
-
-  return inputValue;
 }
 
 function tryParseJson(value: string) {
@@ -163,4 +163,30 @@ function parseCommaSeparated(value: string) {
     .split(",")
     .map(val => val.trim())
     .filter(val => val.length > 0);
+}
+
+function getInput(
+  inputName: string,
+  inputReader: InputReader,
+  allowedValues?: string[],
+  throwOnMissing = true,
+): string | undefined {
+  const inputValue = inputReader.getInput(inputName)?.trim();
+  if (!inputValue) {
+    if (throwOnMissing) {
+      throw new Error(
+        `Action input '${inputName}' is required but not provided`,
+      );
+    } else {
+      return;
+    }
+  }
+
+  if (allowedValues && !allowedValues.includes(inputValue)) {
+    throw new Error(
+      `Action input '${inputName}' must be one of the following values: '${allowedValues.join(`', '`)}'`,
+    );
+  }
+
+  return inputValue;
 }

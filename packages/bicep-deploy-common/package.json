@@ -1,0 +1,23 @@
+{
+  "name": "bicep-deploy-common",
+  "description": "Common Code for bicep-deploy (GitHub Action/ADO Task)",
+  "version": "0.0.1",
+  "author": "Microsoft",
+  "homepage": "https://github.com/Azure/bicep-deploy#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Azure/bicep-deploy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Azure/bicep-deploy/issues"
+  },
+  "keywords": [
+    "bicep",
+    "arm templates"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "MIT"
+}

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 export interface Logger {
+  isDebugEnabled(): boolean;
+  debug(message: string): void;
   logInfo(message: string): void;
   logWarning(message: string): void;
   logError(message: string): void;

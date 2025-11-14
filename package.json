@@ -26,8 +26,8 @@
     "test": "jest --config jest.config.unit.ts",
     "test:live": "jest --config jest.config.live.ts",
     "package": "esbuild src/index.ts --minify --bundle --outfile=dist/index.js --sourcemap --platform=node --target=es2021",
-    "lint": "eslint src test test-live",
-    "lint:fix": "eslint src test test-live --fix"
+    "lint": "eslint src test test-live packages",
+    "lint:fix": "eslint src test test-live packages --fix"
   },
   "license": "MIT",
   "dependencies": {

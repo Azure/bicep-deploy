@@ -2,16 +2,17 @@
 // Licensed under the MIT License.
 import {
   getRequiredEnumInput,
+  getRequiredStringInput,
   getOptionalStringInput,
   getOptionalStringDictionaryInput,
   getOptionalFilePath,
-  getOptionalBooleanInput,
   getOptionalEnumInput,
   getOptionalStringArrayInput,
-  getRequiredStringInput,
   getOptionalEnumArrayInput,
   getOptionalDictionaryInput,
-} from "./common/input";
+  getOptionalBooleanInput,
+  InputReader,
+} from "./input";
 
 export type ScopeType =
   | "tenant"
@@ -106,26 +107,39 @@ export type DeploymentStackConfig = CommonConfig & {
   bypassStackOutOfSyncError: boolean;
 };
 
-export type ActionConfig = DeploymentsConfig | DeploymentStackConfig;
+export type DeployConfig = DeploymentsConfig | DeploymentStackConfig;
 
-export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
-  const type = getRequiredEnumInput("type", ["deployment", "deploymentStack"]);
-  const name = getOptionalStringInput("name");
-  const location = getOptionalStringInput("location");
-  const templateFile = getOptionalFilePath("template-file");
-  const parametersFile = getOptionalFilePath("parameters-file");
-  const parameters = getOptionalDictionaryInput("parameters");
-  const bicepVersion = getOptionalStringInput("bicep-version");
-  const description = getOptionalStringInput("description");
-  const tags = getOptionalStringDictionaryInput("tags");
-  const maskedOutputs = getOptionalStringArrayInput("masked-outputs");
+export function parseConfig(
+  inputReader: InputReader,
+): DeploymentsConfig | DeploymentStackConfig {
+  const type = getRequiredEnumInput(
+    "type",
+    ["deployment", "deploymentStack"],
+    inputReader,
+  );
+  const name = getOptionalStringInput("name", inputReader);
+  const location = getOptionalStringInput("location", inputReader);
+  const templateFile = getOptionalFilePath("template-file", inputReader);
+  const parametersFile = getOptionalFilePath("parameters-file", inputReader);
+  const parameters = getOptionalDictionaryInput("parameters", inputReader);
+  const bicepVersion = getOptionalStringInput("bicep-version", inputReader);
+  const description = getOptionalStringInput("description", inputReader);
+  const tags = getOptionalStringDictionaryInput("tags", inputReader);
+  const maskedOutputs = getOptionalStringArrayInput(
+    "masked-outputs",
+    inputReader,
+  );
   const environment =
-    getOptionalEnumInput("environment", [
-      "azureCloud",
-      "azureChinaCloud",
-      "azureGermanCloud",
-      "azureUSGovernment",
-    ]) ?? "azureCloud";
+    getOptionalEnumInput(
+      "environment",
+      [
+        "azureCloud",
+        "azureChinaCloud",
+        "azureGermanCloud",
+        "azureUSGovernment",
+      ],
+      inputReader,
+    ) ?? "azureCloud";
 
   switch (type) {
     case "deployment": {
@@ -140,12 +154,12 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         tags,
         maskedOutputs,
         environment: environment,
-        operation: getRequiredEnumInput("operation", [
-          "create",
-          "validate",
-          "whatIf",
-        ]),
-        scope: parseDeploymentScope(),
+        operation: getRequiredEnumInput(
+          "operation",
+          ["create", "validate", "whatIf"],
+          inputReader,
+        ),
+        scope: parseDeploymentScope(inputReader),
         whatIf: {
           excludeChangeTypes: getOptionalEnumArrayInput(
             "what-if-exclude-change-types",
@@ -158,13 +172,14 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
               "ignore",
               "unsupported",
             ],
+            inputReader,
           ),
         },
-        validationLevel: getOptionalEnumInput("validation-level", [
-          "provider",
-          "template",
-          "providerNoRbac",
-        ]),
+        validationLevel: getOptionalEnumInput(
+          "validation-level",
+          ["provider", "template", "providerNoRbac"],
+          inputReader,
+        ),
       };
     }
     case "deploymentStack": {
@@ -180,43 +195,50 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
         tags,
         maskedOutputs,
         environment: environment,
-        operation: getRequiredEnumInput("operation", [
-          "create",
-          "validate",
-          "delete",
-        ]),
-        scope: parseDeploymentStackScope(),
+        operation: getRequiredEnumInput(
+          "operation",
+          ["create", "validate", "delete"],
+          inputReader,
+        ),
+        scope: parseDeploymentStackScope(inputReader),
         actionOnUnManage: {
-          resources: getRequiredEnumInput("action-on-unmanage-resources", [
-            "delete",
-            "detach",
-          ]),
+          resources: getRequiredEnumInput(
+            "action-on-unmanage-resources",
+            ["delete", "detach"],
+            inputReader,
+          ),
           resourceGroups: getOptionalEnumInput(
             "action-on-unmanage-resourcegroups",
             ["delete", "detach"],
+            inputReader,
           ),
           managementGroups: getOptionalEnumInput(
             "action-on-unmanage-managementgroups",
             ["delete", "detach"],
+            inputReader,
           ),
         },
         bypassStackOutOfSyncError: getOptionalBooleanInput(
           "bypass-stack-out-of-sync-error",
+          inputReader,
         ),
         denySettings: {
-          mode: getRequiredEnumInput("deny-settings-mode", [
-            "denyDelete",
-            "denyWriteAndDelete",
-            "none",
-          ]),
+          mode: getRequiredEnumInput(
+            "deny-settings-mode",
+            ["denyDelete", "denyWriteAndDelete", "none"],
+            inputReader,
+          ),
           excludedActions: getOptionalStringArrayInput(
             "deny-settings-excluded-actions",
+            inputReader,
           ),
           excludedPrincipals: getOptionalStringArrayInput(
             "deny-settings-excluded-principals",
+            inputReader,
           ),
           applyToChildScopes: getOptionalBooleanInput(
             "deny-settings-apply-to-child-scopes",
+            inputReader,
           ),
         },
       };
@@ -224,18 +246,15 @@ export function parseConfig(): DeploymentsConfig | DeploymentStackConfig {
   }
 }
 
-function parseDeploymentScope():
-  | TenantScope
-  | ManagementGroupScope
-  | SubscriptionScope
-  | ResourceGroupScope {
-  const type = getRequiredEnumInput("scope", [
-    "tenant",
-    "managementGroup",
-    "subscription",
-    "resourceGroup",
-  ]);
-  const tenantId = getOptionalStringInput("tenant-id");
+function parseDeploymentScope(
+  inputReader: InputReader,
+): TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope {
+  const type = getRequiredEnumInput(
+    "scope",
+    ["tenant", "managementGroup", "subscription", "resourceGroup"],
+    inputReader,
+  );
+  const tenantId = getOptionalStringInput("tenant-id", inputReader);
 
   switch (type) {
     case "tenant": {
@@ -245,7 +264,10 @@ function parseDeploymentScope():
       };
     }
     case "managementGroup": {
-      const managementGroup = getRequiredStringInput("management-group-id");
+      const managementGroup = getRequiredStringInput(
+        "management-group-id",
+        inputReader,
+      );
       return {
         type,
         tenantId,
@@ -253,7 +275,10 @@ function parseDeploymentScope():
       };
     }
     case "subscription": {
-      const subscriptionId = getRequiredStringInput("subscription-id");
+      const subscriptionId = getRequiredStringInput(
+        "subscription-id",
+        inputReader,
+      );
       return {
         type,
         tenantId,
@@ -261,8 +286,14 @@ function parseDeploymentScope():
       };
     }
     case "resourceGroup": {
-      const subscriptionId = getRequiredStringInput("subscription-id");
-      const resourceGroup = getRequiredStringInput("resource-group-name");
+      const subscriptionId = getRequiredStringInput(
+        "subscription-id",
+        inputReader,
+      );
+      const resourceGroup = getRequiredStringInput(
+        "resource-group-name",
+        inputReader,
+      );
       return {
         type,
         tenantId,
@@ -273,20 +304,22 @@ function parseDeploymentScope():
   }
 }
 
-function parseDeploymentStackScope():
-  | ManagementGroupScope
-  | SubscriptionScope
-  | ResourceGroupScope {
-  const type = getRequiredEnumInput("scope", [
-    "managementGroup",
-    "subscription",
-    "resourceGroup",
-  ]);
-  const tenantId = getOptionalStringInput("tenant-id");
+function parseDeploymentStackScope(
+  inputReader: InputReader,
+): ManagementGroupScope | SubscriptionScope | ResourceGroupScope {
+  const type = getRequiredEnumInput(
+    "scope",
+    ["managementGroup", "subscription", "resourceGroup"],
+    inputReader,
+  );
+  const tenantId = getOptionalStringInput("tenant-id", inputReader);
 
   switch (type) {
     case "managementGroup": {
-      const managementGroup = getRequiredStringInput("management-group-id");
+      const managementGroup = getRequiredStringInput(
+        "management-group-id",
+        inputReader,
+      );
       return {
         type,
         tenantId,
@@ -294,7 +327,10 @@ function parseDeploymentStackScope():
       };
     }
     case "subscription": {
-      const subscriptionId = getRequiredStringInput("subscription-id");
+      const subscriptionId = getRequiredStringInput(
+        "subscription-id",
+        inputReader,
+      );
       return {
         type,
         tenantId,
@@ -302,8 +338,14 @@ function parseDeploymentStackScope():
       };
     }
     case "resourceGroup": {
-      const subscriptionId = getRequiredStringInput("subscription-id");
-      const resourceGroup = getRequiredStringInput("resource-group-name");
+      const subscriptionId = getRequiredStringInput(
+        "subscription-id",
+        inputReader,
+      );
+      const resourceGroup = getRequiredStringInput(
+        "resource-group-name",
+        inputReader,
+      );
       return {
         type,
         tenantId,

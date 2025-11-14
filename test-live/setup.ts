@@ -61,7 +61,7 @@ function configureMocks(inputYaml: string) {
 }
 
 import { run } from "../src/main";
-import { removeColors } from "../src/common/logging";
+import { removeColors } from "../packages/bicep-deploy-common/src/logging";
 
 type EnvironmentData = {
   subscriptionId: string;
