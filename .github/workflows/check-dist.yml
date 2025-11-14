@@ -74,7 +74,7 @@ jobs:
           path: dist/
 
       - name: Build packages/bicep-deploy-common/dist/ Directory
-        id: build bicep-deploy-common
+        id: build common
         run: |
           cd packages/bicep-deploy-common
           rm -Rf dist
@@ -83,7 +83,7 @@ jobs:
       # This will fail the workflow if the `dist/` directory is different than
       # expected.
       - name: Compare packages/bicep-deploy-common/dist/ Directories
-        id: diff
+        id: diff common
         run: |
           if [ ! -d dist/ ]; then
             echo "Expected dist/ directory does not exist.  See status below:"
@@ -100,7 +100,7 @@ jobs:
       # workflow artifact.
       - if: ${{ failure() && steps.diff.outcome == 'failure' }}
         name: Upload Artifact from packages/bicep-deploy-common/dist/ comparison
-        id: upload
+        id: upload common
         uses: actions/upload-artifact@v5
         with:
           name: dist
