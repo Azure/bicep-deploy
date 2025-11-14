@@ -1,4 +1,6 @@
-Name: Upload bicep-deploy-common Package
+name: Upload bicep-deploy-common Package
+
+on: workflow_dispatch
 
 permissions:
   contents: read
