@@ -1,0 +1,49 @@
+Name: Upload bicep-deploy-common Package
+
+permissions:
+  contents: read
+
+jobs:
+  upload-package:
+    name: Upload bicep-deploy-common Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        id: install
+        run: npm ci
+
+      - name: Build bicep-deploy-common Package
+        id: build
+        run: |
+          cd packages/bicep-deploy-common
+          rm -Rf dist
+          npm run package
+
+      - name: Create package tarball
+        run: npm pack
+
+      - name: Login to azuresdkpartnerdrops
+        uses: azure/login@v2
+        with:
+          client-id: 872612f8-2d92-4df7-8a44-b9d03f8e1c97
+          tenant-id: 72f988bf-86f1-41af-91ab-2d7cd011db47
+          subscription-id: a18897a6-7e44-457d-9260-f2854c0aca42
+
+      - name: Upload files to partner drop folder
+        run: |
+          fileName=$(basename *.tgz)
+          version=${fileName##*-}
+          version=${version%.tgz}
+          az storage blob upload -f $fileName -c drops/bicep-deploy-common/npm/$version --account-name azuresdkpartnerdrops --auth-mode login
