@@ -15,9 +15,37 @@
     "bicep",
     "arm templates"
   ],
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "exports": {
+    ".": "./dist/*.js"
   },
-  "license": "MIT"
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "package": "esbuild ./src/*.ts --minify --bundle --outdir=dist --sourcemap --platform=node --target=es2021"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@azure/arm-resources": "^6.0.0",
+    "@azure/arm-resourcesdeploymentstacks": "^1.0.0",
+    "@azure/identity": "^4.10.2",
+    "bicep-node": "^0.0.8",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.29",
+    "esbuild": "^0.25.8",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-jest": "^29.0.1",
+    "eslint-plugin-notice": "^1.0.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.0",
+    "yaml": "^2.7.1"
+  }
 }
