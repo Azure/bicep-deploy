@@ -5,9 +5,7 @@ import * as yaml from "yaml";
 import { resolvePath } from "./file";
 
 export interface InputReader {
-  getInput(
-    inputName: string,
-  ): string | undefined;
+  getInput(inputName: string): string | undefined;
 }
 
 export function getRequiredStringInput(
