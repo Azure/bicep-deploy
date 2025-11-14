@@ -74,7 +74,7 @@ jobs:
           path: dist/
 
       - name: Build packages/bicep-deploy-common/dist/ Directory
-        id: build
+        id: build bicep-deploy-common
         run: |
           cd packages/bicep-deploy-common
           rm -Rf dist
