@@ -1,0 +1,580 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.formatJson = formatJson;
+exports.formatWhatIfOperationResult = formatWhatIfOperationResult;
+const logging_1 = require("./logging");
+var Symbol;
+(function (Symbol) {
+    Symbol["WhiteSpace"] = " ";
+    Symbol["Quote"] = "\"";
+    Symbol["Colon"] = ":";
+    Symbol["LeftSquareBracket"] = "[";
+    Symbol["RightSquareBracket"] = "]";
+    Symbol["Dot"] = ".";
+    Symbol["Equal"] = "=";
+    Symbol["Asterisk"] = "*";
+    Symbol["Plus"] = "+";
+    Symbol["Minus"] = "-";
+    Symbol["Tilde"] = "~";
+    Symbol["ExclamationPoint"] = "!";
+    Symbol["Cross"] = "x";
+})(Symbol || (Symbol = {}));
+const changeTypeToColor = {
+    Create: logging_1.Color.Green,
+    Delete: logging_1.Color.Red,
+    Modify: logging_1.Color.Magenta,
+    Deploy: logging_1.Color.Blue,
+    NoChange: logging_1.Color.Reset,
+    Ignore: logging_1.Color.White,
+    Unsupported: logging_1.Color.White,
+};
+const propertyChangeTypeToColor = {
+    Create: logging_1.Color.Green,
+    Delete: logging_1.Color.Red,
+    Modify: logging_1.Color.Magenta,
+    Array: logging_1.Color.Magenta,
+    NoEffect: logging_1.Color.White,
+};
+const changeTypeToSymbol = {
+    Create: Symbol.Plus,
+    Delete: Symbol.Minus,
+    Modify: Symbol.Tilde,
+    Deploy: Symbol.ExclamationPoint,
+    NoChange: Symbol.Equal,
+    Ignore: Symbol.Asterisk,
+    Unsupported: Symbol.Cross,
+};
+const propertyChangeTypeToSymbol = {
+    Create: Symbol.Plus,
+    Delete: Symbol.Minus,
+    Modify: Symbol.Tilde,
+    Array: Symbol.Tilde,
+    NoEffect: Symbol.Cross,
+};
+const changeTypeToWeight = {
+    Delete: 0,
+    Create: 1,
+    Deploy: 2,
+    Modify: 3,
+    NoChange: 4,
+    Unsupported: 5,
+    Ignore: 6,
+};
+const propertyChangeTypeToWeight = {
+    Delete: 0,
+    Create: 1,
+    Modify: 2,
+    Array: 2,
+    NoEffect: 3,
+};
+const propertyChangeToChangeType = {
+    Array: "Modify",
+    Create: "Create",
+    Delete: "Delete",
+    Modify: "Modify",
+    NoEffect: "NoChange",
+};
+function formatJson(value, colorMode) {
+    const builder = new logging_1.ColorStringBuilder(colorMode);
+    formatJsonValue(builder, value);
+    return builder.build();
+}
+function formatWhatIfOperationResult(whatIfOperationResult, colorMode) {
+    const builder = new logging_1.ColorStringBuilder(colorMode);
+    formatNoiseNotice(builder);
+    formatChangeTypeLegend(builder, whatIfOperationResult.changes ?? []);
+    formatResourceChanges(builder, whatIfOperationResult.changes ?? []);
+    formatResourceChangesStats(builder, whatIfOperationResult.changes ?? []);
+    return builder.build();
+}
+function formatNoiseNotice(builder) {
+    builder.appendLine(`Note: The result may contain false positive predictions (noise).
+You can help us improve the accuracy of the result by opening an issue here: https://aka.ms/WhatIfIssues`);
+    builder.appendLine();
+}
+function formatChangeTypeLegend(builder, resourceChanges) {
+    if (!resourceChanges.length)
+        return;
+    const changeTypeSet = new Set();
+    function populateChangeTypeSet(propertyChanges) {
+        if (!propertyChanges.length)
+            return;
+        for (const propertyChange of propertyChanges) {
+            const propertyChangeType = propertyChange.propertyChangeType;
+            changeTypeSet.add(propertyChangeToChangeType[propertyChangeType]);
+            populateChangeTypeSet(propertyChange.children ?? []);
+        }
+    }
+    for (const resourceChange of resourceChanges) {
+        changeTypeSet.add(resourceChange.changeType);
+        populateChangeTypeSet(resourceChange.delta ?? []);
+    }
+    const changeTypes = Array.from(changeTypeSet).sort((a, b) => changeTypeToWeight[a] - changeTypeToWeight[b]);
+    builder.append("Resource and property changes are indicated with ");
+    builder.appendLine(changeTypes.length === 1 ? "this symbol:" : "these symbols:");
+    for (const changeType of changeTypes) {
+        const changeTypeSymbol = changeTypeToSymbol[changeType];
+        const changeTypeColor = changeTypeToColor[changeType];
+        formatIndent(builder);
+        builder.append(changeTypeSymbol, changeTypeColor).append(Symbol.WhiteSpace);
+        builder.appendLine(changeType.charAt(0).toUpperCase() + changeType.slice(1));
+    }
+}
+function formatResourceChangesStats(builder, resourceChanges) {
+    builder.appendLine().append("Resource changes: ");
+    if (!resourceChanges.length) {
+        builder.append("no change.");
+        return;
+    }
+    const sortedResourceChanges = resourceChanges.sort((a, b) => changeTypeToWeight[a.changeType] - changeTypeToWeight[b.changeType]);
+    const resourceChangesByChangeType = groupBy(sortedResourceChanges, x => x.changeType);
+    const countByChangeType = entries(resourceChangesByChangeType)
+        .map(([key, value]) => ({ key, count: value.length }))
+        .filter(x => x.count > 0);
+    const changeTypeStats = countByChangeType.map(x => formatChangeTypeCount(x.key, x.count));
+    builder.append(changeTypeStats.join(", ")).append(".");
+}
+function formatChangeTypeCount(changeType, count) {
+    switch (changeType) {
+        case "Create":
+            return `${count} to create`;
+        case "Delete":
+            return `${count} to delete`;
+        case "Deploy":
+            return `${count} to deploy`;
+        case "Modify":
+            return `${count} to modify`;
+        case "Ignore":
+            return `${count} to ignore`;
+        case "NoChange":
+            return `${count} no change`;
+        case "Unsupported":
+            return `${count} unsupported`;
+        default:
+            throw new Error(`Invalid ChangeType: ${changeType}`);
+    }
+}
+function formatResourceChanges(builder, resourceChanges) {
+    if (!resourceChanges.length)
+        return;
+    const numScopes = new Set(resourceChanges.map(getScopeUppercase)).size;
+    const resourceChangesByScope = groupBy(resourceChanges.sort((a, b) => getScopeUppercase(a).localeCompare(getScopeUppercase(b))), getScopeUppercase);
+    builder.appendLine();
+    builder.appendLine(`The deployment will update the following ${numScopes === 1 ? "scope:" : "scopes:"}`);
+    for (const [, resourceChangesInScope] of entries(resourceChangesByScope)) {
+        const scope = getScope(resourceChangesInScope[0]);
+        formatResourceChangesInScope(builder, scope, resourceChangesInScope);
+    }
+}
+function formatResourceChangesInScope(builder, scope, resourceChangesInScope) {
+    builder.appendLine().appendLine(`Scope: ${scope}`);
+    const sortedResourceChanges = resourceChangesInScope.sort((a, b) => changeTypeToWeight[a.changeType] - changeTypeToWeight[b.changeType]);
+    const grouped = groupBy(sortedResourceChanges, x => x.changeType);
+    for (const [changeType, resourceChanges] of entries(grouped)) {
+        builder.withColorScope(changeTypeToColor[changeType], () => {
+            for (const resourceChange of resourceChanges) {
+                const isLast = resourceChange ===
+                    sortedResourceChanges[sortedResourceChanges.length - 1];
+                formatResourceChange(builder, resourceChange, isLast);
+            }
+        });
+    }
+}
+function formatResourceChange(builder, resourceChange, isLast) {
+    const changeType = resourceChange.changeType;
+    const relativeResourceId = getRelativeResourceId(resourceChange);
+    const apiVersion = getApiVersion(resourceChange);
+    builder.appendLine();
+    formatResourceChangePath(builder, changeType, relativeResourceId, apiVersion);
+    if (changeType === "Create" && resourceChange.after) {
+        formatJsonValue(builder, resourceChange.after, undefined, undefined, 2);
+    }
+    else if (changeType === "Delete" && resourceChange.before) {
+        formatJsonValue(builder, resourceChange.before, undefined, undefined, 2);
+    }
+    else if (resourceChange.delta) {
+        const delta = resourceChange.delta;
+        builder.withColorScope(logging_1.Color.Reset, () => {
+            builder.appendLine();
+            formatPropertyChanges(builder, sortChanges(delta));
+        });
+    }
+    else if (isLast) {
+        builder.appendLine();
+    }
+}
+function formatResourceChangePath(builder, changeType, resourceChangeId, apiVersion) {
+    formatPath(builder, resourceChangeId, 0, 1, builder => formatResourceChangeType(builder, changeType), builder => formatResourceChangeApiVersion(builder, apiVersion));
+}
+function formatResourceChangeType(builder, changeType) {
+    const changeSymbol = changeTypeToSymbol[changeType];
+    builder.append(changeSymbol).append(Symbol.WhiteSpace);
+}
+function formatResourceChangeApiVersion(builder, apiVersion) {
+    if (!apiVersion)
+        return;
+    builder.withColorScope(logging_1.Color.Reset, () => {
+        builder.append(Symbol.WhiteSpace);
+        builder.append(Symbol.LeftSquareBracket);
+        builder.append(apiVersion);
+        builder.append(Symbol.RightSquareBracket);
+    });
+}
+function formatPropertyChanges(builder, propertyChanges, indentLevel = 2) {
+    const maxPathLength = getMaxPathLengthFromPropertyChanges(propertyChanges);
+    for (const propertyChange of propertyChanges) {
+        formatPropertyChange(builder, propertyChange, maxPathLength, indentLevel);
+        builder.appendLine();
+    }
+}
+function formatPropertyChange(builder, propertyChange, maxPathLength, indentLevel) {
+    const propertyChangeType = propertyChange.propertyChangeType;
+    const before = propertyChange.before;
+    const after = propertyChange.after;
+    const children = propertyChange.children || [];
+    switch (propertyChangeType) {
+        case "Create":
+            formatPropertyChangePath(builder, propertyChange, propertyChange.after, maxPathLength, indentLevel);
+            formatPropertyCreate(builder, after, indentLevel + 1);
+            break;
+        case "Delete":
+            formatPropertyChangePath(builder, propertyChange, propertyChange.before, maxPathLength, indentLevel);
+            formatPropertyDelete(builder, before, indentLevel + 1);
+            break;
+        case "Modify":
+            formatPropertyChangePath(builder, propertyChange, propertyChange.before, maxPathLength, indentLevel);
+            formatPropertyModify(builder, before, after, children, indentLevel + 1);
+            break;
+        case "Array":
+            formatPropertyChangePath(builder, propertyChange, propertyChange.children, maxPathLength, indentLevel);
+            formatPropertyArrayChange(builder, propertyChange, children, indentLevel + 1);
+            break;
+        case "NoEffect":
+            formatPropertyChangePath(builder, propertyChange, propertyChange.after, maxPathLength, indentLevel);
+            formatPropertyNoEffect(builder, after, indentLevel + 1);
+            break;
+        default:
+            throw new Error(`Unknown property change type: ${propertyChangeType}.`);
+    }
+}
+function formatPropertyChangePath(builder, propertyChange, value, maxPathLength, indentLevel) {
+    if (!propertyChange.path)
+        return;
+    const path = propertyChange.path;
+    const propertyChangeType = propertyChange.propertyChangeType;
+    let paddingWidth = maxPathLength - path.length + 1;
+    if (isNonEmptyArray(value)) {
+        paddingWidth = 1;
+    }
+    else if (isNonEmptyObject(value)) {
+        paddingWidth = 0;
+    }
+    else if (propertyChangeType === "Modify" && propertyChange.children) {
+        paddingWidth = 0; // Has nested changes.
+    }
+    formatPath(builder, path, paddingWidth, indentLevel, builder => formatPropertyChangeType(builder, propertyChangeType), formatColon);
+}
+function formatPropertyChangeType(builder, propertyChangeType) {
+    const propertyChangeSymbol = propertyChangeTypeToSymbol[propertyChangeType];
+    const propertyChangeColor = propertyChangeTypeToColor[propertyChangeType];
+    builder
+        .append(propertyChangeSymbol, propertyChangeColor)
+        .append(Symbol.WhiteSpace);
+}
+function formatPropertyNoEffect(builder, value, indentLevel) {
+    builder.withColorScope(propertyChangeTypeToColor["NoEffect"], () => {
+        formatJsonValue(builder, value, undefined, undefined, indentLevel);
+    });
+}
+function formatPropertyCreate(builder, value, indentLevel) {
+    builder.withColorScope(propertyChangeTypeToColor["Create"], () => {
+        formatJsonValue(builder, value, undefined, undefined, indentLevel);
+    });
+}
+function formatPropertyDelete(builder, value, indentLevel) {
+    builder.withColorScope(propertyChangeTypeToColor["Delete"], () => {
+        formatJsonValue(builder, value, undefined, undefined, indentLevel);
+    });
+}
+function fixSdkDeltaFormattingBug(value) {
+    // For some reason, the node SDK appears to conver strings incorrectly inside the "delta" object.
+    // Instead of returning "foo", we get {0: 'f', 1: 'o', 2: 'o' }. This function works around this bug, by
+    // trying to detect this heuristically, and convert back into the correct string format.
+    // See https://github.com/Azure/bicep-deploy/issues/71 for more info.
+    if (value === null ||
+        typeof value !== "object" ||
+        Object.keys(value).length === 0) {
+        return value;
+    }
+    let fixedString = "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const objValue = value;
+    const keys = Object.keys(objValue);
+    for (let i = 0; i < keys.length; i++) {
+        const nextChar = objValue[i.toString()];
+        // be specific here with the check, to minimize the chance of
+        // accidentally trying to convert a value that genuinely should be an object.
+        if (typeof nextChar !== "string" || nextChar.length !== 1) {
+            return value;
+        }
+        fixedString += nextChar;
+    }
+    return fixedString;
+}
+function formatPropertyModify(builder, before, after, children, indentLevel) {
+    if (children && children.length > 0) {
+        // Has nested changes.
+        builder.appendLine().appendLine();
+        formatPropertyChanges(builder, sortChanges(children), indentLevel);
+    }
+    else {
+        formatPropertyDelete(builder, before, indentLevel);
+        // Space before =>
+        if (isNonEmptyObject(before)) {
+            builder.appendLine();
+            formatIndent(builder, indentLevel);
+        }
+        else {
+            builder.append(Symbol.WhiteSpace);
+        }
+        builder.append("=>");
+        // Space after =>
+        if (!isNonEmptyObject(after)) {
+            builder.append(Symbol.WhiteSpace);
+        }
+        formatPropertyCreate(builder, after, indentLevel);
+        if (!isLeaf(before) && isLeaf(after)) {
+            builder.appendLine();
+        }
+    }
+}
+function formatPropertyArrayChange(builder, parentPropertyChange, propertyChanges, indentLevel) {
+    if (!parentPropertyChange.path) {
+        // The parent change doesn't have a path, which means the current
+        // array change is a nested change. Decrease indent level.
+        indentLevel -= 1;
+        formatIndent(builder, indentLevel);
+    }
+    if (!propertyChanges || propertyChanges.length === 0) {
+        builder.appendLine("[]");
+        return;
+    }
+    // [
+    builder.append(Symbol.LeftSquareBracket).appendLine();
+    formatPropertyChanges(builder, sortChanges(propertyChanges), indentLevel);
+    // ]
+    formatIndent(builder, indentLevel);
+    builder.append(Symbol.RightSquareBracket);
+}
+function getApiVersion(resourceChange) {
+    if (resourceChange.before) {
+        return resourceChange.before.apiVersion;
+    }
+    if (resourceChange.after) {
+        return resourceChange.after.apiVersion;
+    }
+}
+function getScope(resourceChange) {
+    if (!resourceChange.resourceId) {
+        throw new Error("Extensible resource what-if is not currently supported by this Action. Please raise an issue: https://github.com/Azure/bicep-deploy/issues.");
+    }
+    const [scope] = splitResourceId(resourceChange.resourceId);
+    return scope;
+}
+function getScopeUppercase(resourceChange) {
+    return getScope(resourceChange).toUpperCase();
+}
+function getRelativeResourceId(resourceChange) {
+    if (!resourceChange.resourceId) {
+        throw new Error("Extensible resource what-if is not currently supported by this Action. Please raise an issue: https://github.com/Azure/bicep-deploy/issues.");
+    }
+    const [, relativeResourceId] = splitResourceId(resourceChange.resourceId);
+    return relativeResourceId;
+}
+function getMaxPathLengthFromPropertyChanges(propertyChanges) {
+    if (!propertyChanges || propertyChanges.length === 0) {
+        return 0;
+    }
+    const filteredPropertyChanges = propertyChanges.filter(shouldConsiderPropertyChangePath);
+    const pathLengths = filteredPropertyChanges.map(x => x.path.length);
+    return Math.max(...pathLengths, 0);
+}
+function shouldConsiderPropertyChangePath(propertyChange) {
+    const propertyChangeType = propertyChange.propertyChangeType;
+    if (propertyChangeType === "Create") {
+        return isLeaf(propertyChange.after);
+    }
+    if (propertyChangeType === "Delete" || propertyChangeType === "Modify") {
+        return isLeaf(propertyChange.before);
+    }
+    return !propertyChange.children;
+}
+function formatJsonValue(builder, value, path = "", maxPathLength = 0, indentLevel = 0) {
+    value = fixSdkDeltaFormattingBug(value);
+    if (isLeaf(value)) {
+        const pathLength = maxPathLength - path.length + 1;
+        formatJsonPath(builder, path, pathLength > 0 ? pathLength : 0, indentLevel);
+        formatLeaf(builder, value);
+    }
+    else if (isNonEmptyArray(value)) {
+        formatJsonPath(builder, path, 1, indentLevel);
+        formatNonEmptyArray(builder, value, indentLevel);
+    }
+    else if (isNonEmptyObject(value)) {
+        formatNonEmptyObject(builder, value, path, maxPathLength, indentLevel);
+    }
+    else {
+        throw new Error(`Invalid JSON value: ${value}`);
+    }
+}
+function formatLeaf(builder, value) {
+    if (value === null) {
+        builder.append("null");
+    }
+    else if (typeof value === "boolean") {
+        builder.append(String(value).toLowerCase());
+    }
+    else if (typeof value === "string") {
+        builder.append(Symbol.Quote).append(value).append(Symbol.Quote);
+    }
+    else if (Array.isArray(value) && value.length === 0) {
+        builder.append("[]");
+    }
+    else if (typeof value === "object") {
+        builder.append("{}");
+    }
+    else {
+        builder.append(String(value));
+    }
+}
+function formatNonEmptyArray(builder, value, indentLevel) {
+    builder.append(Symbol.LeftSquareBracket, logging_1.Color.Reset).appendLine();
+    const maxPathLength = getMaxPathLengthFromArray(value);
+    value.forEach((childValue, index) => {
+        const childPath = String(index);
+        if (isNonEmptyObject(childValue)) {
+            formatJsonPath(builder, childPath, 0, indentLevel + 1);
+            formatNonEmptyObject(builder, childValue, undefined, undefined, indentLevel + 1);
+        }
+        else {
+            formatJsonValue(builder, childValue, childPath, maxPathLength, indentLevel + 1);
+        }
+        builder.appendLine();
+    });
+    formatIndent(builder, indentLevel);
+    builder.append(Symbol.RightSquareBracket, logging_1.Color.Reset);
+}
+function formatNonEmptyObject(builder, value, path = "", maxPathLength = 0, indentLevel = 0) {
+    const isRoot = !path;
+    if (!path) {
+        // Root object.
+        builder.appendLine().appendLine();
+        maxPathLength = getMaxPathLengthFromObject(value);
+        indentLevel += 1;
+    }
+    for (const [childPath, childValue] of entries(value)) {
+        const formattedChildPath = isRoot
+            ? childPath
+            : `${path}${Symbol.Dot}${childPath}`;
+        formatJsonValue(builder, childValue, formattedChildPath, maxPathLength, indentLevel);
+        if (!isNonEmptyObject(childValue)) {
+            builder.appendLine();
+        }
+    }
+}
+function formatJsonPath(builder, path, paddingWidth, indentLevel) {
+    formatPath(builder, path, paddingWidth, indentLevel, undefined, formatColon);
+}
+function formatPath(builder, path, paddingWidth, indentLevel, formatHead, formatTail) {
+    if (!path)
+        return;
+    formatIndent(builder, indentLevel);
+    if (formatHead) {
+        formatHead(builder);
+    }
+    builder.append(path);
+    if (formatTail) {
+        formatTail(builder);
+    }
+    builder.append(" ".repeat(paddingWidth));
+}
+function formatColon(builder) {
+    builder.append(Symbol.Colon, logging_1.Color.Reset);
+}
+function formatIndent(builder, indentLevel = 1) {
+    builder.append(" ".repeat(2 * indentLevel));
+}
+function getMaxPathLengthFromArray(value) {
+    let maxLengthIndex = 0;
+    value.forEach((childValue, index) => {
+        if (isLeaf(childValue)) {
+            maxLengthIndex = index;
+        }
+    });
+    return String(maxLengthIndex).length;
+}
+function getMaxPathLengthFromObject(value) {
+    let maxPathLength = 0;
+    for (const [key, childValue] of entries(value)) {
+        if (isNonEmptyArray(childValue)) {
+            continue; // Ignore array paths
+        }
+        const currentPathLength = isNonEmptyObject(childValue)
+            ? key.length + 1 + getMaxPathLengthFromObject(childValue)
+            : key.length;
+        maxPathLength = Math.max(maxPathLength, currentPathLength);
+    }
+    return maxPathLength;
+}
+function isLeaf(value) {
+    return (value === null ||
+        value === undefined ||
+        typeof value === "boolean" ||
+        typeof value === "number" ||
+        typeof value === "string" ||
+        (Array.isArray(value) && value.length === 0) ||
+        (typeof value === "object" && value && Object.keys(value).length === 0));
+}
+function isNonEmptyArray(value) {
+    return Array.isArray(value) && value.length > 0;
+}
+function isNonEmptyObject(value) {
+    return (typeof value === "object" && value !== null && Object.keys(value).length > 0);
+}
+function sortChanges(changes) {
+    return changes
+        .slice()
+        .sort((a, b) => propertyChangeTypeToWeight[a.propertyChangeType] -
+        propertyChangeTypeToWeight[b.propertyChangeType] ||
+        a.path.localeCompare(b.path));
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function groupBy(array, getKey) {
+    return array.reduce((result, item) => {
+        const key = getKey(item);
+        (result[key] = result[key] || []).push(item);
+        return result;
+    }, {});
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function entries(record) {
+    return Object.entries(record);
+}
+function splitResourceId(resourceId) {
+    const providers = "/providers/";
+    const providersIndex = resourceId.lastIndexOf(providers);
+    if (providersIndex === -1) {
+        const rgMatches = [
+            ...resourceId.matchAll(/^(\/subscriptions\/[^/]+)\/(resourceGroups\/[^/]+)$/gi),
+        ];
+        if (rgMatches[0]) {
+            return [rgMatches[0][1], rgMatches[0][2]];
+        }
+        return ["/", resourceId.substring(1)];
+    }
+    return [
+        resourceId.substring(0, providersIndex),
+        resourceId.substring(providersIndex + providers.length),
+    ];
+}
+//# sourceMappingURL=whatif.js.map

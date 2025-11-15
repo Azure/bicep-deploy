@@ -4,7 +4,7 @@ import {
   configureGetInputMock,
   mockActionsCore,
 } from "./mocks/actionCoreMocks";
-import { mockFile } from "../packages/bicep-deploy-common/test/mocks/fileMocks";
+import { bicepDeployCommonMock } from "./mocks/bicepDeployCommonMocks";
 import { run } from "../src/main";
 
 describe("run", () => {
@@ -22,8 +22,8 @@ describe("run", () => {
   });
 
   it("sets the failed result using a string error", async () => {
-    mockFile.resolvePath.mockImplementation(() => "/path/to/mock.bicepparam");
-    mockFile.getTemplateAndParameters.mockImplementation(() => {
+    bicepDeployCommonMock.resolvePath.mockImplementation(() => "/path/to/mock.bicepparam");
+    bicepDeployCommonMock.getTemplateAndParameters.mockImplementation(() => {
       throw `This is an error!`;
     });
 
@@ -33,8 +33,8 @@ describe("run", () => {
   });
 
   it("sets the failed result using an Error", async () => {
-    mockFile.resolvePath.mockImplementation(() => "/path/to/mock.bicepparam");
-    mockFile.getTemplateAndParameters.mockImplementation(() => {
+    bicepDeployCommonMock.resolvePath.mockImplementation(() => "/path/to/mock.bicepparam");
+    bicepDeployCommonMock.getTemplateAndParameters.mockImplementation(() => {
       throw Error(`This is an error!`);
     });
 

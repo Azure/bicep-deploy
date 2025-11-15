@@ -1,5 +1,6 @@
 # Dependency directory
 node_modules
+packages/**/node_modules
 
 # Rest pulled from https://github.com/github/gitignore/blob/master/Node.gitignore
 # Logs
@@ -103,3 +104,6 @@ __tests__/runner/*
 
 # build output
 /out
+
+# Ignore package dist/
+packages/bicep-deploy-common/dist/

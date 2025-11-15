@@ -1,5 +1,5 @@
 {
-  "name": "bicep-deploy-common",
+  "name": "@azure/bicep-deploy-common",
   "description": "Common Code for bicep-deploy (GitHub Action/ADO Task)",
   "version": "0.0.1",
   "author": "Microsoft",
@@ -11,18 +11,20 @@
   "bugs": {
     "url": "https://github.com/Azure/bicep-deploy/issues"
   },
+  "main": "index.ts",
   "keywords": [
     "bicep",
     "arm templates"
   ],
   "exports": {
-    ".": "./dist/*.js"
+    ".": "./dist/index.js"
   },
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "package": "esbuild ./src/*.ts --minify --bundle --outdir=dist --sourcemap --platform=node --target=es2021"
+    "build": "tsc",
+    "package": "esbuild ./index.ts --minify --bundle --outdir=dist --sourcemap --platform=node --target=es2021"
   },
   "license": "MIT",
   "dependencies": {

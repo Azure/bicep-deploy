@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 const mockFsPromises = {
   readFile: jest.fn(),
   mkdtemp: jest.fn(),
