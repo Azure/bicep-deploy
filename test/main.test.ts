@@ -22,7 +22,9 @@ describe("run", () => {
   });
 
   it("sets the failed result using a string error", async () => {
-    bicepDeployCommonMock.resolvePath.mockImplementation(() => "/path/to/mock.bicepparam");
+    bicepDeployCommonMock.resolvePath.mockImplementation(
+      () => "/path/to/mock.bicepparam",
+    );
     bicepDeployCommonMock.getTemplateAndParameters.mockImplementation(() => {
       throw `This is an error!`;
     });
@@ -33,7 +35,9 @@ describe("run", () => {
   });
 
   it("sets the failed result using an Error", async () => {
-    bicepDeployCommonMock.resolvePath.mockImplementation(() => "/path/to/mock.bicepparam");
+    bicepDeployCommonMock.resolvePath.mockImplementation(
+      () => "/path/to/mock.bicepparam",
+    );
     bicepDeployCommonMock.getTemplateAndParameters.mockImplementation(() => {
       throw Error(`This is an error!`);
     });

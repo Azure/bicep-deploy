@@ -1,8 +1,8 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.configureReadFile = configureReadFile;
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.configureReadFile = configureReadFile;
 const mockFsPromises = {
     readFile: jest.fn(),
     mkdtemp: jest.fn(),

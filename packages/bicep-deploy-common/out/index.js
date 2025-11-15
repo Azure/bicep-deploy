@@ -19,15 +19,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./src/config"), exports);
 __exportStar(require("./src/deployments"), exports);
 __exportStar(require("./src/file"), exports);
+__exportStar(require("./src/handler"), exports);
 __exportStar(require("./src/input"), exports);
 __exportStar(require("./src/logging"), exports);
+__exportStar(require("./src/output"), exports);
 __exportStar(require("./src/stacks"), exports);
 __exportStar(require("./src/utils"), exports);
 __exportStar(require("./src/whatif"), exports);
-__exportStar(require("./test/utils"), exports);
-__exportStar(require("./test/mocks/azureMocks"), exports);
-__exportStar(require("./test/mocks/bicepNodeMocks"), exports);
-__exportStar(require("./test/mocks/fileMocks"), exports);
-__exportStar(require("./test/mocks/fsMocks"), exports);
-__exportStar(require("./test/mocks/inputMocks"), exports);
 //# sourceMappingURL=index.js.map

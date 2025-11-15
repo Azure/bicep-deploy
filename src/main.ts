@@ -5,10 +5,14 @@ import * as core from "@actions/core";
 import {
   getTemplateAndParameters,
   parseConfig,
-  execute
+  execute,
 } from "@azure/bicep-deploy-common";
 
-import { ActionInputReader, ActionOutputSetter, ActionLogger } from "./actionIO";
+import {
+  ActionInputReader,
+  ActionOutputSetter,
+  ActionLogger,
+} from "./actionIO";
 
 /**
  * The main function for the action.

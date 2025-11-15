@@ -2,21 +2,21 @@
 // Licensed under the MIT License.
 import * as core from "@actions/core";
 
-import { 
+import {
   Color,
   colorize,
   InputReader,
   OutputSetter,
-  Logger
-} from "@azure/bicep-deploy-common"
+  Logger,
+} from "@azure/bicep-deploy-common";
 
 export class ActionInputReader implements InputReader {
   getInput = (inputName: string) => core.getInput(inputName);
 }
 
 export class ActionOutputSetter implements OutputSetter {
-  setOutput = (name: string, value: any) =>
-    core.setOutput(name, value);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setOutput = (name: string, value: any) => core.setOutput(name, value);
   setFailed = (message: string) => core.setFailed(message);
   setSecret = (secret: string) => core.setSecret(secret);
 }

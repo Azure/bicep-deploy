@@ -1,7 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import { mockOutputSetter } from "./mocks/outputMocks";
-import { azureMock, mockDeploymentsOps, mockStacksOps } from "./mocks/azureMocks";
+import {
+  azureMock,
+  mockDeploymentsOps,
+  mockStacksOps,
+} from "./mocks/azureMocks";
 import { RestError } from "@azure/core-rest-pipeline";
 
 import {
@@ -99,10 +103,7 @@ describe("deployment execution", () => {
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
-      expect(outputSetter.setOutput).toHaveBeenCalledWith(
-        "mockOutput",
-        "foo",
-      );
+      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
     });
 
@@ -122,7 +123,12 @@ describe("deployment execution", () => {
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -140,7 +146,12 @@ describe("deployment execution", () => {
         {},
       );
 
-      await execute({ ...config, operation: "whatIf" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "whatIf" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -246,10 +257,7 @@ describe("deployment execution", () => {
         expectedPayload,
         expect.anything(),
       );
-      expect(outputSetter.setOutput).toHaveBeenCalledWith(
-        "mockOutput",
-        "foo",
-      );
+      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
     });
 
@@ -275,7 +283,12 @@ describe("deployment execution", () => {
 
       const spyLogError = jest.spyOn(logger, "logError");
 
-      await execute({ ...config, operation: "create" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "create" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "create" },
@@ -294,7 +307,7 @@ describe("deployment execution", () => {
 
       expect(spyLogError).toHaveBeenNthCalledWith(
         1,
-        expect.stringContaining('Request failed. CorrelationId: '),
+        expect.stringContaining("Request failed. CorrelationId: "),
       );
 
       expect(spyLogError).toHaveBeenNthCalledWith(
@@ -304,7 +317,12 @@ describe("deployment execution", () => {
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -326,7 +344,12 @@ describe("deployment execution", () => {
 
       const spyLogError = jest.spyOn(logger, "logError");
 
-      await execute({ ...config, operation: "validate" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -342,7 +365,7 @@ describe("deployment execution", () => {
 
       expect(spyLogError).toHaveBeenNthCalledWith(
         1,
-        expect.stringContaining('Request failed. CorrelationId: '),
+        expect.stringContaining("Request failed. CorrelationId: "),
       );
 
       expect(spyLogError).toHaveBeenNthCalledWith(
@@ -354,7 +377,12 @@ describe("deployment execution", () => {
     it("what-ifs", async () => {
       mockDeploymentsOps.beginWhatIfAndWait!.mockResolvedValue({});
 
-      await execute({ ...config, operation: "whatIf" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "whatIf" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -448,10 +476,7 @@ describe("stack execution", () => {
       expect(
         mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
-      expect(outputSetter.setOutput).toHaveBeenCalledWith(
-        "mockOutput",
-        "foo",
-      );
+      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
     });
 
@@ -471,7 +496,12 @@ describe("stack execution", () => {
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -485,7 +515,12 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute({ ...config, operation: "delete" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "delete" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },
@@ -580,10 +615,7 @@ describe("stack execution", () => {
         expectedPayload,
         expect.anything(),
       );
-      expect(outputSetter.setOutput).toHaveBeenCalledWith(
-        "mockOutput",
-        "foo",
-      );
+      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
     });
 
@@ -603,7 +635,12 @@ describe("stack execution", () => {
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -617,7 +654,12 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute({ ...config, operation: "delete" }, files, logger, outputSetter);
+      await execute(
+        { ...config, operation: "delete" },
+        files,
+        logger,
+        outputSetter,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },

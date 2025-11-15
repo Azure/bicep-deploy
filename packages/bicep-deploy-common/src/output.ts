@@ -3,9 +3,10 @@
 import { DeployConfig } from "./config";
 
 export interface OutputSetter {
-  setOutput(name: string, value: any): void,
-  setFailed(message: string | Error): void,
-  setSecret(secret: string): void,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setOutput(name: string, value: any): void;
+  setFailed(message: string | Error): void;
+  setSecret(secret: string): void;
 }
 
 export function setCreateOutputs(

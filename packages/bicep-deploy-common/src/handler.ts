@@ -10,7 +10,11 @@ import {
 } from "./deployments";
 import { stackCreate, stackDelete, stackValidate } from "./stacks";
 import { formatWhatIfOperationResult } from "./whatif";
-import { logDiagnostics, validateFileScope, tryWithErrorHandling } from "./utils";
+import {
+  logDiagnostics,
+  validateFileScope,
+  tryWithErrorHandling,
+} from "./utils";
 import { ParsedFiles } from "./file";
 import { Logger } from "./logging";
 import { OutputSetter, setCreateOutputs } from "./output";
@@ -30,7 +34,11 @@ export async function execute(
             await tryWithErrorHandling(
               async () => {
                 const result = await deploymentCreate(config, files, logger);
-                setCreateOutputs(config, outputSetter, result?.properties?.outputs);
+                setCreateOutputs(
+                  config,
+                  outputSetter,
+                  result?.properties?.outputs,
+                );
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
@@ -70,7 +78,11 @@ export async function execute(
             await tryWithErrorHandling(
               async () => {
                 const result = await stackCreate(config, files, logger);
-                setCreateOutputs(config, outputSetter, result?.properties?.outputs);
+                setCreateOutputs(
+                  config,
+                  outputSetter,
+                  result?.properties?.outputs,
+                );
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
