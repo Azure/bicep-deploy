@@ -7,7 +7,7 @@
     "outDir": "./out",
     "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["node_modules", "**/test", "test"],
+  "exclude": ["node_modules"],
 }
