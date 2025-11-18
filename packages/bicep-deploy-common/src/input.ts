@@ -8,6 +8,37 @@ export interface InputReader {
   getInput(inputName: string): string | undefined;
 }
 
+export interface InputParameterNames {
+  type: string;
+  name: string;
+  location: string;
+  templateFile: string;
+  paramtersFile: string;
+  parameters: string;
+  bicepVersion: string;
+  description: string;
+  tags: string;
+  maskedOutputs: string;
+  environment: string;
+  operation: string;
+  whatIfExcludeChangeTypes: string;
+  validationLevel: string;
+  actionOnUnmanageResources: string;
+  actionOnUnmanageResourceGroups: string;
+  actionOnUnmanageManagementGroups: string;
+  bypasStackOutOfSyncError: string;
+  denySettingsMode: string;
+  denySettingsExcludedActions: string;
+  denySettingsExcludedPrincipals: string;
+  denySettingsApplyToChildScopes: string;
+  scope: string;
+  tenantId: string;
+  managementGroupId: string;
+  subscriptionId: string;
+  resourceGroupName: string;
+}
+
+
 export function getRequiredStringInput(
   inputName: string,
   inputReader: InputReader,

@@ -12,6 +12,7 @@ import {
   getOptionalDictionaryInput,
   getOptionalBooleanInput,
   InputReader,
+  InputParameterNames,
 } from "./input";
 
 export type ScopeType =
@@ -111,27 +112,28 @@ export type DeployConfig = DeploymentsConfig | DeploymentStackConfig;
 
 export function parseConfig(
   inputReader: InputReader,
+  inputParameterNames: InputParameterNames,
 ): DeploymentsConfig | DeploymentStackConfig {
   const type = getRequiredEnumInput(
-    "type",
+    inputParameterNames.type,
     ["deployment", "deploymentStack"],
     inputReader,
   );
-  const name = getOptionalStringInput("name", inputReader);
-  const location = getOptionalStringInput("location", inputReader);
-  const templateFile = getOptionalFilePath("template-file", inputReader);
-  const parametersFile = getOptionalFilePath("parameters-file", inputReader);
-  const parameters = getOptionalDictionaryInput("parameters", inputReader);
-  const bicepVersion = getOptionalStringInput("bicep-version", inputReader);
-  const description = getOptionalStringInput("description", inputReader);
-  const tags = getOptionalStringDictionaryInput("tags", inputReader);
+  const name = getOptionalStringInput(inputParameterNames.name, inputReader);
+  const location = getOptionalStringInput(inputParameterNames.location, inputReader);
+  const templateFile = getOptionalFilePath(inputParameterNames.templateFile, inputReader);
+  const parametersFile = getOptionalFilePath(inputParameterNames.paramtersFile, inputReader);
+  const parameters = getOptionalDictionaryInput(inputParameterNames.parameters, inputReader);
+  const bicepVersion = getOptionalStringInput(inputParameterNames.bicepVersion, inputReader);
+  const description = getOptionalStringInput(inputParameterNames.description, inputReader);
+  const tags = getOptionalStringDictionaryInput(inputParameterNames.tags, inputReader);
   const maskedOutputs = getOptionalStringArrayInput(
-    "masked-outputs",
+    inputParameterNames.maskedOutputs,
     inputReader,
   );
   const environment =
     getOptionalEnumInput(
-      "environment",
+      inputParameterNames.environment,
       [
         "azureCloud",
         "azureChinaCloud",
@@ -155,14 +157,14 @@ export function parseConfig(
         maskedOutputs,
         environment: environment,
         operation: getRequiredEnumInput(
-          "operation",
+          inputParameterNames.operation,
           ["create", "validate", "whatIf"],
           inputReader,
         ),
-        scope: parseDeploymentScope(inputReader),
+        scope: parseDeploymentScope(inputReader, inputParameterNames),
         whatIf: {
           excludeChangeTypes: getOptionalEnumArrayInput(
-            "what-if-exclude-change-types",
+            inputParameterNames.whatIfExcludeChangeTypes,
             [
               "create",
               "delete",
@@ -176,7 +178,7 @@ export function parseConfig(
           ),
         },
         validationLevel: getOptionalEnumInput(
-          "validation-level",
+          inputParameterNames.validationLevel,
           ["provider", "template", "providerNoRbac"],
           inputReader,
         ),
@@ -196,48 +198,48 @@ export function parseConfig(
         maskedOutputs,
         environment: environment,
         operation: getRequiredEnumInput(
-          "operation",
+          inputParameterNames.operation,
           ["create", "validate", "delete"],
           inputReader,
         ),
-        scope: parseDeploymentStackScope(inputReader),
+        scope: parseDeploymentStackScope(inputReader, inputParameterNames),
         actionOnUnManage: {
           resources: getRequiredEnumInput(
-            "action-on-unmanage-resources",
+            inputParameterNames.actionOnUnmanageResources,
             ["delete", "detach"],
             inputReader,
           ),
           resourceGroups: getOptionalEnumInput(
-            "action-on-unmanage-resourcegroups",
+            inputParameterNames.actionOnUnmanageResourceGroups,
             ["delete", "detach"],
             inputReader,
           ),
           managementGroups: getOptionalEnumInput(
-            "action-on-unmanage-managementgroups",
+            inputParameterNames.actionOnUnmanageManagementGroups,
             ["delete", "detach"],
             inputReader,
           ),
         },
         bypassStackOutOfSyncError: getOptionalBooleanInput(
-          "bypass-stack-out-of-sync-error",
+          inputParameterNames.bypasStackOutOfSyncError,
           inputReader,
         ),
         denySettings: {
           mode: getRequiredEnumInput(
-            "deny-settings-mode",
+            inputParameterNames.denySettingsMode,
             ["denyDelete", "denyWriteAndDelete", "none"],
             inputReader,
           ),
           excludedActions: getOptionalStringArrayInput(
-            "deny-settings-excluded-actions",
+            inputParameterNames.denySettingsExcludedActions,
             inputReader,
           ),
           excludedPrincipals: getOptionalStringArrayInput(
-            "deny-settings-excluded-principals",
+            inputParameterNames.denySettingsExcludedPrincipals,
             inputReader,
           ),
           applyToChildScopes: getOptionalBooleanInput(
-            "deny-settings-apply-to-child-scopes",
+            inputParameterNames.denySettingsApplyToChildScopes,
             inputReader,
           ),
         },
@@ -248,13 +250,14 @@ export function parseConfig(
 
 function parseDeploymentScope(
   inputReader: InputReader,
+  inputParameterNames: InputParameterNames,
 ): TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope {
   const type = getRequiredEnumInput(
-    "scope",
+    inputParameterNames.scope,
     ["tenant", "managementGroup", "subscription", "resourceGroup"],
     inputReader,
   );
-  const tenantId = getOptionalStringInput("tenant-id", inputReader);
+  const tenantId = getOptionalStringInput(inputParameterNames.tenantId, inputReader);
 
   switch (type) {
     case "tenant": {
@@ -265,7 +268,7 @@ function parseDeploymentScope(
     }
     case "managementGroup": {
       const managementGroup = getRequiredStringInput(
-        "management-group-id",
+        inputParameterNames.managementGroupId,
         inputReader,
       );
       return {
@@ -276,7 +279,7 @@ function parseDeploymentScope(
     }
     case "subscription": {
       const subscriptionId = getRequiredStringInput(
-        "subscription-id",
+        inputParameterNames.subscriptionId,
         inputReader,
       );
       return {
@@ -287,11 +290,11 @@ function parseDeploymentScope(
     }
     case "resourceGroup": {
       const subscriptionId = getRequiredStringInput(
-        "subscription-id",
+        inputParameterNames.subscriptionId,
         inputReader,
       );
       const resourceGroup = getRequiredStringInput(
-        "resource-group-name",
+        inputParameterNames.resourceGroupName,
         inputReader,
       );
       return {
@@ -306,18 +309,19 @@ function parseDeploymentScope(
 
 function parseDeploymentStackScope(
   inputReader: InputReader,
+  inputParameterNames: InputParameterNames,
 ): ManagementGroupScope | SubscriptionScope | ResourceGroupScope {
   const type = getRequiredEnumInput(
-    "scope",
+    inputParameterNames.scope,
     ["managementGroup", "subscription", "resourceGroup"],
     inputReader,
   );
-  const tenantId = getOptionalStringInput("tenant-id", inputReader);
+  const tenantId = getOptionalStringInput(inputParameterNames.tenantId, inputReader);
 
   switch (type) {
     case "managementGroup": {
       const managementGroup = getRequiredStringInput(
-        "management-group-id",
+        inputParameterNames.managementGroupId,
         inputReader,
       );
       return {
@@ -328,7 +332,7 @@ function parseDeploymentStackScope(
     }
     case "subscription": {
       const subscriptionId = getRequiredStringInput(
-        "subscription-id",
+        inputParameterNames.subscriptionId,
         inputReader,
       );
       return {
@@ -339,11 +343,11 @@ function parseDeploymentStackScope(
     }
     case "resourceGroup": {
       const subscriptionId = getRequiredStringInput(
-        "subscription-id",
+        inputParameterNames.subscriptionId,
         inputReader,
       );
       const resourceGroup = getRequiredStringInput(
-        "resource-group-name",
+        inputParameterNames.resourceGroupName,
         inputReader,
       );
       return {

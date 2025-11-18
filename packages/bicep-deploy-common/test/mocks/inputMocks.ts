@@ -23,3 +23,34 @@ export function configureGetInputMockWithYaml(
 ) {
   configureGetInputMock(yaml.parse(yamlInput), inputReader);
 }
+
+export class TestInputParameterNames {
+  type = "type";
+  name = "name";
+  location = "location";
+  templateFile = "template-file";
+  paramtersFile = "parameters-file";
+  parameters = "parameters";
+  bicepVersion = "bicep-version";
+  description = "description";
+  tags = "tags";
+  maskedOutputs = "masked-outputs";
+  environment = "environment";
+  operation = "operation";
+  whatIfExcludeChangeTypes = "what-if-exclude-change-types";
+  validationLevel = "validation-level";
+  actionOnUnmanageResources = "action-on-unmanage-resources";
+  actionOnUnmanageResourceGroups = "action-on-unmanage-resourcegroups";
+  actionOnUnmanageManagementGroups = "action-on-unmanage-managementgroups";
+  bypasStackOutOfSyncError = "bypass-stack-out-of-sync-error";
+  denySettingsMode = "deny-settings-mode";
+  denySettingsExcludedActions = "deny-settings-excluded-actions";
+  denySettingsExcludedPrincipals = "deny-settings-excluded-principals";
+  denySettingsApplyToChildScopes = "deny-settings-apply-to-child-scopes";
+  scope = "scope";
+  tenantId = "tenant-id";
+  // setting some with different casing
+  managementGroupId = "managementGroupId";
+  subscriptionId = "subscriptionId";
+  resourceGroupName = "resourceGroupName";
+}

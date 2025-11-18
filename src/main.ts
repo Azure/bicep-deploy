@@ -12,6 +12,7 @@ import {
   ActionInputReader,
   ActionOutputSetter,
   ActionLogger,
+  ActionInputParameterNames,
 } from "./actionIO";
 
 /**
@@ -21,7 +22,8 @@ import {
 export async function run(): Promise<void> {
   try {
     const inputReader = new ActionInputReader();
-    const config = parseConfig(inputReader);
+    const inputParameterNames = new ActionInputParameterNames;
+    const config = parseConfig(inputReader, inputParameterNames);
     const logger = new ActionLogger();
     const outputSetter = new ActionOutputSetter();
     logger.logInfo(`Action config: ${JSON.stringify(config, null, 2)}`);

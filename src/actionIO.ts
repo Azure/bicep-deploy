@@ -33,3 +33,33 @@ export class ActionLogger implements Logger {
     logWarningRaw(colorize(message, Color.Yellow));
   logError = (message: string) => logErrorRaw(colorize(message, Color.Red));
 }
+
+export class ActionInputParameterNames {
+  type = "type";
+  name = "name";
+  location = "location";
+  templateFile = "template-file";
+  paramtersFile = "parameters-file";
+  parameters = "parameters";
+  bicepVersion = "bicep-version";
+  description = "description";
+  tags = "tags";
+  maskedOutputs = "masked-outputs";
+  environment = "environment";
+  operation = "operation";
+  whatIfExcludeChangeTypes = "what-if-exclude-change-types";
+  validationLevel = "validation-level";
+  actionOnUnmanageResources = "action-on-unmanage-resources";
+  actionOnUnmanageResourceGroups = "action-on-unmanage-resourcegroups";
+  actionOnUnmanageManagementGroups = "action-on-unmanage-managementgroups";
+  bypasStackOutOfSyncError = "bypass-stack-out-of-sync-error";
+  denySettingsMode = "deny-settings-mode";
+  denySettingsExcludedActions = "deny-settings-excluded-actions";
+  denySettingsExcludedPrincipals = "deny-settings-excluded-principals";
+  denySettingsApplyToChildScopes = "deny-settings-apply-to-child-scopes";
+  scope = "scope";
+  tenantId = "tenant-id";
+  managementGroupId = "management-group-id";
+  subscriptionId = "subscription-id";
+  resourceGroupName = "resource-group-name";
+}

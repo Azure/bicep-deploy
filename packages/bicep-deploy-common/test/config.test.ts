@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { configureGetInputMock, mockInputReader } from "./mocks/inputMocks";
+import { configureGetInputMock, mockInputReader, TestInputParameterNames } from "./mocks/inputMocks";
 import {
   DeploymentsConfig,
   DeploymentStackConfig,
@@ -9,12 +9,13 @@ import {
 import path from "path";
 
 const inputReader = new mockInputReader();
+const inputParameterNames = new TestInputParameterNames();
 
 describe("input validation", () => {
   it("requires type", async () => {
     configureGetInputMock({}, inputReader);
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'type' is required but not provided",
     );
   });
@@ -22,7 +23,7 @@ describe("input validation", () => {
   it("requires a valid value for type", async () => {
     configureGetInputMock({ type: "foo" }, inputReader);
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'type' must be one of the following values: 'deployment', 'deploymentStack'",
     );
   });
@@ -30,7 +31,7 @@ describe("input validation", () => {
   it("requires valid json for tags string", async () => {
     configureGetInputMock({ type: "deployment", tags: "invalid" }, inputReader);
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'tags' must be a valid JSON or YAML object",
     );
   });
@@ -41,7 +42,7 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'tags' must be a valid JSON or YAML object",
     );
   });
@@ -49,7 +50,7 @@ describe("input validation", () => {
   it("requires operation to be provided", async () => {
     configureGetInputMock({ type: "deployment" }, inputReader);
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'operation' is required but not provided",
     );
   });
@@ -60,7 +61,7 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'operation' must be one of the following values: 'create', 'validate', 'whatIf'",
     );
   });
@@ -71,7 +72,7 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'operation' must be one of the following values: 'create', 'validate', 'delete'",
     );
   });
@@ -82,15 +83,15 @@ describe("input validation", () => {
         type: "deployment",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "what-if-exclude-change-types": "blah",
         environment: "asdf",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
     );
   });
@@ -101,8 +102,8 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "action-on-unmanage-resources": "detach",
         "action-on-unmanage-managementgroups": "sadf",
         environment: "asdf",
@@ -110,12 +111,12 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
     );
   });
 
-  it("requires subscription-id if scope is subscription", async () => {
+  it("requires subscriptionId if scope is subscription", async () => {
     configureGetInputMock(
       {
         type: "deployment",
@@ -125,12 +126,12 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
-      "Action input 'subscription-id' is required but not provided",
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
+      "Action input 'subscriptionId' is required but not provided",
     );
   });
 
-  it("requires subscription-id if scope is resourceGroup", async () => {
+  it("requires subscriptionId if scope is resourceGroup", async () => {
     configureGetInputMock(
       {
         type: "deployment",
@@ -140,28 +141,28 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
-      "Action input 'subscription-id' is required but not provided",
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
+      "Action input 'subscriptionId' is required but not provided",
     );
   });
 
-  it("requires resource-group-name if scope is resourceGroup", async () => {
+  it("requires resourceGroupName if scope is resourceGroup", async () => {
     configureGetInputMock(
       {
         type: "deployment",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
+        "subscriptionId": "foo",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
-      "Action input 'resource-group-name' is required but not provided",
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
+      "Action input 'resourceGroupName' is required but not provided",
     );
   });
 
-  it("requires management-group-id if scope is managementGroup", async () => {
+  it("requires managementGroupId if scope is managementGroup", async () => {
     configureGetInputMock(
       {
         type: "deployment",
@@ -171,8 +172,8 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
-      "Action input 'management-group-id' is required but not provided",
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
+      "Action input 'managementGroupId' is required but not provided",
     );
   });
 
@@ -186,7 +187,7 @@ describe("input validation", () => {
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'scope' must be one of the following values: 'managementGroup', 'subscription', 'resourceGroup'",
     );
   });
@@ -197,14 +198,14 @@ describe("input validation", () => {
         type: "deployment",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "what-if-exclude-change-types": "blah",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'what-if-exclude-change-types' must be one of the following values: 'create', 'delete', 'modify', 'deploy', 'noChange', 'ignore', 'unsupported'",
     );
   });
@@ -215,14 +216,14 @@ describe("input validation", () => {
         type: "deployment",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "validation-level": "blah",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'validation-level' must be one of the following values: 'provider', 'template', 'providerNoRbac'",
     );
   });
@@ -233,13 +234,13 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'action-on-unmanage-resources' is required but not provided",
     );
   });
@@ -250,14 +251,14 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "action-on-unmanage-resources": "sadf",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'action-on-unmanage-resources' must be one of the following values: 'delete', 'detach'",
     );
   });
@@ -268,15 +269,15 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "action-on-unmanage-resources": "detach",
         "action-on-unmanage-resourcegroups": "sadf",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'action-on-unmanage-resourcegroups' must be one of the following values: 'delete', 'detach'",
     );
   });
@@ -287,15 +288,15 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "action-on-unmanage-resources": "detach",
         "action-on-unmanage-managementgroups": "sadf",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'action-on-unmanage-managementgroups' must be one of the following values: 'delete', 'detach'",
     );
   });
@@ -306,14 +307,14 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "action-on-unmanage-resources": "detach",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'deny-settings-mode' is required but not provided",
     );
   });
@@ -324,15 +325,15 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "action-on-unmanage-resources": "detach",
         "deny-settings-mode": "asdfasdf",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'deny-settings-mode' must be one of the following values: 'denyDelete', 'denyWriteAndDelete', 'none'",
     );
   });
@@ -343,15 +344,15 @@ describe("input validation", () => {
         type: "deploymentStack",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "foo",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "foo",
+        "resourceGroupName": "mockRg",
         "action-on-unmanage-resources": "detach",
         "bypass-stack-out-of-sync-error": "asdfasdf",
       },
       inputReader,
     );
 
-    expect(() => parseConfig(inputReader)).toThrow(
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
       "Action input 'bypass-stack-out-of-sync-error' must be a boolean value",
     );
   });
@@ -365,8 +366,8 @@ describe("input parsing", () => {
         name: "mockName",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "mockSub",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "mockSub",
+        "resourceGroupName": "mockRg",
         location: "mockLocation",
         "template-file": "/path/to/mockTemplateFile",
         "parameters-file": "/path/to/mockParametersFile",
@@ -381,7 +382,7 @@ describe("input parsing", () => {
       inputReader,
     );
 
-    const config = parseConfig(inputReader);
+    const config = parseConfig(inputReader, inputParameterNames);
 
     expect(config).toEqual<DeploymentsConfig>({
       type: "deployment",
@@ -417,7 +418,7 @@ describe("input parsing", () => {
         name: "mockName",
         operation: "delete",
         scope: "subscription",
-        "subscription-id": "mockSub",
+        "subscriptionId": "mockSub",
         location: "mockLocation",
         "template-file": "/path/to/mockTemplateFile",
         "parameters-file": "/path/to/mockParametersFile",
@@ -452,7 +453,7 @@ describe("input parsing", () => {
       inputReader,
     );
 
-    const config = parseConfig(inputReader);
+    const config = parseConfig(inputReader, inputParameterNames);
 
     expect(config).toEqual<DeploymentStackConfig>({
       type: "deploymentStack",
@@ -503,8 +504,8 @@ describe("input parsing", () => {
         name: "mockName",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "mockSub",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "mockSub",
+        "resourceGroupName": "mockRg",
         location: "mockLocation",
         "template-file": "/path/to/mockTemplateFile",
         "parameters-file": "/path/to/mockParametersFile",
@@ -529,7 +530,7 @@ objectParam:
       inputReader,
     );
 
-    const config = parseConfig(inputReader);
+    const config = parseConfig(inputReader, inputParameterNames);
 
     expect(config).toEqual<DeploymentsConfig>({
       type: "deployment",
@@ -570,15 +571,15 @@ objectParam:
         type: "deployment",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "mockSub",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "mockSub",
+        "resourceGroupName": "mockRg",
         "template-file": "/path/to/mockTemplateFile",
         "bicep-version": "0.30.23",
       },
       inputReader,
     );
 
-    const config = parseConfig(inputReader);
+    const config = parseConfig(inputReader, inputParameterNames);
 
     expect(config).toEqual<DeploymentsConfig>({
       type: "deployment",
@@ -611,15 +612,15 @@ objectParam:
         type: "deployment",
         operation: "create",
         scope: "resourceGroup",
-        "subscription-id": "mockSub",
-        "resource-group-name": "mockRg",
+        "subscriptionId": "mockSub",
+        "resourceGroupName": "mockRg",
         "template-file": "/path/to/mockTemplateFile",
         // bicep-version not provided
       },
       inputReader,
     );
 
-    const config = parseConfig(inputReader);
+    const config = parseConfig(inputReader, inputParameterNames);
 
     expect(config.bicepVersion).toBeUndefined();
   });
