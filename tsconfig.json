@@ -14,5 +14,5 @@
     "allowJs": true,
     "types": ["vitest/globals"],
   },
-  "include": ["src", "test", "tests", "test-live"]
+  "include": ["src", "test", "test-live"]
 }

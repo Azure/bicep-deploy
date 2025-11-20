@@ -11,6 +11,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
+    "types": ["vitest/globals"],
   },
-  "include": ["src", "tests"]
+  "include": ["src", "test"]
 }
