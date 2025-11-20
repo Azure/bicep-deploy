@@ -32,7 +32,7 @@ import {
 const outputSetter = new mockOutputSetter();
 
 describe("deployment execution", () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   describe("subscription scope", () => {
     const scope: SubscriptionScope = {
@@ -281,7 +281,7 @@ describe("deployment execution", () => {
         getMockRestError(mockError),
       );
 
-      const spyLogError = jest.spyOn(logger, "logError");
+      const spyLogError = vi.spyOn(logger, "logError");
 
       await execute(
         { ...config, operation: "create" },
@@ -342,7 +342,7 @@ describe("deployment execution", () => {
         getMockRestError(mockError),
       );
 
-      const spyLogError = jest.spyOn(logger, "logError");
+      const spyLogError = vi.spyOn(logger, "logError");
 
       await execute(
         { ...config, operation: "validate" },
@@ -400,7 +400,7 @@ describe("deployment execution", () => {
 });
 
 describe("stack execution", () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   describe("subscription scope", () => {
     const scope: SubscriptionScope = {

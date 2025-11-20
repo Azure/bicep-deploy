@@ -22,7 +22,7 @@ import {
 export async function run(): Promise<void> {
   try {
     const inputReader = new ActionInputReader();
-    const inputParameterNames = new ActionInputParameterNames;
+    const inputParameterNames = new ActionInputParameterNames();
     const config = parseConfig(inputReader, inputParameterNames);
     const logger = new ActionLogger();
     const outputSetter = new ActionOutputSetter();

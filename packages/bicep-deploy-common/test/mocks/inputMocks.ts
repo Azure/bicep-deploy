@@ -5,7 +5,7 @@ import yaml from "yaml";
 import { InputReader } from "../../src/input";
 
 export class mockInputReader implements InputReader {
-  getInput = jest.fn();
+  getInput = vi.fn();
 }
 
 export function configureGetInputMock(

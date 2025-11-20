@@ -2,11 +2,8 @@
 // Licensed under the MIT License.
 import { runAction } from "./setup";
 
-const TEST_TIMEOUT_IN_SECONDS = 5 * 60; // 5 minutes
-jest.setTimeout(TEST_TIMEOUT_IN_SECONDS * 1000);
-
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe("deployments live tests", () => {

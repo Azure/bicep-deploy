@@ -8,11 +8,11 @@ import {
   CompileResponse,
 } from "bicep-node";
 
-const mockBicep: Partial<jest.MockedObjectDeep<Bicep>> = {
-  compile: jest.fn(),
-  compileParams: jest.fn(),
-  version: jest.fn().mockReturnValue("1.2.3"),
-  dispose: jest.fn(),
+const mockBicep: Partial<vi.MockedObjectDeep<Bicep>> = {
+  compile: vi.fn(),
+  compileParams: vi.fn(),
+  version: vi.fn().mockReturnValue("1.2.3"),
+  dispose: vi.fn(),
 };
 
 export function configureCompileMock(
@@ -31,8 +31,8 @@ export function configureCompileParamsMock(
 
 const mockBicepNode = {
   Bicep: {
-    install: jest.fn().mockResolvedValue(Promise.resolve("/path/to/bicep")),
-    initialize: jest.fn().mockResolvedValue(mockBicep),
+    install: vi.fn().mockResolvedValue(Promise.resolve("/path/to/bicep")),
+    initialize: vi.fn().mockResolvedValue(mockBicep),
   },
 };
 
@@ -42,4 +42,4 @@ export function configureBicepInstallMock(
   mockBicepNode.Bicep.install.mockImplementation(mock);
 }
 
-jest.mock("bicep-node", () => mockBicepNode);
+vi.mock("bicep-node", () => mockBicepNode);

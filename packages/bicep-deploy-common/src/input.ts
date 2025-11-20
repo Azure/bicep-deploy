@@ -38,7 +38,6 @@ export interface InputParameterNames {
   resourceGroupName: string;
 }
 
-
 export function getRequiredStringInput(
   inputName: string,
   inputReader: InputReader,

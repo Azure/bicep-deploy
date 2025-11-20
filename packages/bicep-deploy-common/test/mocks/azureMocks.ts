@@ -3,31 +3,31 @@
 import { Deployments } from "@azure/arm-resources";
 import { DeploymentStacks } from "@azure/arm-resourcesdeploymentstacks";
 
-export const mockDeploymentsOps: Partial<jest.MockedObjectDeep<Deployments>> = {
-  beginCreateOrUpdateAtSubscriptionScopeAndWait: jest.fn(),
-  beginValidateAtSubscriptionScopeAndWait: jest.fn(),
-  beginWhatIfAtSubscriptionScopeAndWait: jest.fn(),
-  beginCreateOrUpdateAndWait: jest.fn(),
-  beginValidateAndWait: jest.fn(),
-  beginWhatIfAndWait: jest.fn(),
+export const mockDeploymentsOps: Partial<vi.MockedObjectDeep<Deployments>> = {
+  beginCreateOrUpdateAtSubscriptionScopeAndWait: vi.fn(),
+  beginValidateAtSubscriptionScopeAndWait: vi.fn(),
+  beginWhatIfAtSubscriptionScopeAndWait: vi.fn(),
+  beginCreateOrUpdateAndWait: vi.fn(),
+  beginValidateAndWait: vi.fn(),
+  beginWhatIfAndWait: vi.fn(),
 };
 
-export const mockStacksOps: Partial<jest.MockedObjectDeep<DeploymentStacks>> = {
-  beginCreateOrUpdateAtSubscriptionAndWait: jest.fn(),
-  beginValidateStackAtSubscriptionAndWait: jest.fn(),
-  beginDeleteAtSubscriptionAndWait: jest.fn(),
-  beginCreateOrUpdateAtResourceGroupAndWait: jest.fn(),
-  beginValidateStackAtResourceGroupAndWait: jest.fn(),
-  beginDeleteAtResourceGroupAndWait: jest.fn(),
+export const mockStacksOps: Partial<vi.MockedObjectDeep<DeploymentStacks>> = {
+  beginCreateOrUpdateAtSubscriptionAndWait: vi.fn(),
+  beginValidateStackAtSubscriptionAndWait: vi.fn(),
+  beginDeleteAtSubscriptionAndWait: vi.fn(),
+  beginCreateOrUpdateAtResourceGroupAndWait: vi.fn(),
+  beginValidateStackAtResourceGroupAndWait: vi.fn(),
+  beginDeleteAtResourceGroupAndWait: vi.fn(),
 };
 
 export const azureMock = {
-  createDeploymentClient: jest.fn().mockReturnValue({
+  createDeploymentClient: vi.fn().mockReturnValue({
     deployments: mockDeploymentsOps,
   }),
-  createStacksClient: jest.fn().mockReturnValue({
+  createStacksClient: vi.fn().mockReturnValue({
     deploymentStacks: mockStacksOps,
   }),
 };
 
-jest.mock("../../src/azure", () => azureMock);
+vi.mock("../../src/azure", () => azureMock);

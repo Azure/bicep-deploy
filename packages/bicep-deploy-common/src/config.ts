@@ -120,13 +120,34 @@ export function parseConfig(
     inputReader,
   );
   const name = getOptionalStringInput(inputParameterNames.name, inputReader);
-  const location = getOptionalStringInput(inputParameterNames.location, inputReader);
-  const templateFile = getOptionalFilePath(inputParameterNames.templateFile, inputReader);
-  const parametersFile = getOptionalFilePath(inputParameterNames.paramtersFile, inputReader);
-  const parameters = getOptionalDictionaryInput(inputParameterNames.parameters, inputReader);
-  const bicepVersion = getOptionalStringInput(inputParameterNames.bicepVersion, inputReader);
-  const description = getOptionalStringInput(inputParameterNames.description, inputReader);
-  const tags = getOptionalStringDictionaryInput(inputParameterNames.tags, inputReader);
+  const location = getOptionalStringInput(
+    inputParameterNames.location,
+    inputReader,
+  );
+  const templateFile = getOptionalFilePath(
+    inputParameterNames.templateFile,
+    inputReader,
+  );
+  const parametersFile = getOptionalFilePath(
+    inputParameterNames.paramtersFile,
+    inputReader,
+  );
+  const parameters = getOptionalDictionaryInput(
+    inputParameterNames.parameters,
+    inputReader,
+  );
+  const bicepVersion = getOptionalStringInput(
+    inputParameterNames.bicepVersion,
+    inputReader,
+  );
+  const description = getOptionalStringInput(
+    inputParameterNames.description,
+    inputReader,
+  );
+  const tags = getOptionalStringDictionaryInput(
+    inputParameterNames.tags,
+    inputReader,
+  );
   const maskedOutputs = getOptionalStringArrayInput(
     inputParameterNames.maskedOutputs,
     inputReader,
@@ -257,7 +278,10 @@ function parseDeploymentScope(
     ["tenant", "managementGroup", "subscription", "resourceGroup"],
     inputReader,
   );
-  const tenantId = getOptionalStringInput(inputParameterNames.tenantId, inputReader);
+  const tenantId = getOptionalStringInput(
+    inputParameterNames.tenantId,
+    inputReader,
+  );
 
   switch (type) {
     case "tenant": {
@@ -316,7 +340,10 @@ function parseDeploymentStackScope(
     ["managementGroup", "subscription", "resourceGroup"],
     inputReader,
   );
-  const tenantId = getOptionalStringInput(inputParameterNames.tenantId, inputReader);
+  const tenantId = getOptionalStringInput(
+    inputParameterNames.tenantId,
+    inputReader,
+  );
 
   switch (type) {
     case "managementGroup": {

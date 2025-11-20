@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 const mockFsPromises = {
-  readFile: jest.fn(),
-  mkdtemp: jest.fn(),
+  readFile: vi.fn(),
+  mkdtemp: vi.fn(),
 };
 
 export function configureReadFile(mock: (filePath: string) => string) {
@@ -12,4 +12,4 @@ export function configureReadFile(mock: (filePath: string) => string) {
   );
 }
 
-jest.mock("fs/promises", () => mockFsPromises);
+vi.mock("fs/promises", () => mockFsPromises);

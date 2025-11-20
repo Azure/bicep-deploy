@@ -1,1 +1,0 @@
-{"version":3,"file":"fileMocks.js","sourceRoot":"","sources":["../../../test/mocks/fileMocks.ts"],"names":[],"mappings":";;;AAAA,uCAAuC;AACvC,kCAAkC;AACrB,QAAA,QAAQ,GAAG;IACtB,wBAAwB,EAAE,IAAI,CAAC,EAAE,EAAE;IACnC,WAAW,EAAE,IAAI,CAAC,EAAE,EAAE;CACvB,CAAC;AAEF,IAAI,CAAC,IAAI,CAAC,mBAAmB,EAAE,GAAG,EAAE,CAAC,gBAAQ,CAAC,CAAC"}

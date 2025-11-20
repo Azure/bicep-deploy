@@ -2,12 +2,15 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "es2021",
+    "moduleDetection": "force",
     "module": "commonjs",
+    "moduleResolution": "node10",
+    "resolveJsonModule": true,
     "sourceMap": true,
-    "outDir": "./out",
     "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
   },
-  "exclude": ["node_modules"]
+  "include": ["src", "tests"]
 }

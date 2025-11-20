@@ -2,12 +2,17 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "es2021",
+    "moduleDetection": "force",
     "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
     "sourceMap": true,
-    "outDir": "./out",
     "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "allowJs": true,
+    "types": ["vitest/globals"],
   },
-  "exclude": ["node_modules"],
+  "include": ["src", "test", "tests", "test-live"]
 }

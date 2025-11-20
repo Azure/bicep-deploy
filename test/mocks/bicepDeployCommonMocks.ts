@@ -1,10 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-
 export const bicepDeployCommonMock = {
-  ...jest.requireActual("@azure/bicep-deploy-common"),
-  getTemplateAndParameters: jest.fn(),
-  resolvePath: jest.fn(),
+  getTemplateAndParameters: vi.fn(),
+  resolvePath: vi.fn(),
 };
 
-jest.mock("@azure/bicep-deploy-common", () => bicepDeployCommonMock);
+vi.mock("@azure/bicep-deploy-common", async () => {
+  const actual = await vi.importActual("@azure/bicep-deploy-common");
+  return {
+    ...actual,
+    ...bicepDeployCommonMock,
+  };
+});
