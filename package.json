@@ -16,10 +16,10 @@
     "arm templates"
   ],
   "type": "commonjs",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.cjs",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.cjs"
   },
   "engines": {
     "node": ">=22"
