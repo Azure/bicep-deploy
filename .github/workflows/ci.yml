@@ -28,6 +28,21 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
+      - name: Install Dependencies Common
+        id: npm-install-common
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+          git checkout package-lock.json
+
+      - name: Build bicep-deploy-common Package
+        id: build
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          rm -Rf dist
+          npm run build
+
       - name: Install Dependencies
         id: npm-install
         run: |
