@@ -188,6 +188,7 @@ export async function tryWithErrorHandling<T>(
     }
 
     if (ex instanceof CustomPollingError) {
+      console.log("It's a CustomPollingError");
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );

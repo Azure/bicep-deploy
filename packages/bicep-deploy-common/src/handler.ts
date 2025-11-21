@@ -112,6 +112,7 @@ export async function execute(
       }
     }
   } catch (error) {
+    console.log("In execute catch:", error);
     if (error instanceof RestError && error.response?.bodyAsText) {
       const correlationId = error.response.headers.get(
         "x-ms-correlation-request-id",
