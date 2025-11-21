@@ -45,7 +45,7 @@ jobs:
         id: build
         run: |
           rm -Rf dist
-          npm run package
+          npm run build
 
       # This will fail the workflow if the `dist/` directory is different than
       # expected.
