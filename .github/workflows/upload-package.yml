@@ -22,18 +22,23 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - name: Install Dependencies
-        id: install
-        run: npm ci
+      - name: Install Dependencies for bicep-deploy-common
+        id: install-common
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+          git checkout package-lock.json
 
       - name: Build bicep-deploy-common Package
         id: build
+        working-directory: ./packages/bicep-deploy-common
         run: |
-          cd packages/bicep-deploy-common
           rm -Rf dist
-          npm run package
+          npm run build
 
       - name: Create package tarball
+        working-directory: ./packages/bicep-deploy-common
         run: npm pack
 
       - name: Login to azuresdkpartnerdrops
@@ -44,6 +49,7 @@ jobs:
           subscription-id: a18897a6-7e44-457d-9260-f2854c0aca42
 
       - name: Upload files to partner drop folder
+        working-directory: ./packages/bicep-deploy-common
         run: |
           fileName=$(basename *.tgz)
           version=${fileName##*-}
