@@ -170,6 +170,7 @@ export async function tryWithErrorHandling<T>(
   try {
     return await action();
   } catch (ex) {
+    console.log("Caught error:", ex);
     if (ex instanceof RestError) {
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
