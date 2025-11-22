@@ -54,7 +54,7 @@ resource-group-name: ${data.resourceGroup}
 parameters-file: test/files/validationerror/main.bicepparam
 `,
     );
-    
+
     expect(failure).toContain("Validation failed");
     expect(JSON.parse(errors[1])["code"]).toBe("InvalidTemplateDeployment");
   });
