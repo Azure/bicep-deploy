@@ -161,6 +161,7 @@ export async function execute(config: ActionConfig, files: ParsedFiles) {
       }
     }
   } catch (error) {
+    console.log("In execute catch:", error);
     if (error instanceof RestError && error.response?.bodyAsText) {
       const correlationId = error.response.headers.get(
         "x-ms-correlation-request-id",
@@ -498,7 +499,9 @@ async function tryWithErrorHandling<T>(
   try {
     return await action();
   } catch (ex) {
+    console.log("Caught error:", ex);
     if (ex instanceof RestError) {
+      console.log("It's a RestError");
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
@@ -512,6 +515,7 @@ async function tryWithErrorHandling<T>(
     }
 
     if (ex instanceof CustomPollingError) {
+      console.log("It's a CustomPollingError");
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );

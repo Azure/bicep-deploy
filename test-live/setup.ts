@@ -47,6 +47,7 @@ function configureMocks(inputYaml: string) {
 
   mockCore.setFailed.mockImplementation(message => {
     console.error(`setFailed: ${message}`);
+    console.trace("path to set failed");
     result.failure = message;
   });
 
