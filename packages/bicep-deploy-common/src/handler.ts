@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { RestError } from "@azure/core-rest-pipeline";
+import { isRestError, RestError } from "@azure/core-rest-pipeline";
 
 import { DeployConfig } from "./config";
 import {
@@ -113,7 +113,7 @@ export async function execute(
     }
   } catch (error) {
     console.log("In execute catch:", error);
-    if (error instanceof RestError && error.response?.bodyAsText) {
+    if (isRestError(error) && error.response?.bodyAsText) {
       const correlationId = error.response.headers.get(
         "x-ms-correlation-request-id",
       );

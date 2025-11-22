@@ -17,7 +17,7 @@ import {
   ErrorResponse,
 } from "@azure/arm-resources";
 import { OperationOptions } from "@azure/core-client";
-import { PipelineResponse, RestError } from "@azure/core-rest-pipeline";
+import { isRestError, PipelineResponse, RestError } from "@azure/core-rest-pipeline";
 
 import { Logger } from "./logging";
 import { ParsedFiles } from "./file";
@@ -171,7 +171,7 @@ export async function tryWithErrorHandling<T>(
     return await action();
   } catch (ex) {
     console.log("Caught error:", ex);
-    if (ex instanceof RestError) {
+    if (isRestError(ex)) {
       console.log("It's a RestError");
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
