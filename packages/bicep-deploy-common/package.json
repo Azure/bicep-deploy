@@ -1,7 +1,7 @@
 {
   "name": "@azure/bicep-deploy-common",
   "description": "Common Code for bicep-deploy (GitHub Action/ADO Task)",
-  "version": "0.0.1",
+  "version": "0.0.1-dev",
   "author": "Microsoft",
   "homepage": "https://github.com/Azure/bicep-deploy#readme",
   "repository": {
