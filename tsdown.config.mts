@@ -10,4 +10,8 @@ export default defineConfig({
   platform: 'node',
   target: 'es2021',
   format: ['cjs', 'esm'],
+  outputOptions: {
+    inlineDynamicImports: true,
+  },
+  noExternal: [/.*/], // bundle all dependencies
 })
