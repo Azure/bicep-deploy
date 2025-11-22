@@ -17,7 +17,7 @@ import {
   ErrorResponse,
 } from "@azure/arm-resources";
 import { OperationOptions } from "@azure/core-client";
-import { isRestError, PipelineResponse, RestError } from "@azure/core-rest-pipeline";
+import { isRestError, PipelineResponse } from "@azure/core-rest-pipeline";
 
 import { Logger } from "./logging";
 import { ParsedFiles } from "./file";
