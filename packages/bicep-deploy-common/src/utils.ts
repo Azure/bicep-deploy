@@ -170,25 +170,20 @@ export async function tryWithErrorHandling<T>(
   try {
     return await action();
   } catch (ex) {
-    console.log("Caught error:", ex);
     if (isRestError(ex)) {
-      console.log("It's a RestError");
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
       logger.logError(`Request failed. CorrelationId: ${correlationId}`);
 
-      console.log("Calling onError with:", ex.details);
       const { error } = ex.details as CloudError;
       if (error) {
-        console.log("somehow converted and threw?");
         onError(error);
         return;
       }
     }
 
     if (ex instanceof CustomPollingError) {
-      console.log("It's a CustomPollingError");
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );

@@ -64,7 +64,6 @@ deny-settings-mode: denyWriteAndDelete
 `,
     );
 
-    console.log("Failure:", failure);
     expect(failure).toContain("Validation failed");
     expect(JSON.parse(errors[1])["code"]).toBe("InvalidTemplateDeployment");
   });
