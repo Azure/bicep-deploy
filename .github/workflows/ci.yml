@@ -112,7 +112,10 @@ jobs:
 
       - name: Install Dependencies
         id: npm-ci
-        run: npm ci
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+          git checkout package-lock.json
 
       - uses: azure/login@v2
         with:
