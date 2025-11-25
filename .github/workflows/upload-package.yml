@@ -3,6 +3,7 @@ name: Upload bicep-deploy-common Package
 on: workflow_dispatch
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
