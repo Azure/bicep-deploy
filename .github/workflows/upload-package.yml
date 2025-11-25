@@ -35,8 +35,12 @@ jobs:
           npm run build
 
       - name: Create package tarball
+        id: pack
         working-directory: ./packages/bicep-deploy-common
-        run: npm pack
+        run: |
+          packOutput=$(npm pack --json)
+          echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
+          echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
 
       # Using upload steps defined for the Partner Release Pipeline (https://aka.ms/azsdk/partner-release-pipeline)
       # azuresdkpartnerdrops is the managed identity that we use to upload to the partner drop folder
@@ -51,7 +55,5 @@ jobs:
       - name: Upload files to partner drop folder
         working-directory: ./packages/bicep-deploy-common
         run: |
-          fileName=$(basename *.tgz)
-          version=${fileName##*-}
-          version=${version%.tgz}
-          az storage blob upload -f $fileName -c drops/bicep-deploy-common/npm/$version --account-name azuresdkpartnerdrops --auth-mode login
+          echo "Uploading ${{ steps.pack.outputs.filename }} to partner drop folder at drops/bicep-deploy-common/npm/${{ steps.pack.outputs.version }}..."
+          az storage blob upload -f ${{ steps.pack.outputs.filename }} -c drops/bicep-deploy-common/npm/${{ steps.pack.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login
