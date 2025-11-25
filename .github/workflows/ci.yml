@@ -31,10 +31,7 @@ jobs:
       - name: Install Dependencies Common
         id: npm-install-common
         working-directory: ./packages/bicep-deploy-common
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
-          git checkout package-lock.json
+        run: npm ci
 
       - name: Build bicep-deploy-common Package
         id: build
@@ -45,10 +42,7 @@ jobs:
 
       - name: Install Dependencies
         id: npm-install
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
-          git checkout package-lock.json
+        run: npm ci
 
       - name: Lint
         id: npm-lint
@@ -98,10 +92,7 @@ jobs:
       - name: Install Dependencies Common
         id: npm-install-common
         working-directory: ./packages/bicep-deploy-common
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
-          git checkout package-lock.json
+        run: npm ci
 
       - name: Build bicep-deploy-common Package
         id: build
@@ -112,10 +103,7 @@ jobs:
 
       - name: Install Dependencies
         id: npm-ci
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
-          git checkout package-lock.json
+        run: npm ci
 
       - uses: azure/login@v2
         with:

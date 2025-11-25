@@ -25,10 +25,7 @@ jobs:
       - name: Install Dependencies for bicep-deploy-common
         id: install-common
         working-directory: ./packages/bicep-deploy-common
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
-          git checkout package-lock.json
+        run: npm ci
 
       - name: Build bicep-deploy-common Package
         id: build
