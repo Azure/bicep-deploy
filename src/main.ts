@@ -11,9 +11,10 @@ import {
 import {
   ActionInputReader,
   ActionOutputSetter,
-  ActionLogger,
   ActionInputParameterNames,
 } from "./actionIO";
+
+import { ActionLogger } from "./logging";
 
 /**
  * The main function for the action.

@@ -3,11 +3,9 @@
 import * as core from "@actions/core";
 
 import {
-  Color,
-  colorize,
   InputReader,
   OutputSetter,
-  Logger,
+  InputParameterNames,
 } from "@azure/bicep-deploy-common";
 
 export class ActionInputReader implements InputReader {
@@ -21,20 +19,7 @@ export class ActionOutputSetter implements OutputSetter {
   setSecret = (secret: string) => core.setSecret(secret);
 }
 
-const logWarningRaw = (message: string) => core.warning(message);
-const logErrorRaw = (message: string) => core.error(message);
-
-export class ActionLogger implements Logger {
-  isDebugEnabled = () => core.isDebug();
-  debug = (message: string) => core.debug(message);
-  logInfoRaw = (message: string) => core.info(message);
-  logInfo = (message: string) => this.logInfoRaw(colorize(message, Color.Blue));
-  logWarning = (message: string) =>
-    logWarningRaw(colorize(message, Color.Yellow));
-  logError = (message: string) => logErrorRaw(colorize(message, Color.Red));
-}
-
-export class ActionInputParameterNames {
+export class ActionInputParameterNames implements InputParameterNames {
   type = "type";
   name = "name";
   location = "location";

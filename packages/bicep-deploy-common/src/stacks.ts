@@ -21,7 +21,7 @@ export async function stackCreate(
   const name = config.name ?? defaultName;
   const scope = config.scope;
   const client = getStacksClient(config, scope, logger);
-  const stack = getStack(config, files);
+  const stack = createStackDefinition(config, files);
 
   switch (scope.type) {
     case "resourceGroup":
@@ -61,7 +61,7 @@ export async function stackValidate(
   const name = config.name ?? defaultName;
   const scope = config.scope;
   const client = getStacksClient(config, scope, logger);
-  const stack = getStack(config, files);
+  const stack = createStackDefinition(config, files);
 
   switch (scope.type) {
     case "resourceGroup":
@@ -120,7 +120,7 @@ export async function stackDelete(
   }
 }
 
-export function getStack(
+function createStackDefinition(
   config: DeploymentStackConfig,
   files: ParsedFiles,
 ): DeploymentStack {
@@ -144,7 +144,7 @@ export function getStack(
   };
 }
 
-export function getStackDeletionOptions(config: DeploymentStackConfig) {
+function getStackDeletionOptions(config: DeploymentStackConfig) {
   return {
     unmanageActionResources: config.actionOnUnManage.resources,
     unmanageActionResourceGroups: config.actionOnUnManage.resourceGroups,

@@ -9,7 +9,7 @@ export interface OutputSetter {
   setSecret(secret: string): void;
 }
 
-export function setCreateOutputs(
+export function setOutputs(
   config: DeployConfig,
   outputSetter: OutputSetter,
   outputs?: Record<string, unknown>,

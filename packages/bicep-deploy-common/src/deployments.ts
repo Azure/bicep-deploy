@@ -21,7 +21,7 @@ export async function deploymentCreate(
   const name = config.name ?? defaultName;
   const scope = config.scope;
   const client = getDeploymentClient(config, scope, logger);
-  const deployment = getDeployment(config, files);
+  const deployment = createDeploymentDefinition(config, files);
 
   switch (scope.type) {
     case "resourceGroup":
@@ -70,7 +70,7 @@ export async function deploymentValidate(
   const name = config.name ?? defaultName;
   const scope = config.scope;
   const client = getDeploymentClient(config, scope, logger);
-  const deployment = getDeployment(config, files);
+  const deployment = createDeploymentDefinition(config, files);
 
   switch (scope.type) {
     case "resourceGroup":
@@ -112,7 +112,7 @@ export async function deploymentWhatIf(
   const deploymentName = config.name ?? defaultName;
   const scope = config.scope;
   const client = getDeploymentClient(config, scope, logger);
-  const deployment = getDeployment(config, files);
+  const deployment = createDeploymentDefinition(config, files);
 
   switch (scope.type) {
     case "resourceGroup":
@@ -149,7 +149,7 @@ export async function deploymentWhatIf(
   }
 }
 
-export function getDeployment(
+function createDeploymentDefinition(
   config: DeploymentsConfig,
   files: ParsedFiles,
 ): Deployment {
