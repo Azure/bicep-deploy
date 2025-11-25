@@ -28,8 +28,20 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
+      - name: Install Dependencies Common
+        id: npm-install-common
+        working-directory: ./packages/bicep-deploy-common
+        run: npm ci
+
+      - name: Build bicep-deploy-common Package
+        id: build
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          rm -Rf dist
+          npm run build
+
       - name: Install Dependencies
-        id: npm-ci
+        id: npm-install
         run: npm ci
 
       - name: Lint
@@ -77,6 +89,18 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
+      - name: Install Dependencies Common
+        id: npm-install-common
+        working-directory: ./packages/bicep-deploy-common
+        run: npm ci
+
+      - name: Build bicep-deploy-common Package
+        id: build
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          rm -Rf dist
+          npm run build
+
       - name: Install Dependencies
         id: npm-ci
         run: npm ci
@@ -120,6 +144,13 @@ jobs:
       - name: Checkout
         id: checkout
         uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
 
       - uses: azure/login@v2
         with:

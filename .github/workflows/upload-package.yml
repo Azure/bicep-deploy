@@ -1,0 +1,59 @@
+name: Upload bicep-deploy-common Package
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  upload-package:
+    name: Upload bicep-deploy-common Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies for bicep-deploy-common
+        id: install-common
+        working-directory: ./packages/bicep-deploy-common
+        run: npm ci
+
+      - name: Build bicep-deploy-common Package
+        id: build
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          rm -Rf dist
+          npm run build
+
+      - name: Create package tarball
+        id: pack
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          packOutput=$(npm pack --json)
+          echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
+          echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
+
+      # Using upload steps defined for the Partner Release Pipeline (https://aka.ms/azsdk/partner-release-pipeline)
+      # azuresdkpartnerdrops is the managed identity that we use to upload to the partner drop folder
+      - name: Login to azuresdkpartnerdrops
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURESDKPARTNERDROPS_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURESDKPARTNERDROPS_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURESDKPARTNERDROPS_SUBSCRIPTION_ID }}
+
+      # Upload bicep-deploy-common package to partner drop folder to allow external distribution under the @azure scope
+      - name: Upload files to partner drop folder
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          echo "Uploading ${{ steps.pack.outputs.filename }} to partner drop folder at drops/bicep-deploy-common/npm/${{ steps.pack.outputs.version }}..."
+          az storage blob upload -f ${{ steps.pack.outputs.filename }} -c drops/bicep-deploy-common/npm/${{ steps.pack.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login

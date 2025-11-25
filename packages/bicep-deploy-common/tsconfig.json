@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "es2021",
+    "moduleDetection": "force",
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "types": ["vitest/globals"],
+  },
+  "include": ["src", "test"]
+}

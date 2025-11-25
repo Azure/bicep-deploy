@@ -1,0 +1,57 @@
+{
+  "name": "@azure/bicep-deploy-common",
+  "description": "Common Code for bicep-deploy (GitHub Action/ADO Task)",
+  "version": "0.0.1-dev",
+  "author": "Microsoft",
+  "homepage": "https://github.com/Azure/bicep-deploy#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Azure/bicep-deploy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Azure/bicep-deploy/issues"
+  },
+  "keywords": [
+    "bicep",
+    "arm templates"
+  ],
+  "type": "commonjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.cjs",
+  "exports": {
+    ".": "./dist/index.cjs"
+  },
+  "files": [
+    "./dist",
+    "./package.json",
+    "./README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsdown --config ./tsdown.config.mts"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@azure/arm-resources": "^6.0.0",
+    "@azure/arm-resourcesdeploymentstacks": "^1.0.0",
+    "@azure/identity": "^4.10.2",
+    "bicep-node": "^0.0.8",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "@vitest/eslint-plugin": "^1.4.3",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-notice": "^1.0.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "ts-node": "^10.9.2",
+    "tsdown": "^0.16.5",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.0",
+    "vitest": "^4.0.10",
+    "yaml": "^2.7.1"
+  }
+}
