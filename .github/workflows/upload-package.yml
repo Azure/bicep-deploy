@@ -2,8 +2,7 @@ name: Upload bicep-deploy-common Package
 
 on: workflow_dispatch
 
-permissions:
-  contents: read
+permissions: write-all
 
 jobs:
   upload-package:
