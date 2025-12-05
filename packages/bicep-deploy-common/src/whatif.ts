@@ -8,6 +8,7 @@ import {
   WhatIfPropertyChange,
 } from "@azure/arm-resources";
 import { Color, ColorMode, ColorStringBuilder } from "./logging";
+import { errorMessages } from "./errorMessages";
 
 // ChatGPT was heavily utilized to generate this file, using the below Python code as a starting point:
 // https://github.com/Azure/azure-cli/blob/5b77a09013d0f15f01e2b2acce1efd37571ac1d9/src/azure-cli/azure/cli/command_modules/resource/_formatters.py#L84
@@ -207,7 +208,7 @@ function formatChangeTypeCount(changeType: ChangeType, count: number): string {
     case "Unsupported":
       return `${count} unsupported`;
     default:
-      throw new Error(`Invalid ChangeType: ${changeType}`);
+      throw new Error(errorMessages.invalidChangeType(changeType));
   }
 }
 
@@ -407,7 +408,9 @@ function formatPropertyChange(
       formatPropertyNoEffect(builder, after, indentLevel + 1);
       break;
     default:
-      throw new Error(`Unknown property change type: ${propertyChangeType}.`);
+      throw new Error(
+        errorMessages.unknownPropertyChangeType(propertyChangeType),
+      );
   }
 }
 
@@ -665,7 +668,7 @@ function formatJsonValue(
   } else if (isNonEmptyObject(value)) {
     formatNonEmptyObject(builder, value, path, maxPathLength, indentLevel);
   } else {
-    throw new Error(`Invalid JSON value: ${value}`);
+    throw new Error(errorMessages.invalidJsonValue(value));
   }
 }
 

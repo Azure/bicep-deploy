@@ -1,7 +1,7 @@
 {
   "name": "@azure/bicep-deploy-common",
   "description": "Common Code for bicep-deploy (GitHub Action/ADO Task)",
-  "version": "0.0.1-dev",
+  "version": "0.0.2-dev",
   "author": "Microsoft",
   "homepage": "https://github.com/Azure/bicep-deploy#readme",
   "repository": {
@@ -19,7 +19,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.cjs",
   "exports": {
-    ".": "./dist/index.cjs"
+    ".": "./dist/index.cjs",
+    "./deployments": "./dist/deployments.cjs",
+    "./stacks": "./dist/stacks.cjs"
   },
   "files": [
     "./dist",

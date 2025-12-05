@@ -10,6 +10,8 @@ import {
   TenantScope,
 } from "./config";
 import { createDeploymentClient, createStacksClient } from "./azure";
+import { errorMessages } from "./errorMessages";
+import { loggingMessages } from "./loggingMessages";
 
 import {
   CloudError,
@@ -87,7 +89,7 @@ export function requireLocation(config: DeployConfig) {
   // this just exists to make typescript's validation happy.
   // it should only be called in places where we've already validated the location is set.
   if (!config.location) {
-    throw new Error("Location is required");
+    throw new Error(errorMessages.locationRequired);
   }
 
   return config.location;
@@ -101,7 +103,7 @@ export function logDiagnostics(
     return;
   }
 
-  logger.logInfo("Diagnostics returned by the API");
+  logger.logInfo(loggingMessages.diagnosticsReturned);
 
   for (const diagnostic of diagnostics) {
     const message = `[${diagnostic.level}] ${diagnostic.code}: ${diagnostic.message}`;
@@ -158,7 +160,7 @@ function getScope(files: ParsedFiles): ScopeType | undefined {
     case "deployment":
       return "resourceGroup";
     default:
-      throw new Error(`Failed to determine deployment scope from Bicep file.`);
+      throw new Error(errorMessages.failedToDetermineScope);
   }
 }
 
@@ -174,7 +176,9 @@ export async function tryWithErrorHandling<T>(
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
-      logger.logError(`Request failed. CorrelationId: ${correlationId}`);
+      logger.logError(
+        errorMessages.requestFailedCorrelation(correlationId ?? "unknown"),
+      );
 
       const { error } = ex.details as CloudError;
       if (error) {
@@ -187,7 +191,9 @@ export async function tryWithErrorHandling<T>(
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
-      logger.logError(`Request failed. CorrelationId: ${correlationId}`);
+      logger.logError(
+        loggingMessages.requestFailedCorrelation(correlationId ?? null),
+      );
 
       const { error } = ex.details;
       if (error) {

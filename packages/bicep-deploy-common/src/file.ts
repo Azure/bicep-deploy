@@ -8,6 +8,8 @@ import { Bicep, CompileResponseDiagnostic } from "bicep-node";
 
 import { FileConfig } from "./config";
 import { Logger } from "./logging";
+import { errorMessages } from "./errorMessages";
+import { loggingMessages } from "./loggingMessages";
 
 export type ParsedFiles = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,7 +100,7 @@ export async function getTemplateAndParameters(config: FileConfig, logger: Logge
     parametersFile &&
     path.extname(parametersFile).toLowerCase() !== ".json"
   ) {
-    throw new Error(`Unsupported parameters file type: ${parametersFile}`);
+    throw new Error(errorMessages.unsupportedParametersFile(parametersFile));
   }
 
   const parameters = await getJsonParameters(config);
@@ -110,11 +112,11 @@ export async function getTemplateAndParameters(config: FileConfig, logger: Logge
   }
 
   if (templateFile && path.extname(templateFile).toLowerCase() !== ".json") {
-    throw new Error(`Unsupported template file type: ${templateFile}`);
+    throw new Error(errorMessages.unsupportedTemplateFile(templateFile));
   }
 
   if (!templateFile) {
-    throw new Error("Template file is required");
+    throw new Error(errorMessages.templateFileRequired);
   }
 
   const template = await fs.readFile(templateFile, "utf8");
@@ -143,7 +145,7 @@ async function withBicep<T>(
 
   try {
     const version = await bicep.version();
-    logger.logInfo(`Installed Bicep version ${version} to ${bicepPath}`);
+    logger.logInfo(loggingMessages.bicepVersionInstalled(version, bicepPath));
 
     return await action(bicep);
   } finally {

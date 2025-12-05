@@ -20,7 +20,7 @@ describe("input validation", () => {
     configureGetInputMock({}, inputReader);
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'type' is required but not provided",
+      "Input 'type' is required but not provided",
     );
   });
 
@@ -28,7 +28,7 @@ describe("input validation", () => {
     configureGetInputMock({ type: "foo" }, inputReader);
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'type' must be one of the following values: 'deployment', 'deploymentStack'",
+      "Input 'type' must be one of the following values: 'deployment', 'deploymentStack'",
     );
   });
 
@@ -36,7 +36,7 @@ describe("input validation", () => {
     configureGetInputMock({ type: "deployment", tags: "invalid" }, inputReader);
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'tags' must be a valid JSON or YAML object",
+      "Input 'tags' must be a valid JSON or YAML object",
     );
   });
 
@@ -47,7 +47,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'tags' must be a valid JSON or YAML object",
+      "Input 'tags' must be a valid JSON or YAML object",
     );
   });
 
@@ -55,7 +55,7 @@ describe("input validation", () => {
     configureGetInputMock({ type: "deployment" }, inputReader);
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'operation' is required but not provided",
+      "Input 'operation' is required but not provided",
     );
   });
 
@@ -66,7 +66,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'operation' must be one of the following values: 'create', 'validate', 'whatIf'",
+      "Input 'operation' must be one of the following values: 'create', 'validate', 'whatIf'",
     );
   });
 
@@ -77,7 +77,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'operation' must be one of the following values: 'create', 'validate', 'delete'",
+      "Input 'operation' must be one of the following values: 'create', 'validate', 'delete'",
     );
   });
 
@@ -96,7 +96,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
+      "Input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
     );
   });
 
@@ -116,7 +116,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
+      "Input 'environment' must be one of the following values: 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'",
     );
   });
 
@@ -131,7 +131,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'subscriptionId' is required but not provided",
+      "Input 'subscriptionId' is required but not provided",
     );
   });
 
@@ -146,7 +146,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'subscriptionId' is required but not provided",
+      "Input 'subscriptionId' is required but not provided",
     );
   });
 
@@ -162,7 +162,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'resourceGroupName' is required but not provided",
+      "Input 'resourceGroupName' is required but not provided",
     );
   });
 
@@ -177,7 +177,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'managementGroupId' is required but not provided",
+      "Input 'managementGroupId' is required but not provided",
     );
   });
 
@@ -192,7 +192,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'scope' must be one of the following values: 'managementGroup', 'subscription', 'resourceGroup'",
+      "Input 'scope' must be one of the following values: 'managementGroup', 'subscription', 'resourceGroup'",
     );
   });
 
@@ -210,7 +210,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'what-if-exclude-change-types' must be one of the following values: 'create', 'delete', 'modify', 'deploy', 'noChange', 'ignore', 'unsupported'",
+      "Input 'what-if-exclude-change-types' must be one of the following values: 'create', 'delete', 'modify', 'deploy', 'noChange', 'ignore', 'unsupported'",
     );
   });
 
@@ -228,7 +228,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'validation-level' must be one of the following values: 'provider', 'template', 'providerNoRbac'",
+      "Input 'validation-level' must be one of the following values: 'provider', 'template', 'providerNoRbac'",
     );
   });
 
@@ -245,7 +245,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'action-on-unmanage-resources' is required but not provided",
+      "Input 'action-on-unmanage-resources' is required but not provided",
     );
   });
 
@@ -263,7 +263,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'action-on-unmanage-resources' must be one of the following values: 'delete', 'detach'",
+      "Input 'action-on-unmanage-resources' must be one of the following values: 'delete', 'detach'",
     );
   });
 
@@ -282,7 +282,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'action-on-unmanage-resourcegroups' must be one of the following values: 'delete', 'detach'",
+      "Input 'action-on-unmanage-resourcegroups' must be one of the following values: 'delete', 'detach'",
     );
   });
 
@@ -301,7 +301,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'action-on-unmanage-managementgroups' must be one of the following values: 'delete', 'detach'",
+      "Input 'action-on-unmanage-managementgroups' must be one of the following values: 'delete', 'detach'",
     );
   });
 
@@ -319,7 +319,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'deny-settings-mode' is required but not provided",
+      "Input 'deny-settings-mode' is required but not provided",
     );
   });
 
@@ -338,7 +338,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'deny-settings-mode' must be one of the following values: 'denyDelete', 'denyWriteAndDelete', 'none'",
+      "Input 'deny-settings-mode' must be one of the following values: 'denyDelete', 'denyWriteAndDelete', 'none'",
     );
   });
 
@@ -357,7 +357,7 @@ describe("input validation", () => {
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Action input 'bypass-stack-out-of-sync-error' must be a boolean value",
+      "Input 'bypass-stack-out-of-sync-error' must be a boolean value",
     );
   });
 });
