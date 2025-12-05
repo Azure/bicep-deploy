@@ -129,7 +129,7 @@ export function parseConfig(
     inputReader,
   );
   const parametersFile = getOptionalFilePath(
-    inputParameterNames.paramtersFile,
+    inputParameterNames.parametersFile,
     inputReader,
   );
   const parameters = getOptionalDictionaryInput(
@@ -242,7 +242,7 @@ export function parseConfig(
           ),
         },
         bypassStackOutOfSyncError: getOptionalBooleanInput(
-          inputParameterNames.bypasStackOutOfSyncError,
+          inputParameterNames.bypassStackOutOfSyncError,
           inputReader,
         ),
         denySettings: {

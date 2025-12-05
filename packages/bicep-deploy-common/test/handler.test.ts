@@ -18,6 +18,8 @@ import { ParsedFiles } from "../src/file";
 import { TestLogger } from "./logging";
 import { execute } from "../src/handler";
 import { readTestFile } from "./utils";
+import { errorMessages, resetErrorMessages } from "../src/errorMessages";
+import { loggingMessages, resetLoggingMessages } from "../src/loggingMessages";
 import {
   Deployment,
   DeploymentExtended,
@@ -32,7 +34,9 @@ import {
 const outputSetter = new mockOutputSetter();
 
 describe("deployment execution", () => {
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe("subscription scope", () => {
     const scope: SubscriptionScope = {
@@ -677,9 +681,138 @@ describe("stack execution", () => {
   });
 });
 
+describe("custom error messages", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetErrorMessages();
+  });
+
+  const config: DeploymentsConfig = {
+    type: "deployment",
+    scope: {
+      type: "resourceGroup",
+      subscriptionId: "sub",
+      resourceGroup: "rg",
+    },
+    operation: "validate",
+    whatIf: {},
+    environment: "azureCloud",
+  };
+
+  const files: ParsedFiles = {
+    templateContents: {},
+    parametersContents: { parameters: {} },
+  };
+
+  const logger = new TestLogger();
+
+  it("uses custom validation error message when provided", async () => {
+    const mockError = {
+      code: "InvalidTemplateDeployment",
+      message: "Validation failed",
+    };
+
+    mockDeploymentsOps.beginValidateAndWait!.mockRejectedValue(
+      getMockRestError(mockError),
+    );
+
+    const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+    await execute(config, files, logger, outputSetter, {
+      validationFailed: "Custom validation error message",
+    });
+
+    expect(spySetFailed).toHaveBeenCalledWith(
+      "Custom validation error message",
+    );
+    expect(errorMessages.validationFailed).toBe(
+      "Custom validation error message",
+    );
+  });
+
+  it("uses custom correlation error message when provided", async () => {
+    const mockError = { code: "DeploymentFailed", message: "Deploy failed" };
+
+    mockDeploymentsOps.beginCreateOrUpdateAndWait!.mockRejectedValue(
+      getMockRestError(mockError),
+    );
+
+    const spyLogError = vi.spyOn(logger, "logError");
+
+    await execute(config, files, logger, outputSetter, {
+      requestFailedCorrelation: (id: string) =>
+        `Request failed with correlation ID: ${id}`,
+    });
+
+    expect(spyLogError).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("Request failed with correlation ID: "),
+    );
+  });
+});
+
+describe("custom logging messages", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetLoggingMessages();
+  });
+
+  const config: DeploymentsConfig = {
+    type: "deployment",
+    scope: {
+      type: "resourceGroup",
+      subscriptionId: "sub",
+      resourceGroup: "rg",
+    },
+    operation: "validate",
+    whatIf: {},
+    environment: "azureCloud",
+  };
+
+  const files: ParsedFiles = {
+    templateContents: {},
+    parametersContents: { parameters: {} },
+  };
+
+  const logger = new TestLogger();
+
+  it("uses custom diagnostics message when provided", async () => {
+    const spyLogInfo = vi.spyOn(logger, "logInfo");
+
+    mockDeploymentsOps.beginValidateAndWait!.mockResolvedValue({
+      properties: {
+        diagnostics: [
+          {
+            level: "Info",
+            code: "INFO001",
+            message: "Test diagnostic message",
+          },
+        ],
+      },
+    });
+
+    await execute(config, files, logger, outputSetter, undefined, {
+      diagnosticsReturned: "Custom diagnostics message",
+    });
+
+    expect(spyLogInfo).toHaveBeenCalledWith("Custom diagnostics message");
+    expect(loggingMessages.diagnosticsReturned).toBe(
+      "Custom diagnostics message",
+    );
+  });
+});
+
 function getMockRestError(errorResponse: ErrorResponse) {
   const restError = new RestError("foo error");
   restError.details = { error: errorResponse };
+  restError.response = {
+    headers: {
+      get: (name: string) =>
+        name === "x-ms-correlation-request-id"
+          ? "test-correlation-id"
+          : undefined,
+    },
+  } as RestError["response"];
 
   return restError;
 }

@@ -3,6 +3,7 @@
 import * as yaml from "yaml";
 
 import { resolvePath } from "./file";
+import { errorMessages } from "./errorMessages";
 
 export interface InputReader {
   getInput(inputName: string): string | undefined;
@@ -13,7 +14,7 @@ export interface InputParameterNames {
   name: string;
   location: string;
   templateFile: string;
-  paramtersFile: string;
+  parametersFile: string;
   parameters: string;
   bicepVersion: string;
   description: string;
@@ -26,7 +27,7 @@ export interface InputParameterNames {
   actionOnUnmanageResources: string;
   actionOnUnmanageResourceGroups: string;
   actionOnUnmanageManagementGroups: string;
-  bypasStackOutOfSyncError: string;
+  bypassStackOutOfSyncError: string;
   denySettingsMode: string;
   denySettingsExcludedActions: string;
   denySettingsExcludedPrincipals: string;
@@ -96,7 +97,7 @@ export function getOptionalBooleanInput(
   } else if (input.toLowerCase() === "false") {
     return false;
   } else {
-    throw new Error(`Action input '${inputName}' must be a boolean value`);
+    throw new Error(errorMessages.inputMustBeBoolean(inputName));
   }
 }
 
@@ -122,9 +123,7 @@ export function getOptionalEnumArrayInput<TEnum extends string>(
   const allowedValuesString = allowedValues as string[];
   for (const value of values) {
     if (allowedValuesString.indexOf(value) === -1) {
-      throw new Error(
-        `Action input '${inputName}' must be one of the following values: '${allowedValues.join(`', '`)}'`,
-      );
+      throw new Error(errorMessages.inputMustBeEnum(inputName, allowedValues));
     }
   }
 
@@ -142,9 +141,7 @@ export function getOptionalDictionaryInput(
 
   const input = tryParseJson(inputString) ?? tryParseYaml(inputString);
   if (typeof input !== "object") {
-    throw new Error(
-      `Action input '${inputName}' must be a valid JSON or YAML object`,
-    );
+    throw new Error(errorMessages.inputMustBeValidObject(inputName));
   }
 
   return input;
@@ -161,9 +158,7 @@ export function getOptionalStringDictionaryInput(
 
   Object.keys(input).forEach(key => {
     if (typeof input[key] !== "string") {
-      throw new Error(
-        `Action input '${inputName}' must be a valid JSON or YAML object containing only string values`,
-      );
+      throw new Error(errorMessages.inputMustBeStringObject(inputName));
     }
   });
 
@@ -202,18 +197,14 @@ function getInput(
   const inputValue = inputReader.getInput(inputName)?.trim();
   if (!inputValue) {
     if (throwOnMissing) {
-      throw new Error(
-        `Action input '${inputName}' is required but not provided`,
-      );
+      throw new Error(errorMessages.inputRequired(inputName));
     } else {
       return;
     }
   }
 
   if (allowedValues && !allowedValues.includes(inputValue)) {
-    throw new Error(
-      `Action input '${inputName}' must be one of the following values: '${allowedValues.join(`', '`)}'`,
-    );
+    throw new Error(errorMessages.inputMustBeEnum(inputName, allowedValues));
   }
 
   return inputValue;

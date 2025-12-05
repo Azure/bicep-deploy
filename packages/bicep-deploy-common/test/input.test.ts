@@ -18,7 +18,7 @@ describe("getRequiredStringInput", () => {
     configureGetInputMock({}, inputReader);
 
     expect(() => getRequiredStringInput("type", inputReader)).toThrow(
-      "Action input 'type' is required but not provided",
+      "Input 'type' is required but not provided",
     );
   });
 
@@ -140,7 +140,7 @@ describe("getOptionalEnumArrayInput", () => {
     expect(() =>
       getOptionalEnumArrayInput("type", ["foo", "bar", "baz"], inputReader),
     ).toThrow(
-      "Action input 'type' must be one of the following values: 'foo', 'bar', 'baz'",
+      "Input 'type' must be one of the following values: 'foo', 'bar', 'baz'",
     );
   });
 });
@@ -184,7 +184,7 @@ describe("getOptionalDictionaryInput", () => {
     configureGetInputMock({ type: "notanobject" }, inputReader);
 
     expect(() => getOptionalDictionaryInput("type", inputReader)).toThrow(
-      "Action input 'type' must be a valid JSON or YAML object",
+      "Input 'type' must be a valid JSON or YAML object",
     );
   });
 
@@ -253,7 +253,7 @@ describe("getOptionalStringDictionaryInput", () => {
     configureGetInputMock({ type: "notanobject" }, inputReader);
 
     expect(() => getOptionalStringDictionaryInput("type", inputReader)).toThrow(
-      "Action input 'type' must be a valid JSON or YAML object",
+      "Input 'type' must be a valid JSON or YAML object",
     );
   });
 
@@ -271,7 +271,7 @@ describe("getOptionalStringDictionaryInput", () => {
     configureGetInputMock({ type: '{ "abc": { "def": "ghi" } }' }, inputReader);
 
     expect(() => getOptionalStringDictionaryInput("type", inputReader)).toThrow(
-      "Action input 'type' must be a valid JSON or YAML object containing only string values",
+      "Input 'type' must be a valid JSON or YAML object containing only string values",
     );
   });
 });

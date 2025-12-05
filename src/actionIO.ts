@@ -24,7 +24,7 @@ export class ActionInputParameterNames implements InputParameterNames {
   name = "name";
   location = "location";
   templateFile = "template-file";
-  paramtersFile = "parameters-file";
+  parametersFile = "parameters-file";
   parameters = "parameters";
   bicepVersion = "bicep-version";
   description = "description";
@@ -37,7 +37,7 @@ export class ActionInputParameterNames implements InputParameterNames {
   actionOnUnmanageResources = "action-on-unmanage-resources";
   actionOnUnmanageResourceGroups = "action-on-unmanage-resourcegroups";
   actionOnUnmanageManagementGroups = "action-on-unmanage-managementgroups";
-  bypasStackOutOfSyncError = "bypass-stack-out-of-sync-error";
+  bypassStackOutOfSyncError = "bypass-stack-out-of-sync-error";
   denySettingsMode = "deny-settings-mode";
   denySettingsExcludedActions = "deny-settings-excluded-actions";
   denySettingsExcludedPrincipals = "deny-settings-excluded-principals";

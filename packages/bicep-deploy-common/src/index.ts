@@ -3,10 +3,12 @@
 
 export * from "./config";
 export * from "./deployments";
+export * from "./errorMessages";
 export * from "./file";
 export * from "./handler";
 export * from "./input";
 export * from "./logging";
+export * from "./loggingMessages";
 export * from "./output";
 export * from "./stacks";
 export * from "./utils";

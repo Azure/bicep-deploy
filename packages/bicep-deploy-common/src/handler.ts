@@ -18,13 +18,29 @@ import {
 import { ParsedFiles } from "./file";
 import { Logger } from "./logging";
 import { OutputSetter, setOutputs } from "./output";
+import {
+  errorMessages,
+  ErrorMessageConfig,
+  setErrorMessages,
+} from "./errorMessages";
+import { LoggingMessageConfig, setLoggingMessages } from "./loggingMessages";
 
 export async function execute(
   config: DeployConfig,
   files: ParsedFiles,
   logger: Logger,
   outputSetter: OutputSetter,
+  customErrorMessages?: Partial<ErrorMessageConfig>,
+  customLoggingMessages?: Partial<LoggingMessageConfig>,
 ) {
+  if (customErrorMessages) {
+    setErrorMessages(customErrorMessages);
+  }
+
+  if (customLoggingMessages) {
+    setLoggingMessages(customLoggingMessages);
+  }
+
   try {
     validateFileScope(config, files);
     switch (config.type) {
@@ -38,7 +54,7 @@ export async function execute(
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
-                outputSetter.setFailed("Create failed");
+                outputSetter.setFailed(errorMessages.createFailed);
               },
               logger,
             );
@@ -52,7 +68,7 @@ export async function execute(
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
-                outputSetter.setFailed("Validation failed");
+                outputSetter.setFailed(errorMessages.validationFailed);
               },
               logger,
             );
@@ -78,7 +94,7 @@ export async function execute(
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
-                outputSetter.setFailed("Create failed");
+                outputSetter.setFailed(errorMessages.createFailed);
               },
               logger,
             );
@@ -89,7 +105,7 @@ export async function execute(
               () => stackValidate(config, files, logger),
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
-                outputSetter.setFailed("Validation failed");
+                outputSetter.setFailed(errorMessages.validationFailed);
               },
               logger,
             );
@@ -108,13 +124,15 @@ export async function execute(
       const correlationId = error.response.headers.get(
         "x-ms-correlation-request-id",
       );
-      logger.logError(`Request failed. CorrelationId: ${correlationId}`);
+      logger.logError(
+        errorMessages.requestFailedCorrelation(correlationId ?? "unknown"),
+      );
 
       const responseBody = JSON.parse(error.response.bodyAsText);
       logger.logError(JSON.stringify(responseBody, null, 2));
     }
 
-    outputSetter.setFailed("Operation failed");
+    outputSetter.setFailed(errorMessages.operationFailed);
     throw error;
   }
 }
