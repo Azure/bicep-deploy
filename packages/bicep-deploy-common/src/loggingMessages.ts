@@ -32,7 +32,7 @@ const defaultLoggingMessages: LoggingMessageConfig = {
     scopedId: string,
     name: string,
   ) =>
-    `Starting ${type} ${operation} at ${scope}${scopedId ? ` '${scopedId}'` : ``} scope${name ? ` with name '${name}'` : ""}`,
+    `Starting ${type} ${operation} at ${scope}${scopedId ? ` '${scopedId}'` : ""} scope${name ? ` with name '${name}'` : ""}`,
   usingTemplateFile: (templateFile: string) =>
     `Using template file: ${templateFile}`,
   usingParametersFile: (parametersFile: string) =>

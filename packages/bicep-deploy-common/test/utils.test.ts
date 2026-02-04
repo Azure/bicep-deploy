@@ -1,7 +1,49 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import { ScopeType } from "../src/config";
-import { validateFileScope } from "../src/utils";
+import { getScopedId, validateFileScope } from "../src/utils";
+
+describe("getScopedId", () => {
+  it("returns resource group name for resourceGroup scope", () => {
+    const result = getScopedId({
+      scope: {
+        type: "resourceGroup",
+        subscriptionId: "sub-123",
+        resourceGroup: "my-rg",
+      },
+    } as never);
+    expect(result).toBe("my-rg");
+  });
+
+  it("returns subscription ID for subscription scope", () => {
+    const result = getScopedId({
+      scope: {
+        type: "subscription",
+        subscriptionId: "sub-123",
+      },
+    } as never);
+    expect(result).toBe("sub-123");
+  });
+
+  it("returns management group name for managementGroup scope", () => {
+    const result = getScopedId({
+      scope: {
+        type: "managementGroup",
+        managementGroup: "my-mg",
+      },
+    } as never);
+    expect(result).toBe("my-mg");
+  });
+
+  it("returns empty string for tenant scope", () => {
+    const result = getScopedId({
+      scope: {
+        type: "tenant",
+      },
+    } as never);
+    expect(result).toBe("");
+  });
+});
 
 describe("validateFileScope", () => {
   it("should ignore empty template", () => {

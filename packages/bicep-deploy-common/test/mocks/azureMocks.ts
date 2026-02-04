@@ -10,6 +10,7 @@ export const mockDeploymentsOps: Partial<vi.MockedObjectDeep<Deployments>> = {
   beginCreateOrUpdateAndWait: vi.fn(),
   beginValidateAndWait: vi.fn(),
   beginWhatIfAndWait: vi.fn(),
+  beginCreateOrUpdateAtTenantScopeAndWait: vi.fn(),
 };
 
 export const mockStacksOps: Partial<vi.MockedObjectDeep<DeploymentStacks>> = {

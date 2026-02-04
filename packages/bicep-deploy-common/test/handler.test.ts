@@ -14,6 +14,7 @@ import {
   DeploymentStackConfig,
   ResourceGroupScope,
   SubscriptionScope,
+  TenantScope,
 } from "../src/config";
 import { ParsedFiles } from "../src/file";
 import { TestLogger } from "./logging";
@@ -382,6 +383,91 @@ describe("deployment execution", () => {
         config.name,
         expectedPayload,
       );
+    });
+  });
+
+  describe("tenant scope", () => {
+    const scope: TenantScope = {
+      type: "tenant",
+    };
+
+    const config: DeploymentsConfig = {
+      location: "mockLocation",
+      type: "deployment",
+      scope: scope,
+      name: "mockName",
+      operation: "create",
+      whatIf: {},
+      environment: "azureCloud",
+    };
+
+    const files: ParsedFiles = {
+      templateContents: JSON.parse(
+        readTestFile("files/basic-tenant/main.json"),
+      ),
+      parametersContents: JSON.parse(
+        readTestFile("files/basic-tenant/main.parameters.json"),
+      ),
+    };
+
+    const logger = new TestLogger();
+
+    beforeEach(() => {
+      mockFile.getTemplateAndParameters.mockResolvedValue(files);
+    });
+
+    const expectedPayload = {
+      location: config.location,
+      properties: {
+        mode: "Incremental",
+        template: files.templateContents,
+        parameters: files.parametersContents["parameters"],
+        expressionEvaluationOptions: {
+          scope: "inner",
+        },
+        validationLevel: undefined,
+      },
+      tags: undefined,
+    };
+
+    const mockReturnPayload = {
+      ...expectedPayload,
+      properties: {
+        ...expectedPayload.properties,
+        outputs: { mockOutput: { value: "foo" } },
+      },
+    };
+
+    it("deploys and logs tenant scope correctly", async () => {
+      mockDeploymentsOps.beginCreateOrUpdateAtTenantScopeAndWait!.mockResolvedValue(
+        mockReturnPayload,
+      );
+
+      logger.clear();
+      await execute(config, logger, outputSetter);
+
+      expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        config,
+        logger,
+        undefined,
+        undefined,
+      );
+      expect(
+        mockDeploymentsOps.beginCreateOrUpdateAtTenantScopeAndWait,
+      ).toHaveBeenCalledWith(
+        config.name,
+        { ...expectedPayload, location: config.location },
+        expect.anything(),
+      );
+      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
+      expect(outputSetter.setSecret).not.toHaveBeenCalled();
+
+      // Validate expected log sequence - tenant scope has no scopedId
+      const infoLogs = logger.getInfoMessages();
+      expect(infoLogs[0]).toContain("Starting deployment create");
+      // Tenant scope should show "at tenant scope" without a scopedId in between
+      expect(infoLogs[0]).toMatch(/at tenant scope/);
+      expect(infoLogs[0]).toContain("with name 'mockName'");
     });
   });
 });

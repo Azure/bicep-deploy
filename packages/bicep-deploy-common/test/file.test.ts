@@ -188,6 +188,19 @@ describe("file parsing", () => {
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     );
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
+
+    // Validate logging - both template and parameters file should be logged
+    const infoLogs = logger.getInfoMessages();
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using template file: /path/to/main.bicep"),
+      ),
+    ).toBe(true);
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using parameters file: /path/to/parameters.json"),
+      ),
+    ).toBe(true);
   });
 
   it("compiles Bicep files with specific version", async () => {
