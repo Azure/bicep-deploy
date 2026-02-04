@@ -101,6 +101,7 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
+      logger.clear();
       await execute(config, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
@@ -114,6 +115,11 @@ describe("deployment execution", () => {
       ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
       expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
+
+      // Validate expected log sequence
+      const infoLogs = logger.getInfoMessages();
+      expect(infoLogs[0]).toContain("Starting deployment create");
+      expect(infoLogs[0]).toContain("subscription 'mockSub'");
     });
 
     it("masks secure values", async () => {
@@ -450,6 +456,7 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
+      logger.clear();
       await execute(config, logger, outputSetter);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
@@ -463,6 +470,11 @@ describe("stack execution", () => {
       ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
       expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
+
+      // Validate expected log sequence for stacks
+      const infoLogs = logger.getInfoMessages();
+      expect(infoLogs[0]).toContain("Starting deploymentStack create");
+      expect(infoLogs[0]).toContain("subscription 'mockSub'");
     });
 
     it("masks secure values", async () => {

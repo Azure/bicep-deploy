@@ -26,6 +26,22 @@ import { ParsedFiles } from "./file";
 
 export const defaultName = "azure-bicep-deploy";
 
+export function getScopedId(config: DeployConfig): string {
+  const scope = config.scope;
+  switch (scope.type) {
+    case "resourceGroup":
+      return scope.resourceGroup;
+    case "subscription":
+      return scope.subscriptionId;
+    case "managementGroup":
+      return scope.managementGroup;
+    case "tenant":
+      return "";
+    default:
+      return "";
+  }
+}
+
 export function getDeploymentClient(
   config: DeployConfig,
   scope:

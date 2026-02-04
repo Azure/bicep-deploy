@@ -72,12 +72,16 @@ async function compileBicep(templateFilePath: string, logger: Logger, bicepVersi
   return { template: result.contents };
 }
 
-export async function getJsonParameters(config: FileConfig) {
+export async function getJsonParameters(config: FileConfig, logger: Logger) {
   const { parametersFile, parameters } = config;
 
-  const contents = parametersFile
-    ? JSON.parse(await fs.readFile(parametersFile, "utf8"))
-    : { parameters: {} };
+  let contents;
+  if (parametersFile) {
+    logger.logInfo(loggingMessages.usingParametersFile(parametersFile));
+    contents = JSON.parse(await fs.readFile(parametersFile, "utf8"));
+  } else {
+    contents = { parameters: {} };
+  }
 
   for (const [key, value] of Object.entries(parameters ?? {})) {
     contents["parameters"][key] = { value };
@@ -93,6 +97,8 @@ export async function getTemplateAndParameters(config: FileConfig, logger: Logge
     parametersFile &&
     path.extname(parametersFile).toLowerCase() === ".bicepparam"
   ) {
+    // .bicepparam includes template reference, so only log parameters file
+    logger.logInfo(loggingMessages.usingParametersFile(parametersFile));
     return parse(await compileBicepParams(parametersFile, logger, config.parameters, config.bicepVersion));
   }
 
@@ -103,9 +109,10 @@ export async function getTemplateAndParameters(config: FileConfig, logger: Logge
     throw new Error(errorMessages.unsupportedParametersFile(parametersFile));
   }
 
-  const parameters = await getJsonParameters(config);
+  const parameters = await getJsonParameters(config, logger);
 
   if (templateFile && path.extname(templateFile).toLowerCase() === ".bicep") {
+    logger.logInfo(loggingMessages.usingTemplateFile(templateFile));
     const { template } = await compileBicep(templateFile, logger, config.bicepVersion);
 
     return parse({ template, parameters });
@@ -119,6 +126,7 @@ export async function getTemplateAndParameters(config: FileConfig, logger: Logge
     throw new Error(errorMessages.templateFileRequired);
   }
 
+  logger.logInfo(loggingMessages.usingTemplateFile(templateFile));
   const template = await fs.readFile(templateFile, "utf8");
 
   return parse({ template, parameters });
