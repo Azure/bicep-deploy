@@ -42,6 +42,31 @@ describe("file parsing", () => {
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
   });
 
+  it("reads template file without parameters file", async () => {
+    const config: FileConfig = {
+      templateFile: "/path/to/template.json",
+      parametersFile: undefined,
+    };
+
+    configureReadFile(filePath => {
+      if (filePath === "/path/to/template.json")
+        return readTestFile("files/basic/main.json");
+      throw `Unexpected file path: ${filePath}`;
+    });
+
+    const logger = new TestLogger();
+
+    const { templateContents, parametersContents } =
+      await getTemplateAndParameters(config, logger);
+
+    expect(templateContents["$schema"]).toBe(
+      "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    );
+    expect(templateContents["parameters"]["stringParam"]).toBeDefined();
+
+    expect(parametersContents["parameters"]).toStrictEqual({});
+  });
+
   it("compiles Bicepparam files", async () => {
     const config: FileConfig = {
       parametersFile: "/path/to/main.bicepparam",
@@ -177,32 +202,52 @@ describe("file parsing", () => {
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
   });
 
-  it("blocks unexpected parameter file extensions", async () => {
-    const config: FileConfig = {
-      parametersFile: "/path/to/parameters.what",
-      templateFile: "/path/to/main.json",
-    };
+  it.each([
+    {
+      description: "parameter file",
+      config: {
+        parametersFile: "/path/to/parameters.what",
+        templateFile: "/path/to/main.json",
+      },
+      expectedError:
+        "Unsupported parameters file type: /path/to/parameters.what",
+    },
+    {
+      description: "template file",
+      config: {
+        parametersFile: "/path/to/parameters.json",
+        templateFile: "/path/to/main.what",
+      },
+      expectedError: "Unsupported template file type: /path/to/main.what",
+    },
+  ])(
+    "blocks unexpected $description extension",
+    async ({ config, expectedError }) => {
+      const logger = new TestLogger();
 
-    const logger = new TestLogger();
+      await expect(
+        async () => await getTemplateAndParameters(config, logger),
+      ).rejects.toThrow(expectedError);
+    },
+  );
 
-    await expect(
-      async () => await getTemplateAndParameters(config, logger),
-    ).rejects.toThrow(
-      "Unsupported parameters file type: /path/to/parameters.what",
-    );
-  });
-
-  it("blocks unexpected template file extension", async () => {
+  it("requires template file when using JSON parameters", async () => {
     const config: FileConfig = {
       parametersFile: "/path/to/parameters.json",
-      templateFile: "/path/to/main.what",
+      templateFile: undefined,
     };
+
+    configureReadFile(filePath => {
+      if (filePath === "/path/to/parameters.json")
+        return readTestFile("files/basic/main.parameters.json");
+      throw `Unexpected file path: ${filePath}`;
+    });
 
     const logger = new TestLogger();
 
     await expect(
       async () => await getTemplateAndParameters(config, logger),
-    ).rejects.toThrow("Unsupported template file type: /path/to/main.what");
+    ).rejects.toThrow("Template file is required");
   });
 });
 

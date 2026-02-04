@@ -25,7 +25,7 @@ describe("run", () => {
     bicepDeployCommonMock.resolvePath.mockImplementation(
       () => "/path/to/mock.bicepparam",
     );
-    bicepDeployCommonMock.getTemplateAndParameters.mockImplementation(() => {
+    bicepDeployCommonMock.execute.mockImplementation(() => {
       throw `This is an error!`;
     });
 
@@ -38,7 +38,7 @@ describe("run", () => {
     bicepDeployCommonMock.resolvePath.mockImplementation(
       () => "/path/to/mock.bicepparam",
     );
-    bicepDeployCommonMock.getTemplateAndParameters.mockImplementation(() => {
+    bicepDeployCommonMock.execute.mockImplementation(() => {
       throw Error(`This is an error!`);
     });
 

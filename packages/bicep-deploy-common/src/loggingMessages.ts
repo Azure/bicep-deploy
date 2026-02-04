@@ -5,6 +5,7 @@ export interface LoggingMessageConfig {
   diagnosticsReturned: string;
   bicepVersionInstalled: (version: string, path: string) => string;
   requestFailedCorrelation: (correlationId: string | null) => string;
+  filesIgnoredForDelete: string;
 }
 
 const defaultLoggingMessages: LoggingMessageConfig = {
@@ -13,6 +14,8 @@ const defaultLoggingMessages: LoggingMessageConfig = {
     `Installed Bicep version ${version} to ${path}`,
   requestFailedCorrelation: (correlationId: string | null) =>
     `Request failed. CorrelationId: ${correlationId}`,
+  filesIgnoredForDelete:
+    "Template and parameter files are not required for delete operations and will be ignored.",
 };
 
 let currentLoggingMessages: LoggingMessageConfig = {
