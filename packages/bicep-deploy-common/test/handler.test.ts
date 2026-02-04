@@ -6,6 +6,7 @@ import {
   mockDeploymentsOps,
   mockStacksOps,
 } from "./mocks/azureMocks";
+import { mockFile } from "./mocks/fileMocks";
 import { RestError } from "@azure/core-rest-pipeline";
 
 import {
@@ -67,6 +68,10 @@ describe("deployment execution", () => {
 
     const logger = new TestLogger();
 
+    beforeEach(() => {
+      mockFile.getTemplateAndParameters.mockResolvedValue(files);
+    });
+
     const expectedProperties: DeploymentProperties = {
       mode: "Incremental",
       template: files.templateContents,
@@ -96,7 +101,7 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files, logger, outputSetter);
+      await execute(config, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         config,
@@ -118,7 +123,6 @@ describe("deployment execution", () => {
 
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
-        files,
         logger,
         outputSetter,
       );
@@ -127,12 +131,7 @@ describe("deployment execution", () => {
     });
 
     it("validates", async () => {
-      await execute(
-        { ...config, operation: "validate" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "validate" }, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -150,12 +149,7 @@ describe("deployment execution", () => {
         {},
       );
 
-      await execute(
-        { ...config, operation: "whatIf" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "whatIf" }, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -197,6 +191,10 @@ describe("deployment execution", () => {
     };
 
     const logger = new TestLogger();
+
+    beforeEach(() => {
+      mockFile.getTemplateAndParameters.mockResolvedValue(files);
+    });
 
     const expectedProperties: DeploymentProperties = {
       mode: "Incremental",
@@ -245,7 +243,7 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files, logger, outputSetter);
+      await execute(config, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         config,
@@ -272,7 +270,6 @@ describe("deployment execution", () => {
 
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
-        files,
         logger,
         outputSetter,
       );
@@ -287,12 +284,7 @@ describe("deployment execution", () => {
 
       const spyLogError = vi.spyOn(logger, "logError");
 
-      await execute(
-        { ...config, operation: "create" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "create" }, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "create" },
@@ -321,12 +313,7 @@ describe("deployment execution", () => {
     });
 
     it("validates", async () => {
-      await execute(
-        { ...config, operation: "validate" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "validate" }, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -348,12 +335,7 @@ describe("deployment execution", () => {
 
       const spyLogError = vi.spyOn(logger, "logError");
 
-      await execute(
-        { ...config, operation: "validate" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "validate" }, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -381,12 +363,7 @@ describe("deployment execution", () => {
     it("what-ifs", async () => {
       mockDeploymentsOps.beginWhatIfAndWait!.mockResolvedValue({});
 
-      await execute(
-        { ...config, operation: "whatIf" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "whatIf" }, logger, outputSetter);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -441,6 +418,10 @@ describe("stack execution", () => {
 
     const logger = new TestLogger();
 
+    beforeEach(() => {
+      mockFile.getTemplateAndParameters.mockResolvedValue(files);
+    });
+
     const expectedProperties: DeploymentStackProperties = {
       actionOnUnmanage: config.actionOnUnManage,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
@@ -469,7 +450,7 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files, logger, outputSetter);
+      await execute(config, logger, outputSetter);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         config,
@@ -491,7 +472,6 @@ describe("stack execution", () => {
 
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
-        files,
         logger,
         outputSetter,
       );
@@ -500,12 +480,7 @@ describe("stack execution", () => {
     });
 
     it("validates", async () => {
-      await execute(
-        { ...config, operation: "validate" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "validate" }, logger, outputSetter);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -519,12 +494,7 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute(
-        { ...config, operation: "delete" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "delete" }, logger, outputSetter);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },
@@ -538,6 +508,44 @@ describe("stack execution", () => {
         bypassStackOutOfSyncError: true,
         unmanageActionResources: "delete",
       });
+    });
+
+    it.each([
+      { templateFile: "main.bicep", parametersFile: undefined },
+      { templateFile: undefined, parametersFile: "main.bicepparam" },
+      { templateFile: "main.bicep", parametersFile: "main.bicepparam" },
+    ])(
+      "warns when files are provided for delete operation ($templateFile, $parametersFile)",
+      async ({ templateFile, parametersFile }) => {
+        const spyLogWarning = vi.spyOn(logger, "logWarning");
+
+        await execute(
+          { ...config, operation: "delete", templateFile, parametersFile },
+          logger,
+          outputSetter,
+        );
+
+        expect(spyLogWarning).toHaveBeenCalledWith(
+          "Template and parameter files are not required for delete operations and will be ignored.",
+        );
+      },
+    );
+
+    it("does not warn when no files are provided for delete operation", async () => {
+      const spyLogWarning = vi.spyOn(logger, "logWarning");
+
+      await execute(
+        {
+          ...config,
+          operation: "delete",
+          templateFile: undefined,
+          parametersFile: undefined,
+        },
+        logger,
+        outputSetter,
+      );
+
+      expect(spyLogWarning).not.toHaveBeenCalled();
     });
   });
 
@@ -576,6 +584,10 @@ describe("stack execution", () => {
 
     const logger = new TestLogger();
 
+    beforeEach(() => {
+      mockFile.getTemplateAndParameters.mockResolvedValue(files);
+    });
+
     const expectedProperties: DeploymentStackProperties = {
       actionOnUnmanage: config.actionOnUnManage,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
@@ -603,7 +615,7 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, files, logger, outputSetter);
+      await execute(config, logger, outputSetter);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         config,
@@ -630,7 +642,6 @@ describe("stack execution", () => {
 
       await execute(
         { ...config, maskedOutputs: ["mockOutput"] },
-        files,
         logger,
         outputSetter,
       );
@@ -639,12 +650,7 @@ describe("stack execution", () => {
     });
 
     it("validates", async () => {
-      await execute(
-        { ...config, operation: "validate" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "validate" }, logger, outputSetter);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -658,12 +664,7 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute(
-        { ...config, operation: "delete" },
-        files,
-        logger,
-        outputSetter,
-      );
+      await execute({ ...config, operation: "delete" }, logger, outputSetter);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },
@@ -706,6 +707,10 @@ describe("custom error messages", () => {
 
   const logger = new TestLogger();
 
+  beforeEach(() => {
+    mockFile.getTemplateAndParameters.mockResolvedValue(files);
+  });
+
   it("uses custom validation error message when provided", async () => {
     const mockError = {
       code: "InvalidTemplateDeployment",
@@ -718,7 +723,7 @@ describe("custom error messages", () => {
 
     const spySetFailed = vi.spyOn(outputSetter, "setFailed");
 
-    await execute(config, files, logger, outputSetter, {
+    await execute(config, logger, outputSetter, {
       validationFailed: "Custom validation error message",
     });
 
@@ -739,7 +744,7 @@ describe("custom error messages", () => {
 
     const spyLogError = vi.spyOn(logger, "logError");
 
-    await execute(config, files, logger, outputSetter, {
+    await execute(config, logger, outputSetter, {
       requestFailedCorrelation: (id: string) =>
         `Request failed with correlation ID: ${id}`,
     });
@@ -776,6 +781,10 @@ describe("custom logging messages", () => {
 
   const logger = new TestLogger();
 
+  beforeEach(() => {
+    mockFile.getTemplateAndParameters.mockResolvedValue(files);
+  });
+
   it("uses custom diagnostics message when provided", async () => {
     const spyLogInfo = vi.spyOn(logger, "logInfo");
 
@@ -791,7 +800,7 @@ describe("custom logging messages", () => {
       },
     });
 
-    await execute(config, files, logger, outputSetter, undefined, {
+    await execute(config, logger, outputSetter, undefined, {
       diagnosticsReturned: "Custom diagnostics message",
     });
 
