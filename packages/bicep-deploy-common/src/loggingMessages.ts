@@ -6,7 +6,13 @@ export interface LoggingMessageConfig {
   bicepVersionInstalled: (version: string, path: string) => string;
   requestFailedCorrelation: (correlationId: string | null) => string;
   filesIgnoredForDelete: string;
-  startingOperation: (type: string, operation: string, scope: string, scopedId: string, name: string) => string;
+  startingOperation: (
+    type: string,
+    operation: string,
+    scope: string,
+    scopedId: string,
+    name: string,
+  ) => string;
   usingTemplateFile: (templateFile: string) => string;
   usingParametersFile: (parametersFile: string) => string;
 }
@@ -19,7 +25,13 @@ const defaultLoggingMessages: LoggingMessageConfig = {
     `Request failed. CorrelationId: ${correlationId}`,
   filesIgnoredForDelete:
     "Template and parameter files are not required for delete operations and will be ignored.",
-  startingOperation: (type: string, operation: string, scope: string, scopedId: string, name: string) =>
+  startingOperation: (
+    type: string,
+    operation: string,
+    scope: string,
+    scopedId: string,
+    name: string,
+  ) =>
     `Starting ${type} ${operation} at ${scope}${scopedId ? ` '${scopedId}'` : ``} scope${name ? ` with name '${name}'` : ""}`,
   usingTemplateFile: (templateFile: string) =>
     `Using template file: ${templateFile}`,

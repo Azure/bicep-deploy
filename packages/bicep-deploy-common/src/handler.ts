@@ -50,7 +50,15 @@ export async function execute(
   try {
     // Log what operation we're starting
     const scopedId = getScopedId(config);
-    logger.logInfo(loggingMessages.startingOperation(config.type, config.operation, config.scope.type, scopedId, config.name ?? ""));
+    logger.logInfo(
+      loggingMessages.startingOperation(
+        config.type,
+        config.operation,
+        config.scope.type,
+        scopedId,
+        config.name ?? "",
+      ),
+    );
 
     if (config.operation !== "delete") {
       // Get template and parameters only for non-delete operations
