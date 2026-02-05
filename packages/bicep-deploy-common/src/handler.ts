@@ -14,6 +14,7 @@ import {
   logDiagnostics,
   validateFileScope,
   tryWithErrorHandling,
+  getScopedId,
 } from "./utils";
 import { getTemplateAndParameters, ParsedFiles } from "./file";
 import { Logger } from "./logging";
@@ -47,6 +48,18 @@ export async function execute(
   let files: ParsedFiles = {};
 
   try {
+    // Log what operation we're starting
+    const scopedId = getScopedId(config);
+    logger.logInfo(
+      loggingMessages.startingOperation(
+        config.type,
+        config.operation,
+        config.scope.type,
+        scopedId,
+        config.name ?? "",
+      ),
+    );
+
     if (config.operation !== "delete") {
       // Get template and parameters only for non-delete operations
       files = await getTemplateAndParameters(config, logger);

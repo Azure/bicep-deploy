@@ -28,6 +28,43 @@ describe("logging messages", () => {
     expect(loggingMessages.requestFailedCorrelation(null)).toBe(
       "Request failed. CorrelationId: null",
     );
+    expect(
+      loggingMessages.startingOperation(
+        "deployment",
+        "create",
+        "resourceGroup",
+        "my-rg",
+        "my-deployment",
+      ),
+    ).toBe(
+      "Starting deployment create at resourceGroup 'my-rg' scope with name 'my-deployment'",
+    );
+    expect(
+      loggingMessages.startingOperation(
+        "deploymentStack",
+        "validate",
+        "subscription",
+        "1234",
+        "",
+      ),
+    ).toBe("Starting deploymentStack validate at subscription '1234' scope");
+    expect(
+      loggingMessages.startingOperation(
+        "deployment",
+        "create",
+        "tenant",
+        "",
+        "my-deployment",
+      ),
+    ).toBe(
+      "Starting deployment create at tenant scope with name 'my-deployment'",
+    );
+    expect(loggingMessages.usingTemplateFile("./main.bicep")).toBe(
+      "Using template file: ./main.bicep",
+    );
+    expect(loggingMessages.usingParametersFile("./main.bicepparam")).toBe(
+      "Using parameters file: ./main.bicepparam",
+    );
   });
 
   it("overrides string messages", () => {

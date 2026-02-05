@@ -40,6 +40,19 @@ describe("file parsing", () => {
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     );
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
+
+    // Validate logging
+    const infoLogs = logger.getInfoMessages();
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using parameters file: /path/to/parameters.json"),
+      ),
+    ).toBe(true);
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using template file: /path/to/template.json"),
+      ),
+    ).toBe(true);
   });
 
   it("reads template file without parameters file", async () => {
@@ -65,6 +78,17 @@ describe("file parsing", () => {
     expect(templateContents["parameters"]["stringParam"]).toBeDefined();
 
     expect(parametersContents["parameters"]).toStrictEqual({});
+
+    // Validate logging - only template file should be logged
+    const infoLogs = logger.getInfoMessages();
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using template file: /path/to/template.json"),
+      ),
+    ).toBe(true);
+    expect(infoLogs.some(log => log.includes("Using parameters file"))).toBe(
+      false,
+    );
   });
 
   it("compiles Bicepparam files", async () => {
@@ -108,6 +132,17 @@ describe("file parsing", () => {
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     );
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
+
+    // Validate logging - bicepparam includes template, so only params file logged
+    const infoLogs = logger.getInfoMessages();
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using parameters file: /path/to/main.bicepparam"),
+      ),
+    ).toBe(true);
+    expect(infoLogs.some(log => log.includes("Using template file"))).toBe(
+      false,
+    );
   });
 
   it("compiles Bicep files", async () => {
@@ -153,6 +188,19 @@ describe("file parsing", () => {
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     );
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
+
+    // Validate logging - both template and parameters file should be logged
+    const infoLogs = logger.getInfoMessages();
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using template file: /path/to/main.bicep"),
+      ),
+    ).toBe(true);
+    expect(
+      infoLogs.some(log =>
+        log.includes("Using parameters file: /path/to/parameters.json"),
+      ),
+    ).toBe(true);
   });
 
   it("compiles Bicep files with specific version", async () => {
@@ -259,12 +307,16 @@ describe("file parsing with parameters", () => {
       throw `Unexpected file path: ${filePath}`;
     });
 
-    const parameters = await getJsonParameters({
-      parametersFile: "/parameters.json",
-      parameters: {
-        objectParam: "this param has been overridden!",
+    const logger = new TestLogger();
+    const parameters = await getJsonParameters(
+      {
+        parametersFile: "/parameters.json",
+        parameters: {
+          objectParam: "this param has been overridden!",
+        },
       },
-    });
+      logger,
+    );
 
     expect(JSON.parse(parameters).parameters).toStrictEqual({
       intParam: {
@@ -286,12 +338,16 @@ describe("file parsing with parameters", () => {
       throw `Unexpected file path: ${filePath}`;
     });
 
-    const parameters = await getJsonParameters({
-      parametersFile: "/parameters.json",
-      parameters: {
-        objectParam: "this param has been overridden!",
+    const logger = new TestLogger();
+    const parameters = await getJsonParameters(
+      {
+        parametersFile: "/parameters.json",
+        parameters: {
+          objectParam: "this param has been overridden!",
+        },
       },
-    });
+      logger,
+    );
 
     expect(JSON.parse(parameters).parameters).toStrictEqual({
       objectParam: {
@@ -301,11 +357,15 @@ describe("file parsing with parameters", () => {
   });
 
   it("works without a parameters file", async () => {
-    const parameters = await getJsonParameters({
-      parameters: {
-        objectParam: "this param has been overridden!",
+    const logger = new TestLogger();
+    const parameters = await getJsonParameters(
+      {
+        parameters: {
+          objectParam: "this param has been overridden!",
+        },
       },
-    });
+      logger,
+    );
 
     expect(JSON.parse(parameters).parameters).toStrictEqual({
       objectParam: {
