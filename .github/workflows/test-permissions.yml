@@ -1,0 +1,84 @@
+name: Test file permissions through cache pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-permissions:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test permissions through copy pipeline
+        shell: bash
+        run: |
+          node -e "
+          const { writeFile, chmod, copyFile, stat, mkdtemp, rm } = require('fs/promises');
+          const { join } = require('path');
+          const { tmpdir } = require('os');
+          const tc = require('@actions/tool-cache');
+
+          function modeStr(mode) {
+            return '0o' + (mode & 0o777).toString(8);
+          }
+
+          async function run() {
+            const tmp = await mkdtemp(join(tmpdir(), 'perm-test-'));
+
+            // 1. Simulate Bicep.install: writeFile + chmod 0o755
+            const srcPath = join(tmp, 'bicep');
+            await writeFile(srcPath, '#!/bin/sh\necho hello\n');
+            await chmod(srcPath, 0o755);
+            const srcStat = await stat(srcPath);
+            console.log('Source after chmod:      ' + modeStr(srcStat.mode));
+
+            // 2. Raw fs.copyFile
+            const rawCopyPath = join(tmp, 'bicep-raw-copy');
+            await copyFile(srcPath, rawCopyPath);
+            const rawCopyStat = await stat(rawCopyPath);
+            console.log('After fs.copyFile:       ' + modeStr(rawCopyStat.mode));
+
+            // 3. tc.cacheFile (what our BicepCache.save uses)
+            const cacheRoot = join(tmp, 'tool-cache');
+            process.env.RUNNER_TOOL_CACHE = cacheRoot;
+            const cachedDir = await tc.cacheFile(srcPath, 'bicep', 'perm-test', '1.0.0');
+            const cachedPath = join(cachedDir, 'bicep');
+            const cachedStat = await stat(cachedPath);
+            console.log('After tc.cacheFile:      ' + modeStr(cachedStat.mode));
+
+            // 4. tc.find (what a subsequent cache consumer would see)
+            const foundDir = tc.find('perm-test', '1.0.0');
+            if (foundDir) {
+              const foundPath = join(foundDir, 'bicep');
+              const foundStat = await stat(foundPath);
+              console.log('After tc.find:           ' + modeStr(foundStat.mode));
+            }
+
+            // 5. Also test writeFile without chmod (worst case)
+            const noChmodPath = join(tmp, 'bicep-no-chmod');
+            await writeFile(noChmodPath, '#!/bin/sh\necho hello\n');
+            const noChmodStat = await stat(noChmodPath);
+            console.log('writeFile (no chmod):    ' + modeStr(noChmodStat.mode));
+
+            const cacheDir2 = await tc.cacheFile(noChmodPath, 'bicep', 'perm-test-nochmod', '1.0.0');
+            const cachedPath2 = join(cacheDir2, 'bicep');
+            const cachedStat2 = await stat(cachedPath2);
+            console.log('tc.cacheFile (no chmod): ' + modeStr(cachedStat2.mode));
+
+            // Cleanup
+            delete process.env.RUNNER_TOOL_CACHE;
+            await rm(tmp, { recursive: true });
+          }
+
+          run().catch(e => { console.error(e); process.exit(1); });
+          "
