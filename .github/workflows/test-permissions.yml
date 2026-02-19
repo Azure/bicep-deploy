@@ -2,6 +2,9 @@ name: Test file permissions through cache pipeline
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - snehab/bicep-cache
 
 jobs:
   test-permissions:
