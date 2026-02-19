@@ -59,7 +59,13 @@ async function installBicep(
   const bicepTmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bicep-"));
   const bicepPath = await Bicep.install(bicepTmpDir, resolvedVersion);
 
-  return await cache.save(bicepPath, resolvedVersion);
+  // Save to cache for future invocations, but return the original download
+  // path for this run. This avoids a race condition when multiple parallel
+  // processes download and cache the same version simultaneously — the cached
+  // file could be overwritten mid-read by another process's cache.save() call.
+  await cache.save(bicepPath, resolvedVersion);
+
+  return bicepPath;
 }
 
 async function compileBicepParams(

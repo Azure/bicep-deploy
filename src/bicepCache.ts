@@ -1,6 +1,5 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import * as fs from "fs/promises";
 import * as path from "path";
 import * as tc from "@actions/tool-cache";
 
@@ -26,15 +25,7 @@ export class ActionBicepCache implements BicepCache {
       version,
     );
 
-    const cachedPath = path.join(cachedDir, getBinaryName());
-
-    // tc.cacheFile uses io.cp which does not preserve the executable bit.
-    // Restore it so the Bicep binary can be invoked on Linux/macOS.
-    if (process.platform !== "win32") {
-      await fs.chmod(cachedPath, 0o755);
-    }
-
-    return cachedPath;
+    return path.join(cachedDir, getBinaryName());
   }
 }
 

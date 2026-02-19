@@ -8,6 +8,7 @@ import {
 } from "./mocks/bicepNodeMocks";
 import { configureReadFile } from "./mocks/fsMocks";
 import { mockBicepCache } from "./mocks/cacheMocks";
+import { Bicep } from "bicep-node";
 import { FileConfig } from "../src/config";
 import { TestLogger } from "./logging";
 import { getTemplateAndParameters } from "../src/file";
@@ -319,6 +320,60 @@ describe("BicepCache", () => {
       expect(installMock).not.toHaveBeenCalled();
       expect(cache.find).not.toHaveBeenCalled();
       expect(cache.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("parallel race condition", () => {
+    // When multiple parallel callers (e.g. vitest running live test files
+    // concurrently) both miss the cache and download simultaneously, their
+    // cache.save() calls race on the same target directory. Both tc.cacheFile
+    // and toolLib.cacheFile internally do rmRF + mkdirP + copy, so one
+    // caller's save can delete the binary while the other caller's
+    // Bicep.initialize() is trying to spawn it, producing:
+    //   "Failed to invoke '/cached/bicep jsonrpc'. Error:"
+    //
+    // The fix: installBicep() returns the caller's private temp download path
+    // instead of the shared cached path. cache.save() is still called to
+    // populate the cache for future invocations, but the current caller is
+    // isolated from any concurrent save operations.
+    it("each caller uses its own install path, not the shared cached path", async () => {
+      const cache = new mockBicepCache();
+      cache.find.mockResolvedValue(undefined);
+      cache.save.mockResolvedValue("/shared/cached/bicep");
+
+      let callCount = 0;
+      configureBicepInstallMock(async () => {
+        callCount++;
+        return `/tmp/bicep-${callCount}/bicep`;
+      });
+      setupBicepCompile();
+
+      configureReadFile(filePath => {
+        if (filePath === "/path/to/parameters.json")
+          return readTestFile("files/basic/main.parameters.json");
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      const config: FileConfig = {
+        templateFile: "/path/to/main.bicep",
+        parametersFile: "/path/to/parameters.json",
+        bicepVersion: "0.30.23",
+      };
+
+      const logger = new TestLogger();
+      vi.mocked(Bicep.initialize).mockClear();
+
+      await Promise.all([
+        getTemplateAndParameters(config, logger, cache),
+        getTemplateAndParameters(config, logger, cache),
+      ]);
+
+      // Each call should use its own unique install path for Bicep.initialize,
+      // NOT the shared cached path returned by cache.save()
+      const initCalls = vi.mocked(Bicep.initialize).mock.calls;
+      expect(initCalls).toHaveLength(2);
+      expect(initCalls[0][0]).toBe("/tmp/bicep-1/bicep");
+      expect(initCalls[1][0]).toBe("/tmp/bicep-2/bicep");
     });
   });
 });
