@@ -11,6 +11,7 @@ import {
 } from "./actionIO";
 
 import { ActionLogger } from "./logging";
+import { ActionBicepCache } from "./bicepCache";
 
 /**
  * The main function for the action.
@@ -23,9 +24,10 @@ export async function run(): Promise<void> {
     const config = parseConfig(inputReader, inputParameterNames);
     const logger = new ActionLogger();
     const outputSetter = new ActionOutputSetter();
+    const bicepCache = new ActionBicepCache();
     logger.logInfo(`Action config: ${JSON.stringify(config, null, 2)}`);
 
-    await execute(config, logger, outputSetter);
+    await execute(config, logger, outputSetter, bicepCache);
   } catch (error) {
     // Fail the workflow run if an error occurs
     const message = error instanceof Error ? error.message : `${error}`;

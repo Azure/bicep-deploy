@@ -33,6 +33,11 @@ const mockBicepNode = {
   Bicep: {
     install: vi.fn().mockResolvedValue(Promise.resolve("/path/to/bicep")),
     initialize: vi.fn().mockResolvedValue(mockBicep),
+    getDownloadUrl: vi
+      .fn()
+      .mockResolvedValue(
+        "https://downloads.bicep.azure.com/v1.2.3/bicep-linux-x64",
+      ),
   },
 };
 
@@ -40,6 +45,12 @@ export function configureBicepInstallMock(
   mock: (tmpDir: string, version?: string) => Promise<string>,
 ) {
   mockBicepNode.Bicep.install.mockImplementation(mock);
+}
+
+export function configureBicepGetDownloadUrlMock(
+  mock: (version?: string) => Promise<string>,
+) {
+  mockBicepNode.Bicep.getDownloadUrl.mockImplementation(mock);
 }
 
 vi.mock("bicep-node", () => mockBicepNode);

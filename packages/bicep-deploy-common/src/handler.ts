@@ -16,7 +16,7 @@ import {
   tryWithErrorHandling,
   getScopedId,
 } from "./utils";
-import { getTemplateAndParameters, ParsedFiles } from "./file";
+import { getTemplateAndParameters, ParsedFiles, BicepCache } from "./file";
 import { Logger } from "./logging";
 import { OutputSetter, setOutputs } from "./output";
 import {
@@ -34,6 +34,7 @@ export async function execute(
   config: DeployConfig,
   logger: Logger,
   outputSetter: OutputSetter,
+  bicepCache: BicepCache,
   customErrorMessages?: Partial<ErrorMessageConfig>,
   customLoggingMessages?: Partial<LoggingMessageConfig>,
 ) {
@@ -62,7 +63,7 @@ export async function execute(
 
     if (config.operation !== "delete") {
       // Get template and parameters only for non-delete operations
-      files = await getTemplateAndParameters(config, logger);
+      files = await getTemplateAndParameters(config, logger, bicepCache);
       validateFileScope(config, files);
     } else if (config.parametersFile || config.templateFile) {
       // Log a message if files are provided for a delete operation

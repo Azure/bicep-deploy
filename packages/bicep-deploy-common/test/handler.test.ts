@@ -19,7 +19,7 @@ import {
 import { ParsedFiles } from "../src/file";
 import { TestLogger } from "./logging";
 import { execute } from "../src/handler";
-import { readTestFile } from "./utils";
+import { readTestFile, noopCache } from "./utils";
 import { errorMessages, resetErrorMessages } from "../src/errorMessages";
 import { loggingMessages, resetLoggingMessages } from "../src/loggingMessages";
 import {
@@ -103,7 +103,7 @@ describe("deployment execution", () => {
       );
 
       logger.clear();
-      await execute(config, logger, outputSetter);
+      await execute(config, logger, outputSetter, noopCache);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         config,
@@ -132,13 +132,19 @@ describe("deployment execution", () => {
         { ...config, maskedOutputs: ["mockOutput"] },
         logger,
         outputSetter,
+        noopCache,
       );
 
       expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -156,7 +162,12 @@ describe("deployment execution", () => {
         {},
       );
 
-      await execute({ ...config, operation: "whatIf" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "whatIf" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -250,7 +261,7 @@ describe("deployment execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, logger, outputSetter);
+      await execute(config, logger, outputSetter, noopCache);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         config,
@@ -279,6 +290,7 @@ describe("deployment execution", () => {
         { ...config, maskedOutputs: ["mockOutput"] },
         logger,
         outputSetter,
+        noopCache,
       );
 
       expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
@@ -291,7 +303,12 @@ describe("deployment execution", () => {
 
       const spyLogError = vi.spyOn(logger, "logError");
 
-      await execute({ ...config, operation: "create" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "create" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "create" },
@@ -320,7 +337,12 @@ describe("deployment execution", () => {
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -342,7 +364,12 @@ describe("deployment execution", () => {
 
       const spyLogError = vi.spyOn(logger, "logError");
 
-      await execute({ ...config, operation: "validate" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -370,7 +397,12 @@ describe("deployment execution", () => {
     it("what-ifs", async () => {
       mockDeploymentsOps.beginWhatIfAndWait!.mockResolvedValue({});
 
-      await execute({ ...config, operation: "whatIf" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "whatIf" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         { ...config, operation: "whatIf" },
@@ -444,7 +476,7 @@ describe("deployment execution", () => {
       );
 
       logger.clear();
-      await execute(config, logger, outputSetter);
+      await execute(config, logger, outputSetter, noopCache);
 
       expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
         config,
@@ -543,7 +575,7 @@ describe("stack execution", () => {
       );
 
       logger.clear();
-      await execute(config, logger, outputSetter);
+      await execute(config, logger, outputSetter, noopCache);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         config,
@@ -572,13 +604,19 @@ describe("stack execution", () => {
         { ...config, maskedOutputs: ["mockOutput"] },
         logger,
         outputSetter,
+        noopCache,
       );
 
       expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -592,7 +630,12 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute({ ...config, operation: "delete" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "delete" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },
@@ -621,6 +664,7 @@ describe("stack execution", () => {
           { ...config, operation: "delete", templateFile, parametersFile },
           logger,
           outputSetter,
+          noopCache,
         );
 
         expect(spyLogWarning).toHaveBeenCalledWith(
@@ -641,6 +685,7 @@ describe("stack execution", () => {
         },
         logger,
         outputSetter,
+        noopCache,
       );
 
       expect(spyLogWarning).not.toHaveBeenCalled();
@@ -713,7 +758,7 @@ describe("stack execution", () => {
         mockReturnPayload,
       );
 
-      await execute(config, logger, outputSetter);
+      await execute(config, logger, outputSetter, noopCache);
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         config,
@@ -742,13 +787,19 @@ describe("stack execution", () => {
         { ...config, maskedOutputs: ["mockOutput"] },
         logger,
         outputSetter,
+        noopCache,
       );
 
       expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
     });
 
     it("validates", async () => {
-      await execute({ ...config, operation: "validate" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "validate" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "validate" },
@@ -762,7 +813,12 @@ describe("stack execution", () => {
     });
 
     it("deletes", async () => {
-      await execute({ ...config, operation: "delete" }, logger, outputSetter);
+      await execute(
+        { ...config, operation: "delete" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
 
       expect(azureMock.createStacksClient).toHaveBeenCalledWith(
         { ...config, operation: "delete" },
@@ -821,7 +877,7 @@ describe("custom error messages", () => {
 
     const spySetFailed = vi.spyOn(outputSetter, "setFailed");
 
-    await execute(config, logger, outputSetter, {
+    await execute(config, logger, outputSetter, noopCache, {
       validationFailed: "Custom validation error message",
     });
 
@@ -842,7 +898,7 @@ describe("custom error messages", () => {
 
     const spyLogError = vi.spyOn(logger, "logError");
 
-    await execute(config, logger, outputSetter, {
+    await execute(config, logger, outputSetter, noopCache, {
       requestFailedCorrelation: (id: string) =>
         `Request failed with correlation ID: ${id}`,
     });
@@ -898,7 +954,7 @@ describe("custom logging messages", () => {
       },
     });
 
-    await execute(config, logger, outputSetter, undefined, {
+    await execute(config, logger, outputSetter, noopCache, undefined, {
       diagnosticsReturned: "Custom diagnostics message",
     });
 

@@ -23,6 +23,7 @@ export interface ErrorMessageConfig {
   unsupportedParametersFile: (parametersFile: string) => string;
   unsupportedTemplateFile: (templateFile: string) => string;
   templateFileRequired: string;
+  failedToResolveBicepVersion: (url: string) => string;
 
   // WhatIf errors
   invalidChangeType: (changeType: string) => string;
@@ -60,6 +61,8 @@ const defaultErrorMessages: ErrorMessageConfig = {
   unsupportedTemplateFile: (templateFile: string) =>
     `Unsupported template file type: ${templateFile}`,
   templateFileRequired: "Template file is required",
+  failedToResolveBicepVersion: (url: string) =>
+    `Failed to resolve Bicep version from download URL: ${url}`,
 
   // WhatIf errors
   invalidChangeType: (changeType: string) =>

@@ -9,7 +9,7 @@ import { configureReadFile } from "./mocks/fsMocks";
 import { FileConfig } from "../src/config";
 import { TestLogger } from "./logging";
 import { getJsonParameters, getTemplateAndParameters } from "../src/file";
-import { readTestFile } from "./utils";
+import { readTestFile, noopCache } from "./utils";
 
 describe("file parsing", () => {
   it("reads and parses template and parameters files", async () => {
@@ -29,7 +29,7 @@ describe("file parsing", () => {
     const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
-      await getTemplateAndParameters(config, logger);
+      await getTemplateAndParameters(config, logger, noopCache);
 
     expect(templateContents["$schema"]).toBe(
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -70,7 +70,7 @@ describe("file parsing", () => {
     const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
-      await getTemplateAndParameters(config, logger);
+      await getTemplateAndParameters(config, logger, noopCache);
 
     expect(templateContents["$schema"]).toBe(
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -100,7 +100,7 @@ describe("file parsing", () => {
     };
 
     configureBicepInstallMock((tmpDir, version) => {
-      expect(version).toBeUndefined();
+      expect(version).toBe("1.2.3");
       return Promise.resolve("/path/to/bicep");
     });
 
@@ -121,7 +121,7 @@ describe("file parsing", () => {
     const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
-      await getTemplateAndParameters(config, logger);
+      await getTemplateAndParameters(config, logger, noopCache);
 
     expect(templateContents["$schema"]).toBe(
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -158,7 +158,7 @@ describe("file parsing", () => {
     });
 
     configureBicepInstallMock((tmpDir, version) => {
-      expect(version).toBeUndefined();
+      expect(version).toBe("1.2.3");
       return Promise.resolve("/path/to/bicep");
     });
 
@@ -177,7 +177,7 @@ describe("file parsing", () => {
     const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
-      await getTemplateAndParameters(config, logger);
+      await getTemplateAndParameters(config, logger, noopCache);
 
     expect(templateContents["$schema"]).toBe(
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -237,7 +237,7 @@ describe("file parsing", () => {
     const logger = new TestLogger();
 
     const { templateContents, parametersContents } =
-      await getTemplateAndParameters(config, logger);
+      await getTemplateAndParameters(config, logger, noopCache);
 
     expect(templateContents["$schema"]).toBe(
       "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -274,7 +274,7 @@ describe("file parsing", () => {
       const logger = new TestLogger();
 
       await expect(
-        async () => await getTemplateAndParameters(config, logger),
+        async () => await getTemplateAndParameters(config, logger, noopCache),
       ).rejects.toThrow(expectedError);
     },
   );
@@ -294,7 +294,7 @@ describe("file parsing", () => {
     const logger = new TestLogger();
 
     await expect(
-      async () => await getTemplateAndParameters(config, logger),
+      async () => await getTemplateAndParameters(config, logger, noopCache),
     ).rejects.toThrow("Template file is required");
   });
 });
