@@ -55,6 +55,25 @@ This snippet demonstrates the default usage of the `azure/bicep-deploy@v2` actio
     parameters: '{"name": "Development", "tags": { "environment": "development" }}'
 ```
 
+You can also provide parameters as a YAML object.
+
+```yaml
+- name: Deployment
+  uses: azure/bicep-deploy@v2
+  with:
+    type: deployment
+    operation: create
+    name: Development
+    scope: resourceGroup
+    subscription-id: 00000000-0000-0000-0000-000000000000
+    resource-group-name: example
+    template-file: ./src/main.bicep
+    parameters: |
+      name: Development
+      tags:
+        environment: development
+```
+
 ## Workflows
 ### Create
 
