@@ -10,3 +10,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+  - package-ecosystem: "npm"
+    directory: "/packages/bicep-deploy-common"
+    schedule:
+      interval: "weekly"
+      day: "sunday"

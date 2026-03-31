@@ -27,22 +27,28 @@ jobs:
 
     steps:
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        id: setup-node
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: npm
 
+      - name: Install Dependencies Common
+        working-directory: ./packages/bicep-deploy-common
+        run: npm ci
+
+      - name: Build bicep-deploy-common Package
+        working-directory: ./packages/bicep-deploy-common
+        run: |
+          rm -Rf dist
+          npm run build
+
       - name: Install Dependencies
-        id: install
         run: npm ci
 
       - name: Build dist/ Directory
-        id: build
         run: |
           rm -Rf dist
           npm run build
@@ -67,7 +73,6 @@ jobs:
       # workflow artifact.
       - if: ${{ failure() && steps.diff.outcome == 'failure' }}
         name: Upload Artifact
-        id: upload
         uses: actions/upload-artifact@v7
         with:
           name: dist
