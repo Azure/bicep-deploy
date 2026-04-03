@@ -45,6 +45,29 @@ This snippet illustrates the default usage of the `azure/bicep-deploy@v2` action
     description: "Development Environment"
 ```
 
+You can also provide parameters as a YAML object.
+
+```yaml
+- name: Create
+  uses: azure/bicep-deploy@v2
+  with:
+    type: deploymentStack
+    operation: create
+    name: Development
+    location: westus2
+    scope: subscription
+    subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    template-file: ./main.bicep
+    parameters: |
+      name: Development
+      tags:
+        environment: development
+    action-on-unmanage-resources: delete
+    action-on-unmanage-resourcegroups: delete
+    deny-settings-mode: denyWriteAndDelete
+    description: "Development Environment"
+```
+
 ## Workflows
 ### Create
 
