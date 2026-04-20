@@ -7,6 +7,7 @@ import { errorMessages } from "./errorMessages";
 
 export interface InputReader {
   getInput(inputName: string): string | undefined;
+  isFilePathSupplied?(inputName: string): boolean;
 }
 
 export interface InputParameterNames {
@@ -75,6 +76,15 @@ export function getOptionalFilePath(
   inputName: string,
   inputReader: InputReader,
 ): string | undefined {
+  // ADO filePath-type inputs resolve empty values to the working directory.
+  // If the consumer implements isFilePathSupplied, use it to detect this.
+  if (
+    inputReader.isFilePathSupplied &&
+    !inputReader.isFilePathSupplied(inputName)
+  ) {
+    return;
+  }
+
   const input = getOptionalStringInput(inputName, inputReader);
   if (!input) {
     return;

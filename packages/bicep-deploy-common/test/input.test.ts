@@ -8,8 +8,13 @@ import {
   getOptionalBooleanInput,
   getOptionalDictionaryInput,
   getOptionalStringDictionaryInput,
+  getOptionalFilePath,
 } from "../src/input";
 import { mockInputReader, configureGetInputMock } from "./mocks/inputMocks";
+
+vi.mock("../src/file", () => ({
+  resolvePath: vi.fn((input: string) => `/resolved${input}`),
+}));
 
 const inputReader = new mockInputReader();
 
@@ -272,6 +277,57 @@ describe("getOptionalStringDictionaryInput", () => {
 
     expect(() => getOptionalStringDictionaryInput("type", inputReader)).toThrow(
       "Input 'type' must be a valid JSON or YAML object containing only string values",
+    );
+  });
+});
+
+describe("getOptionalFilePath", () => {
+  it("returns undefined for missing input", () => {
+    configureGetInputMock({}, inputReader);
+
+    expect(getOptionalFilePath("templateFile", inputReader)).toBeUndefined();
+  });
+
+  it("returns resolved path for a file", () => {
+    configureGetInputMock({ templateFile: "/path/to/file.json" }, inputReader);
+
+    expect(getOptionalFilePath("templateFile", inputReader)).toBe(
+      "/resolved/path/to/file.json",
+    );
+  });
+
+  it("returns undefined when isFilePathSupplied returns false", () => {
+    configureGetInputMock(
+      { parametersFile: "/path/to/directory" },
+      inputReader,
+    );
+    inputReader.isFilePathSupplied = vi.fn().mockReturnValue(false);
+
+    expect(getOptionalFilePath("parametersFile", inputReader)).toBeUndefined();
+    delete inputReader.isFilePathSupplied;
+  });
+
+  it("returns resolved path when isFilePathSupplied returns true", () => {
+    configureGetInputMock(
+      { parametersFile: "/path/to/file.json" },
+      inputReader,
+    );
+    inputReader.isFilePathSupplied = vi.fn().mockReturnValue(true);
+
+    expect(getOptionalFilePath("parametersFile", inputReader)).toBe(
+      "/resolved/path/to/file.json",
+    );
+    delete inputReader.isFilePathSupplied;
+  });
+
+  it("returns resolved path when isFilePathSupplied is not implemented", () => {
+    configureGetInputMock(
+      { parametersFile: "/path/to/file.json" },
+      inputReader,
+    );
+
+    expect(getOptionalFilePath("parametersFile", inputReader)).toBe(
+      "/resolved/path/to/file.json",
     );
   });
 });

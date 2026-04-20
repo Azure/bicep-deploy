@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import * as fs from "fs/promises";
+import fsSync from "fs";
 import * as path from "path";
 import * as os from "os";
 import { Bicep, CompileResponseDiagnostic } from "bicep-node";
@@ -126,6 +127,9 @@ export async function getJsonParameters(config: FileConfig, logger: Logger) {
   let contents;
   if (parametersFile) {
     logger.logInfo(loggingMessages.usingParametersFile(parametersFile));
+    if (!fsSync.existsSync(parametersFile)) {
+      throw new Error(errorMessages.parametersFileNotFound(parametersFile));
+    }
     contents = JSON.parse(await fs.readFile(parametersFile, "utf8"));
   } else {
     contents = { parameters: {} };
