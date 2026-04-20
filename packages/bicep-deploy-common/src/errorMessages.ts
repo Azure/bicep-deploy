@@ -20,6 +20,7 @@ export interface ErrorMessageConfig {
   failedToDetermineScope: string;
 
   // File errors
+  parametersFileNotFound: (parametersFile: string) => string;
   unsupportedParametersFile: (parametersFile: string) => string;
   unsupportedTemplateFile: (templateFile: string) => string;
   templateFileRequired: string;
@@ -56,6 +57,8 @@ const defaultErrorMessages: ErrorMessageConfig = {
   failedToDetermineScope: `Failed to determine deployment scope from Bicep file.`,
 
   // File errors
+  parametersFileNotFound: (parametersFile: string) =>
+    `Parameters file not found: ${parametersFile}`,
   unsupportedParametersFile: (parametersFile: string) =>
     `Unsupported parameters file type: ${parametersFile}`,
   unsupportedTemplateFile: (templateFile: string) =>

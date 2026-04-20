@@ -5,7 +5,7 @@ import {
   configureCompileParamsMock,
   configureBicepInstallMock,
 } from "./mocks/bicepNodeMocks";
-import { configureReadFile } from "./mocks/fsMocks";
+import { configureReadFile, configureExistsSync } from "./mocks/fsMocks";
 import { FileConfig } from "../src/config";
 import { TestLogger } from "./logging";
 import { getJsonParameters, getTemplateAndParameters } from "../src/file";
@@ -296,6 +296,20 @@ describe("file parsing", () => {
     await expect(
       async () => await getTemplateAndParameters(config, logger, noopCache),
     ).rejects.toThrow("Template file is required");
+  });
+
+  it("throws when JSON parameters file does not exist", async () => {
+    const config: FileConfig = {
+      parametersFile: "/path/to/nonexistent.json",
+    };
+
+    configureExistsSync(false);
+
+    const logger = new TestLogger();
+
+    await expect(
+      async () => await getJsonParameters(config, logger),
+    ).rejects.toThrow("Parameters file not found: /path/to/nonexistent.json");
   });
 });
 

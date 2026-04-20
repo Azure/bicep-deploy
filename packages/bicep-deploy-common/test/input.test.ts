@@ -8,8 +8,19 @@ import {
   getOptionalBooleanInput,
   getOptionalDictionaryInput,
   getOptionalStringDictionaryInput,
+  getOptionalFilePath,
 } from "../src/input";
 import { mockInputReader, configureGetInputMock } from "./mocks/inputMocks";
+
+vi.mock("fs", () => ({
+  statSync: vi.fn(),
+}));
+
+vi.mock("../src/file", () => ({
+  resolvePath: vi.fn((input: string) => `/resolved${input}`),
+}));
+
+import * as fs from "fs";
 
 const inputReader = new mockInputReader();
 
@@ -272,6 +283,47 @@ describe("getOptionalStringDictionaryInput", () => {
 
     expect(() => getOptionalStringDictionaryInput("type", inputReader)).toThrow(
       "Input 'type' must be a valid JSON or YAML object containing only string values",
+    );
+  });
+});
+
+describe("getOptionalFilePath", () => {
+  it("returns undefined for missing input", () => {
+    configureGetInputMock({}, inputReader);
+
+    expect(getOptionalFilePath("templateFile", inputReader)).toBeUndefined();
+  });
+
+  it("returns resolved path for a file", () => {
+    configureGetInputMock({ templateFile: "/path/to/file.json" }, inputReader);
+    vi.mocked(fs.statSync).mockReturnValue(undefined as unknown as fs.Stats);
+
+    expect(getOptionalFilePath("templateFile", inputReader)).toBe(
+      "/resolved/path/to/file.json",
+    );
+  });
+
+  it("returns undefined when path is a directory", () => {
+    configureGetInputMock(
+      { parametersFile: "/path/to/directory" },
+      inputReader,
+    );
+    vi.mocked(fs.statSync).mockReturnValue({
+      isDirectory: () => true,
+    } as unknown as fs.Stats);
+
+    expect(getOptionalFilePath("parametersFile", inputReader)).toBeUndefined();
+  });
+
+  it("returns resolved path when path does not exist on disk", () => {
+    configureGetInputMock(
+      { parametersFile: "/path/to/file.json" },
+      inputReader,
+    );
+    vi.mocked(fs.statSync).mockReturnValue(undefined as unknown as fs.Stats);
+
+    expect(getOptionalFilePath("parametersFile", inputReader)).toBe(
+      "/resolved/path/to/file.json",
     );
   });
 });

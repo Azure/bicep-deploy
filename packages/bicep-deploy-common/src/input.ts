@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+import * as fs from "fs";
 import * as yaml from "yaml";
 
 import { resolvePath } from "./file";
@@ -80,7 +81,15 @@ export function getOptionalFilePath(
     return;
   }
 
-  return resolvePath(input);
+  const resolved = resolvePath(input);
+
+  // ADO filePath-type inputs resolve empty values to the working directory.
+  // A valid file path should never be a directory.
+  if (fs.statSync(resolved, { throwIfNoEntry: false })?.isDirectory()) {
+    return;
+  }
+
+  return resolved;
 }
 
 export function getOptionalBooleanInput(
