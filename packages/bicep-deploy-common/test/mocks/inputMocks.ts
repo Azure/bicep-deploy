@@ -6,6 +6,7 @@ import { InputReader } from "../../src/input";
 
 export class mockInputReader implements InputReader {
   getInput = vi.fn();
+  isFilePathSupplied?: (inputName: string) => boolean;
 }
 
 export function configureGetInputMock(

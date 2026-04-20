@@ -1,6 +1,5 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import * as fs from "fs";
 import * as yaml from "yaml";
 
 import { resolvePath } from "./file";
@@ -8,6 +7,7 @@ import { errorMessages } from "./errorMessages";
 
 export interface InputReader {
   getInput(inputName: string): string | undefined;
+  isFilePathSupplied?(inputName: string): boolean;
 }
 
 export interface InputParameterNames {
@@ -76,20 +76,21 @@ export function getOptionalFilePath(
   inputName: string,
   inputReader: InputReader,
 ): string | undefined {
+  // ADO filePath-type inputs resolve empty values to the working directory.
+  // If the consumer implements isFilePathSupplied, use it to detect this.
+  if (
+    inputReader.isFilePathSupplied &&
+    !inputReader.isFilePathSupplied(inputName)
+  ) {
+    return;
+  }
+
   const input = getOptionalStringInput(inputName, inputReader);
   if (!input) {
     return;
   }
 
-  const resolved = resolvePath(input);
-
-  // ADO filePath-type inputs resolve empty values to the working directory.
-  // A valid file path should never be a directory.
-  if (fs.statSync(resolved, { throwIfNoEntry: false })?.isDirectory()) {
-    return;
-  }
-
-  return resolved;
+  return resolvePath(input);
 }
 
 export function getOptionalBooleanInput(

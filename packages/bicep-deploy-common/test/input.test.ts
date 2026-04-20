@@ -12,15 +12,9 @@ import {
 } from "../src/input";
 import { mockInputReader, configureGetInputMock } from "./mocks/inputMocks";
 
-vi.mock("fs", () => ({
-  statSync: vi.fn(),
-}));
-
 vi.mock("../src/file", () => ({
   resolvePath: vi.fn((input: string) => `/resolved${input}`),
 }));
-
-import * as fs from "fs";
 
 const inputReader = new mockInputReader();
 
@@ -296,31 +290,41 @@ describe("getOptionalFilePath", () => {
 
   it("returns resolved path for a file", () => {
     configureGetInputMock({ templateFile: "/path/to/file.json" }, inputReader);
-    vi.mocked(fs.statSync).mockReturnValue(undefined as unknown as fs.Stats);
 
     expect(getOptionalFilePath("templateFile", inputReader)).toBe(
       "/resolved/path/to/file.json",
     );
   });
 
-  it("returns undefined when path is a directory", () => {
+  it("returns undefined when isFilePathSupplied returns false", () => {
     configureGetInputMock(
       { parametersFile: "/path/to/directory" },
       inputReader,
     );
-    vi.mocked(fs.statSync).mockReturnValue({
-      isDirectory: () => true,
-    } as unknown as fs.Stats);
+    inputReader.isFilePathSupplied = vi.fn().mockReturnValue(false);
 
     expect(getOptionalFilePath("parametersFile", inputReader)).toBeUndefined();
+    delete inputReader.isFilePathSupplied;
   });
 
-  it("returns resolved path when path does not exist on disk", () => {
+  it("returns resolved path when isFilePathSupplied returns true", () => {
     configureGetInputMock(
       { parametersFile: "/path/to/file.json" },
       inputReader,
     );
-    vi.mocked(fs.statSync).mockReturnValue(undefined as unknown as fs.Stats);
+    inputReader.isFilePathSupplied = vi.fn().mockReturnValue(true);
+
+    expect(getOptionalFilePath("parametersFile", inputReader)).toBe(
+      "/resolved/path/to/file.json",
+    );
+    delete inputReader.isFilePathSupplied;
+  });
+
+  it("returns resolved path when isFilePathSupplied is not implemented", () => {
+    configureGetInputMock(
+      { parametersFile: "/path/to/file.json" },
+      inputReader,
+    );
 
     expect(getOptionalFilePath("parametersFile", inputReader)).toBe(
       "/resolved/path/to/file.json",
