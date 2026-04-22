@@ -43,7 +43,7 @@
     "yaml": "^2.7.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.29",
+    "@types/node": "^25.5.2",
     "@vitest/eslint-plugin": "^1.4.3",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.5",
