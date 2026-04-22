@@ -102,10 +102,19 @@ export async function execute(
             break;
           }
           case "whatIf": {
-            const result = await deploymentWhatIf(config, files, logger);
-            const formatted = formatWhatIfOperationResult(result, "ansii");
-            logger.logInfoRaw(formatted);
-            logDiagnostics(result.diagnostics ?? [], logger);
+            await tryWithErrorHandling(
+              async () => {
+                const result = await deploymentWhatIf(config, files, logger);
+                const formatted = formatWhatIfOperationResult(result, "ansii");
+                logger.logInfoRaw(formatted);
+                logDiagnostics(result.diagnostics ?? [], logger);
+              },
+              error => {
+                logger.logError(JSON.stringify(error, null, 2));
+                outputSetter.setFailed(errorMessages.whatIfFailed);
+              },
+              logger,
+            );
             break;
           }
         }

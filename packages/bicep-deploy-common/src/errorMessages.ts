@@ -5,6 +5,7 @@ export interface ErrorMessageConfig {
   // Handler errors
   createFailed: string;
   validationFailed: string;
+  whatIfFailed: string;
   operationFailed: string;
   requestFailedCorrelation: (correlationId: string) => string;
 
@@ -36,6 +37,7 @@ const defaultErrorMessages: ErrorMessageConfig = {
   // Handler errors
   createFailed: "Create failed",
   validationFailed: "Validation failed",
+  whatIfFailed: "What-if failed",
   operationFailed: "Operation failed",
   requestFailedCorrelation: (correlationId: string) =>
     `Request failed. CorrelationId: ${correlationId}`,
