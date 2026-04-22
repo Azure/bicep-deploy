@@ -416,6 +416,43 @@ describe("deployment execution", () => {
         expectedPayload,
       );
     });
+
+    it("handles what-if errors", async () => {
+      mockDeploymentsOps.beginWhatIfAndWait!.mockRejectedValue(
+        getMockRestError(mockError),
+      );
+
+      const spyLogError = vi.spyOn(logger, "logError");
+
+      await execute(
+        { ...config, operation: "whatIf" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+        { ...config, operation: "whatIf" },
+        logger,
+        scope.subscriptionId,
+        undefined,
+      );
+      expect(mockDeploymentsOps.beginWhatIfAndWait).toHaveBeenCalledWith(
+        scope.resourceGroup,
+        config.name,
+        expectedPayload,
+      );
+
+      expect(spyLogError).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining("Request failed. CorrelationId: "),
+      );
+
+      expect(spyLogError).toHaveBeenNthCalledWith(
+        2,
+        JSON.stringify(mockError, null, 2),
+      );
+    });
   });
 
   describe("tenant scope", () => {
@@ -887,6 +924,32 @@ describe("custom error messages", () => {
     expect(errorMessages.validationFailed).toBe(
       "Custom validation error message",
     );
+  });
+
+  it("uses custom what-if error message when provided", async () => {
+    const mockError = {
+      code: "OperationNotFound",
+      message: "What-if operation failed",
+    };
+
+    mockDeploymentsOps.beginWhatIfAndWait!.mockRejectedValue(
+      getMockRestError(mockError),
+    );
+
+    const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+    await execute(
+      { ...config, operation: "whatIf" },
+      logger,
+      outputSetter,
+      noopCache,
+      {
+        whatIfFailed: "Custom what-if error message",
+      },
+    );
+
+    expect(spySetFailed).toHaveBeenCalledWith("Custom what-if error message");
+    expect(errorMessages.whatIfFailed).toBe("Custom what-if error message");
   });
 
   it("uses custom correlation error message when provided", async () => {
