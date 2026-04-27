@@ -40,6 +40,14 @@ describe("formatJson tests", () => {
     expect(formatJson(value, "debug")).toStrictEqual(expected);
   });
 
+  it("test_non_empty_array_inline_when_all_leaves", () => {
+    const value = ["a", "b", "c"];
+    // expect inline representation when all elements are leaves
+    const expected = `<RESET>[<RESET>"a", "b", "c"<RESET>]<RESET>`;
+
+    expect(formatJson(value, "debug")).toStrictEqual(expected);
+  });
+
   it("test_non_empty_object", () => {
     const value = {
       path: { to: { foo: "foo" } },

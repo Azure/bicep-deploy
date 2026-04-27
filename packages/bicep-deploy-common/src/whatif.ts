@@ -693,6 +693,30 @@ function formatNonEmptyArray(
   value: UnknownValue[],
   indentLevel: number,
 ): void {
+  // If all array elements are leaves (primitives / empty arrays / empty objects)
+  // then render the array inline (e.g. [1, 2, 3]) to avoid printing each element
+  // on its own line. Otherwise fall back to the multi-line representation.
+  const allLeaf = value.every(v => isLeaf(v));
+
+  if (allLeaf) {
+    builder.append(Symbol.LeftSquareBracket, Color.Reset);
+
+    for (let i = 0; i < value.length; i++) {
+      const childValue = value[i];
+      // Reuse existing leaf formatting for correctness
+      formatLeaf(builder, childValue);
+
+      if (i < value.length - 1) {
+        // comma and space between inline items
+        builder.append(",").append(Symbol.WhiteSpace);
+      }
+    }
+
+    builder.append(Symbol.RightSquareBracket, Color.Reset);
+    return;
+  }
+
+  // Fallback: multi-line array formatting (preserve original behavior)
   builder.append(Symbol.LeftSquareBracket, Color.Reset).appendLine();
 
   const maxPathLength = getMaxPathLengthFromArray(value);
@@ -719,7 +743,9 @@ function formatNonEmptyArray(
       );
     }
 
-    builder.appendLine();
+    if (index < value.length - 1) {
+      builder.appendLine();
+    }
   });
 
   formatIndent(builder, indentLevel);
