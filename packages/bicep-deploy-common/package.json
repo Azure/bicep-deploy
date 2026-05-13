@@ -32,7 +32,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsdown --config ./tsdown.config.mts"
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && tsdown --config ./tsdown.config.mts"
   },
   "license": "MIT",
   "dependencies": {
