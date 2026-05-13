@@ -5,7 +5,7 @@
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import vitest from '@vitest/eslint-plugin';
-import notice from "eslint-plugin-notice";
+import headers from "eslint-plugin-headers";
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 
 export default [
@@ -21,17 +21,18 @@ export default [
       }
     },
     plugins: {
-      notice,
+      headers,
       vitest
     },
     rules: {
-      "notice/notice": [
+      "headers/header-format": [
         "error",
         {
-          template: "// Copyright (c) Microsoft Corporation.\n// Licensed under the MIT License.\n",
+          source: "string",
+          style: "line",
+          content: "Copyright (c) Microsoft Corporation.\nLicensed under the MIT License.",
         },
       ],
-      ...vitest.configs.recommended.rules,
     },
   }
 ];
