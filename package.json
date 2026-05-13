@@ -25,7 +25,8 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown --config ./tsdown.config.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && tsdown --config ./tsdown.config.ts",
     "test": "vitest --config vitest.config.unit.ts",
     "test:live": "vitest --config vitest.config.live.ts",
     "lint": "eslint src test test-live ./packages/bicep-deploy-common/src ./packages/bicep-deploy-common/test",

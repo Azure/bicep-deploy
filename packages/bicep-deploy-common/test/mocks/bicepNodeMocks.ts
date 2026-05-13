@@ -7,8 +7,9 @@ import {
   CompileRequest,
   CompileResponse,
 } from "bicep-node";
+import type { MockedObjectDeep } from "@vitest/spy";
 
-const mockBicep: Partial<vi.MockedObjectDeep<Bicep>> = {
+const mockBicep: Partial<MockedObjectDeep<Bicep>> = {
   compile: vi.fn(),
   compileParams: vi.fn(),
   version: vi.fn().mockReturnValue("1.2.3"),
@@ -18,13 +19,15 @@ const mockBicep: Partial<vi.MockedObjectDeep<Bicep>> = {
 export function configureCompileMock(
   mock: (request: CompileRequest) => CompileResponse,
 ) {
-  mockBicep.compile!.mockImplementation(req => Promise.resolve(mock(req)));
+  mockBicep.compile!.mockImplementation((req: CompileRequest) =>
+    Promise.resolve(mock(req)),
+  );
 }
 
 export function configureCompileParamsMock(
   mock: (request: CompileParamsRequest) => CompileParamsResponse,
 ) {
-  mockBicep.compileParams!.mockImplementation(req =>
+  mockBicep.compileParams!.mockImplementation((req: CompileParamsRequest) =>
     Promise.resolve(mock(req)),
   );
 }

@@ -488,7 +488,7 @@ describe("deployment execution", () => {
     const expectedPayload = {
       location: config.location,
       properties: {
-        mode: "Incremental",
+        mode: "Incremental" as const,
         template: files.templateContents,
         parameters: files.parametersContents["parameters"],
         expressionEvaluationOptions: {
