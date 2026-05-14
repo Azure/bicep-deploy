@@ -18,3 +18,7 @@ After cloning this repo, you can use the following commands to build and run tes
     ```bash
     npm test
     ```
+
+## Versioning
+
+The `@azure/bicep-deploy-common` package is versioned automatically by [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) — **do not edit its `package.json` `version` field by hand**. See [`packages/bicep-deploy-common/VERSIONING.md`](./packages/bicep-deploy-common/VERSIONING.md) for how patch/minor/major bumps work.
