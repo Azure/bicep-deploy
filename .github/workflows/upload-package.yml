@@ -36,7 +36,7 @@ jobs:
       - name: Stamp version (Nerdbank.GitVersioning)
         id: stamp-version
         working-directory: ./packages/bicep-deploy-common
-        run: npx -y --package=nerdbank-gitversioning -- nbgv-setversion
+        run: npm run stamp-version
 
       - name: Build bicep-deploy-common Package
         id: build
@@ -52,6 +52,13 @@ jobs:
           packOutput=$(npm pack --json)
           echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
           echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
+
+      # Restore the placeholder version in package.json so the working tree matches
+      # what's committed (matches the pattern used by vscode-bicep).
+      - name: Reset version
+        if: always()
+        working-directory: ./packages/bicep-deploy-common
+        run: npm run reset-version
 
       # Using upload steps defined for the Partner Release Pipeline (https://aka.ms/azsdk/partner-release-pipeline)
       # azuresdkpartnerdrops is the managed identity that we use to upload to the partner drop folder
