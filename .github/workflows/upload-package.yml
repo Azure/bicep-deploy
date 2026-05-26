@@ -26,59 +26,35 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - name: Install Dependencies (bicep-jsonrpc)
-        working-directory: ./packages/bicep-jsonrpc
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Install Dependencies (bicep-deploy-common)
-        working-directory: ./packages/bicep-deploy-common
-        run: npm ci
+      - name: Clean outputs
+        run: npm run clean:packages
 
-      - name: Stamp version (bicep-jsonrpc)
-        working-directory: ./packages/bicep-jsonrpc
-        run: npm run stamp-version
+      - name: Stamp versions
+        run: npm run stamp-version --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common
 
-      - name: Stamp version (bicep-deploy-common)
-        working-directory: ./packages/bicep-deploy-common
-        run: npm run stamp-version
-
-      - name: Build bicep-jsonrpc Package
-        working-directory: ./packages/bicep-jsonrpc
-        run: |
-          rm -Rf dist
-          npm run build
+      - name: Build packages
+        run: npm run build:packages
 
       - name: Create package tarball (bicep-jsonrpc)
         id: pack-bicep-jsonrpc
-        working-directory: ./packages/bicep-jsonrpc
         run: |
-          packOutput=$(npm pack --json)
+          packOutput=$(npm pack --workspace @azure/bicep-jsonrpc --json)
           echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
           echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
-
-      - name: Build bicep-deploy-common Package
-        working-directory: ./packages/bicep-deploy-common
-        run: |
-          rm -Rf dist
-          npm run build
 
       - name: Create package tarball (bicep-deploy-common)
         id: pack-bicep-deploy-common
-        working-directory: ./packages/bicep-deploy-common
         run: |
-          packOutput=$(npm pack --json)
+          packOutput=$(npm pack --workspace @azure/bicep-deploy-common --json)
           echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
           echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
 
-      - name: Reset version (bicep-jsonrpc)
+      - name: Reset versions
         if: always()
-        working-directory: ./packages/bicep-jsonrpc
-        run: npm run reset-version
-
-      - name: Reset version (bicep-deploy-common)
-        if: always()
-        working-directory: ./packages/bicep-deploy-common
-        run: npm run reset-version
+        run: npm run reset-version --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common
 
       # Using upload steps defined for the Partner Release Pipeline (https://aka.ms/azsdk/partner-release-pipeline)
       # azuresdkpartnerdrops is the managed identity that we use to upload to the partner drop folder
@@ -89,9 +65,8 @@ jobs:
           tenant-id: ${{ secrets.AZURESDKPARTNERDROPS_TENANT_ID }}
           subscription-id: ${{ secrets.AZURESDKPARTNERDROPS_SUBSCRIPTION_ID }}
 
-      # Upload bicep-jsonrpc package to partner drop folder to allow external distribution under the @azure scope
+      # Upload packages to partner drop folder to allow external distribution under the @azure scope
       - name: Upload packages to partner drop folder
-        working-directory: ./packages/bicep-jsonrpc
         run: |
           echo "Uploading ${{ steps.pack-bicep-jsonrpc.outputs.filename }} to partner drop folder at drops/bicep-jsonrpc/npm/${{ steps.pack-bicep-jsonrpc.outputs.version }}..."
           az storage blob upload -f ${{ steps.pack-bicep-jsonrpc.outputs.filename }} -c drops/bicep-jsonrpc/npm/${{ steps.pack-bicep-jsonrpc.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login

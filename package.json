@@ -16,6 +16,10 @@
     "arm templates"
   ],
   "type": "commonjs",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.cjs",
   "exports": {
@@ -26,7 +30,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "clean:packages": "npm run clean --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common",
     "build": "npm run typecheck && tsdown --config ./tsdown.config.ts",
+    "build:packages": "npm run build --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common",
+    "build:all": "npm run build:packages && npm run build",
     "test": "vitest --config vitest.config.unit.ts",
     "test:live": "vitest --config vitest.config.live.ts",
     "lint": "eslint src test test-live ./packages/bicep-deploy-common/src ./packages/bicep-deploy-common/test",
@@ -38,7 +45,7 @@
     "@actions/exec": "^1.1.1",
     "@actions/io": "^1.1.3",
     "@actions/tool-cache": "^2.0.1",
-    "@azure/bicep-deploy-common": "file:packages/bicep-deploy-common"
+    "@azure/bicep-deploy-common": "*"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",

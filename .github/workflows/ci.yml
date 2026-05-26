@@ -28,29 +28,14 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - name: Install Dependencies (bicep-jsonrpc)
-        working-directory: ./packages/bicep-jsonrpc
-        run: npm ci
-
-      - name: Build bicep-jsonrpc Package
-        working-directory: ./packages/bicep-jsonrpc
-        run: |
-          rm -Rf dist
-          npm run build
-
-      - name: Install Dependencies (bicep-deploy-common)
-        working-directory: ./packages/bicep-deploy-common
-        run: npm ci
-
-      - name: Build bicep-deploy-common Package
-        working-directory: ./packages/bicep-deploy-common
-        run: |
-          rm -Rf dist
-          npm run build
-
       - name: Install Dependencies
         id: npm-install
         run: npm ci
+
+      - name: Build Workspace Packages
+        run: |
+          npm run clean:packages
+          npm run build:packages
 
       - name: Lint
         id: npm-lint
@@ -97,29 +82,14 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - name: Install Dependencies (bicep-jsonrpc)
-        working-directory: ./packages/bicep-jsonrpc
-        run: npm ci
-
-      - name: Build bicep-jsonrpc Package
-        working-directory: ./packages/bicep-jsonrpc
-        run: |
-          rm -Rf dist
-          npm run build
-
-      - name: Install Dependencies (bicep-deploy-common)
-        working-directory: ./packages/bicep-deploy-common
-        run: npm ci
-
-      - name: Build bicep-deploy-common Package
-        working-directory: ./packages/bicep-deploy-common
-        run: |
-          rm -Rf dist
-          npm run build
-
       - name: Install Dependencies
         id: npm-ci
         run: npm ci
+
+      - name: Build Workspace Packages
+        run: |
+          npm run clean:packages
+          npm run build:packages
 
       - uses: azure/login@v3
         with:
