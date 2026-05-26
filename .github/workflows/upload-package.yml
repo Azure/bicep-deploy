@@ -1,4 +1,4 @@
-name: Upload bicep-deploy-common Package
+name: Upload Packages
 
 on: workflow_dispatch
 
@@ -7,8 +7,8 @@ permissions:
   contents: read
 
 jobs:
-  upload-package:
-    name: Upload bicep-deploy-common Package
+  upload-packages:
+    name: Upload Packages
     runs-on: ubuntu-latest
 
     steps:
@@ -26,36 +26,56 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - name: Install Dependencies for bicep-deploy-common
-        id: install-common
+      - name: Install Dependencies (bicep-jsonrpc)
+        working-directory: ./packages/bicep-jsonrpc
+        run: npm ci
+
+      - name: Install Dependencies (bicep-deploy-common)
         working-directory: ./packages/bicep-deploy-common
         run: npm ci
 
-      # Stamp packages/bicep-deploy-common/package.json with a version computed from
-      # version.json + commit height (path-scoped via pathFilters in version.json).
-      - name: Stamp version (Nerdbank.GitVersioning)
-        id: stamp-version
+      - name: Stamp version (bicep-jsonrpc)
+        working-directory: ./packages/bicep-jsonrpc
+        run: npm run stamp-version
+
+      - name: Stamp version (bicep-deploy-common)
         working-directory: ./packages/bicep-deploy-common
         run: npm run stamp-version
 
+      - name: Build bicep-jsonrpc Package
+        working-directory: ./packages/bicep-jsonrpc
+        run: |
+          rm -Rf dist
+          npm run build
+
+      - name: Create package tarball (bicep-jsonrpc)
+        id: pack-bicep-jsonrpc
+        working-directory: ./packages/bicep-jsonrpc
+        run: |
+          packOutput=$(npm pack --json)
+          echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
+          echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
+
       - name: Build bicep-deploy-common Package
-        id: build
         working-directory: ./packages/bicep-deploy-common
         run: |
           rm -Rf dist
           npm run build
 
-      - name: Create package tarball
-        id: pack
+      - name: Create package tarball (bicep-deploy-common)
+        id: pack-bicep-deploy-common
         working-directory: ./packages/bicep-deploy-common
         run: |
           packOutput=$(npm pack --json)
           echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
           echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
 
-      # Restore the placeholder version in package.json so the working tree matches
-      # what's committed (matches the pattern used by vscode-bicep).
-      - name: Reset version
+      - name: Reset version (bicep-jsonrpc)
+        if: always()
+        working-directory: ./packages/bicep-jsonrpc
+        run: npm run reset-version
+
+      - name: Reset version (bicep-deploy-common)
         if: always()
         working-directory: ./packages/bicep-deploy-common
         run: npm run reset-version
@@ -69,9 +89,11 @@ jobs:
           tenant-id: ${{ secrets.AZURESDKPARTNERDROPS_TENANT_ID }}
           subscription-id: ${{ secrets.AZURESDKPARTNERDROPS_SUBSCRIPTION_ID }}
 
-      # Upload bicep-deploy-common package to partner drop folder to allow external distribution under the @azure scope
-      - name: Upload files to partner drop folder
-        working-directory: ./packages/bicep-deploy-common
+      # Upload bicep-jsonrpc package to partner drop folder to allow external distribution under the @azure scope
+      - name: Upload packages to partner drop folder
+        working-directory: ./packages/bicep-jsonrpc
         run: |
-          echo "Uploading ${{ steps.pack.outputs.filename }} to partner drop folder at drops/bicep-deploy-common/npm/${{ steps.pack.outputs.version }}..."
-          az storage blob upload -f ${{ steps.pack.outputs.filename }} -c drops/bicep-deploy-common/npm/${{ steps.pack.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login
+          echo "Uploading ${{ steps.pack-bicep-jsonrpc.outputs.filename }} to partner drop folder at drops/bicep-jsonrpc/npm/${{ steps.pack-bicep-jsonrpc.outputs.version }}..."
+          az storage blob upload -f ${{ steps.pack-bicep-jsonrpc.outputs.filename }} -c drops/bicep-jsonrpc/npm/${{ steps.pack-bicep-jsonrpc.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login
+          echo "Uploading ${{ steps.pack-bicep-deploy-common.outputs.filename }} to partner drop folder at drops/bicep-deploy-common/npm/${{ steps.pack-bicep-deploy-common.outputs.version }}..."
+          az storage blob upload -f ${{ steps.pack-bicep-deploy-common.outputs.filename }} -c drops/bicep-deploy-common/npm/${{ steps.pack-bicep-deploy-common.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login

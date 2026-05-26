@@ -35,7 +35,17 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - name: Install Dependencies Common
+      - name: Install Dependencies (bicep-jsonrpc)
+        working-directory: ./packages/bicep-jsonrpc
+        run: npm ci
+
+      - name: Build bicep-jsonrpc Package
+        working-directory: ./packages/bicep-jsonrpc
+        run: |
+          rm -Rf dist
+          npm run build
+
+      - name: Install Dependencies (bicep-deploy-common)
         working-directory: ./packages/bicep-deploy-common
         run: npm ci
 

@@ -15,7 +15,6 @@ export default defineConfig({
   unbundle: true,
   external: [
     /^@azure\//,
-    /^bicep-node/,
     /^yaml/,
   ],
 })
