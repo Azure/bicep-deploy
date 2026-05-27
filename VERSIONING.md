@@ -1,17 +1,17 @@
 # Versioning for `@azure/bicep-deploy-common`
 
-The published version of this package is computed automatically by [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) (NBGV) at publish time. The `"version"` field in [`package.json`](./bicep-deploy-common/package.json) is intentionally set to the sentinel value `"0.0.0-placeholder"` — **do not edit it by hand**. It is overwritten by the publish workflow and restored after packaging.
+The published version of this package is computed automatically by [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) (NBGV) at publish time. The `"version"` field in [`package.json`](./packages/bicep-deploy-common/package.json) is intentionally set to the sentinel value `"0.0.0-placeholder"` — **do not edit it by hand**. It is overwritten by the publish workflow and restored after packaging.
 
 This mirrors the pattern used by [`vscode-bicep`](https://github.com/Azure/bicep/blob/main/src/vscode-bicep/package.json).
 
 ## How it works
 
-- [`version.json`](./bicep-deploy-common/version.json) declares the base version (e.g. `"0.1"`) and a `pathFilters` array scoping NBGV to this package's directory.
+- [`version.json`](./packages/bicep-deploy-common/version.json) declares the base version (e.g. `"0.1"`) and a `pathFilters` array scoping NBGV to this package's directory.
 - `nerdbank-gitversioning` is declared as a devDependency so the `nbgv-setversion` binary is resolved from local `node_modules/.bin` (matching `vscode-bicep`).
-- [`package.json`](./bicep-deploy-common/package.json) exposes two npm scripts that wrap NBGV:
+- [`package.json`](./packages/bicep-deploy-common/package.json) exposes two npm scripts that wrap NBGV:
   - `npm run stamp-version` (`nbgv-setversion`) — rewrites the `"version"` field to `<version>.<commitHeight>`.
   - `npm run reset-version` (`nbgv-setversion --reset`) — restores the `"0.0.0-placeholder"` sentinel.
-- On every run of the `Upload bicep-deploy-common Package` GitHub workflow (`../.github/workflows/upload-package.yml`):
+- On every run of the `Upload bicep-deploy-common Package` GitHub workflow (`.github/workflows/upload-package.yml`):
   1. The repo is checked out with full history (`fetch-depth: 0`).
   2. `npm run stamp-version` stamps the real version.
   3. The package is built and packed (`npm pack`).
