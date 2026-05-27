@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import path from "path";
 import os from "os";
 import { spawn, spawnSync, ChildProcess } from "child_process";
@@ -63,12 +64,18 @@ export const formatRequestType = new RequestType<
   never
 >("bicep/format");
 
-export function hasMinimumVersion(actualVersion: string, minimumVersion: string) {
-  const compareResult = actualVersion.localeCompare(minimumVersion, undefined, { numeric: true, sensitivity: 'base' });
+export function hasMinimumVersion(
+  actualVersion: string,
+  minimumVersion: string,
+) {
+  const compareResult = actualVersion.localeCompare(minimumVersion, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
 
   return {
     success: compareResult >= 0,
-    minimumVersion
+    minimumVersion,
   };
 }
 
@@ -84,7 +91,10 @@ function tryGetVersionNumberError(bicepPath: string) {
   }
 
   const actualVersion = versionMatch[1];
-  const { success, minimumVersion } = hasMinimumVersion(actualVersion, "0.25.3");
+  const { success, minimumVersion } = hasMinimumVersion(
+    actualVersion,
+    "0.25.3",
+  );
   if (!success) {
     return `A minimum Bicep version of ${minimumVersion} is required. Detected version ${actualVersion} from '${bicepPath} --version'`;
   }
@@ -101,7 +111,10 @@ function generateRandomPipeName(): string {
   return path.join(os.tmpdir(), `bicep-${randomSuffix}.sock`);
 }
 
-function connectClientPipe(pipeName: string, process: ChildProcess): Promise<[MessageReader, MessageWriter]> {
+function connectClientPipe(
+  pipeName: string,
+  process: ChildProcess,
+): Promise<[MessageReader, MessageWriter]> {
   return new Promise<[MessageReader, MessageWriter]>((resolve, reject) => {
     const handleConnectionError = () => {
       server.close();
@@ -109,18 +122,20 @@ function connectClientPipe(pipeName: string, process: ChildProcess): Promise<[Me
     };
 
     const server = createServer(socket => {
-      process.removeListener('exit', handleConnectionError)
+      process.removeListener("exit", handleConnectionError);
       server.close();
       resolve([
-        new SocketMessageReader(socket, 'utf-8'),
-        new SocketMessageWriter(socket, 'utf-8')
+        new SocketMessageReader(socket, "utf-8"),
+        new SocketMessageWriter(socket, "utf-8"),
       ]);
     });
 
-    process.on('exit', handleConnectionError);
-    process.on('error', handleConnectionError);
-    server.on('error', handleConnectionError);
-    server.listen(pipeName, () => server.removeListener('error', handleConnectionError));
+    process.on("exit", handleConnectionError);
+    process.on("error", handleConnectionError);
+    server.on("error", handleConnectionError);
+    server.listen(pipeName, () =>
+      server.removeListener("error", handleConnectionError),
+    );
   });
 }
 
@@ -128,10 +143,10 @@ export async function openConnection(bicepPath: string) {
   const pipePath = generateRandomPipeName();
 
   const process = spawn(bicepPath, ["jsonrpc", "--pipe", pipePath]);
-  let stderr = '';
-  process.stderr.on("data", (x) => stderr += x.toString());
+  let stderr = "";
+  process.stderr.on("data", x => (stderr += x.toString()));
   const processExitedEarly = new Promise<void>((_, reject) => {
-    process.on("error", (err) => {
+    process.on("error", err => {
       reject(`Failed to invoke '${bicepPath} jsonrpc'. Error: ${err}`);
     });
     process.on("exit", () => {
@@ -146,10 +161,7 @@ export async function openConnection(bicepPath: string) {
 
   const transportConnected = connectClientPipe(pipePath, process);
 
-  const result = await Promise.race([
-    transportConnected,
-    processExitedEarly,
-  ]);
+  const result = await Promise.race([transportConnected, processExitedEarly]);
 
   const [reader, writer] = result!;
   const connection = createMessageConnection(reader, writer, console);

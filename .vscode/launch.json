@@ -23,7 +23,8 @@
             ],
             "env": {
                 "LIVETEST_SUBSCRIPTION_ID": "a1bfa635-f2bf-42f1-86b5-848c674fc321",
-                "LIVETEST_RESOURCE_GROUP": "ant-test"
+                "LIVETEST_RESOURCE_GROUP": "ant-test",
+                "RUNNER_TOOL_CACHE": "${workspaceFolder}/.runner_tool_cache",
             },
             "cwd": "${workspaceFolder}",
         }

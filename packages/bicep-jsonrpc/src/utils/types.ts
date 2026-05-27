@@ -1,3 +1,7 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface VersionRequest {}
 
 export interface VersionResponse {
@@ -48,7 +52,7 @@ export interface CompileResponse {
 
 export interface CompileParamsRequest {
   path: string;
-  parameterOverrides: Record<string, any>;
+  parameterOverrides: Record<string, unknown>;
 }
 
 export interface CompileParamsResponse {
@@ -62,7 +66,7 @@ export interface CompileParamsResponse {
 export interface CompileResponseDiagnostic {
   source: string;
   range: Range;
-  level: 'Info' | 'Warning' | 'Error';
+  level: "Info" | "Warning" | "Error";
   code: string;
   message: string;
 }
@@ -126,8 +130,8 @@ export interface GetSnapshotRequestMetadataDefinition {
 
 export interface GetSnapshotRequestExternalInputValue {
   kind: string;
-  config?: any;
-  value: any;
+  config?: unknown;
+  value: unknown;
 }
 
 export interface GetSnapshotResponse {

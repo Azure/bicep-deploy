@@ -35,6 +35,8 @@
     "typecheck": "tsc --noEmit",
     "clean": "rimraf ./dist",
     "build": "npm run typecheck && tsdown --config ./tsdown.config.mts",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
     "stamp-version": "nbgv-setversion",
     "reset-version": "nbgv-setversion --reset"
   },

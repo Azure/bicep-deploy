@@ -36,8 +36,8 @@
     "build:all": "npm run build:packages && npm run build",
     "test": "vitest --config vitest.config.unit.ts",
     "test:live": "vitest --config vitest.config.live.ts",
-    "lint": "eslint src test test-live ./packages/bicep-deploy-common/src ./packages/bicep-deploy-common/test",
-    "lint:fix": "eslint src test test-live ./packages/bicep-deploy-common/src ./packages/bicep-deploy-common/test --fix"
+    "lint": "eslint src test test-live && npm run lint --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common",
+    "lint:fix": "eslint src test test-live --fix && npm run lint:fix --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common --fix"
   },
   "license": "MIT",
   "dependencies": {
