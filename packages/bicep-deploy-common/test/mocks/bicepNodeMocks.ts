@@ -6,7 +6,7 @@ import {
   CompileParamsResponse,
   CompileRequest,
   CompileResponse,
-} from "@azure/bicep-jsonrpc";
+} from "@azure/bicep-rpc-client";
 import type { MockedObjectDeep } from "@vitest/spy";
 
 const mockBicep: Partial<MockedObjectDeep<Bicep>> = {
@@ -56,4 +56,4 @@ export function configureBicepGetDownloadUrlMock(
   mockBicepNode.Bicep.getDownloadUrl.mockImplementation(mock);
 }
 
-vi.mock("@azure/bicep-jsonrpc", () => mockBicepNode);
+vi.mock("@azure/bicep-rpc-client", () => mockBicepNode);

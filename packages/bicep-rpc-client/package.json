@@ -1,5 +1,5 @@
 {
-  "name": "@azure/bicep-jsonrpc",
+  "name": "@azure/bicep-rpc-client",
   "description": "JSON-RPC implementation for Bicep CLI integration",
   "version": "0.0.0-placeholder",
   "author": "Microsoft",

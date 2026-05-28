@@ -30,14 +30,14 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "clean:packages": "npm run clean --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common",
+    "clean:packages": "npm run clean --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common",
     "build": "npm run typecheck && tsdown --config ./tsdown.config.ts",
-    "build:packages": "npm run build --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common",
+    "build:packages": "npm run build --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common",
     "build:all": "npm run build:packages && npm run build",
     "test": "vitest --config vitest.config.unit.ts",
     "test:live": "vitest --config vitest.config.live.ts",
-    "lint": "eslint src test test-live && npm run lint --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common",
-    "lint:fix": "eslint src test test-live --fix && npm run lint:fix --workspace @azure/bicep-jsonrpc --workspace @azure/bicep-deploy-common --fix"
+    "lint": "eslint src test test-live && npm run lint --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common",
+    "lint:fix": "eslint src test test-live --fix && npm run lint:fix --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common --fix"
   },
   "license": "MIT",
   "dependencies": {
