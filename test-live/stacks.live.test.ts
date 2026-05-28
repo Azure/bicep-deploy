@@ -48,7 +48,7 @@ deny-settings-mode: denyWriteAndDelete
     expect(rawError["details"][0]["code"]).toBe("DeploymentFailed");
   });
 
-  it("handles deployment failures", async () => {
+  it("handles validation failures", async () => {
     const { failure, errors } = await runAction(
       data => `
 type: deploymentStack

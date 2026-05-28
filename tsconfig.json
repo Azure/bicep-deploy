@@ -3,8 +3,8 @@
   "compilerOptions": {
     "target": "es2021",
     "moduleDetection": "force",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true,
@@ -13,7 +13,7 @@
     "noUnusedLocals": true,
     "allowJs": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "node"],
   },
   "include": ["src", "test", "test-live"]
 }

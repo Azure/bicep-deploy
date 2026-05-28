@@ -8,7 +8,7 @@ import {
 } from "./mocks/bicepNodeMocks";
 import { configureReadFile } from "./mocks/fsMocks";
 import { mockBicepCache } from "./mocks/cacheMocks";
-import { Bicep } from "bicep-node";
+import { Bicep } from "@azure/bicep-rpc-client";
 import { FileConfig } from "../src/config";
 import { TestLogger } from "./logging";
 import { getTemplateAndParameters } from "../src/file";

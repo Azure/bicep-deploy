@@ -1,3 +1,3 @@
 using 'main.bicep'
 
-param input = 'foo'
+param input = 'thisisaverylongstringthatexceedstheallowedlengthforatemplatespecresourcetypeandcausesapreflightfailure'

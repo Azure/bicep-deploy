@@ -42,7 +42,7 @@ parameters-file: test/files/deployerror/main.bicepparam
     expect(rawError["details"][0]["code"]).toBe("ResourceNotFound");
   });
 
-  it("handles deployment failures", async () => {
+  it("handles validation failures", async () => {
     const { failure, errors } = await runAction(
       data => `
 type: deployment

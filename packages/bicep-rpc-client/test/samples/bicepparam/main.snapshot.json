@@ -1,0 +1,17 @@
+{
+  "predictedResources": [
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.Storage/storageAccounts/ASDASD",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "ASDASD",
+      "apiVersion": "2023-01-01",
+      "location": "West US",
+      "sku": {
+        "name": "Standard_ZRS"
+      },
+      "kind": "StorageV2"
+    }
+  ],
+  "diagnostics": [],
+  "outputs": {}
+}

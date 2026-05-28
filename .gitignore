@@ -107,3 +107,7 @@ __tests__/runner/*
 
 # Ignore package dist/
 packages/bicep-deploy-common/dist/
+packages/bicep-rpc-client/dist/
+
+# Tool cache location for tests
+.runner_tool_cache/

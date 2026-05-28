@@ -12,7 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals"]
   },
   "include": ["src", "test"]
 }

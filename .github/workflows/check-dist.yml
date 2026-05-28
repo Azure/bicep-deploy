@@ -35,18 +35,13 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - name: Install Dependencies Common
-        working-directory: ./packages/bicep-deploy-common
-        run: npm ci
-
-      - name: Build bicep-deploy-common Package
-        working-directory: ./packages/bicep-deploy-common
-        run: |
-          rm -Rf dist
-          npm run build
-
       - name: Install Dependencies
         run: npm ci
+
+      - name: Build Workspace Packages
+        run: |
+          npm run clean:packages
+          npm run build:packages
 
       - name: Build dist/ Directory
         run: |

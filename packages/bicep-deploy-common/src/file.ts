@@ -4,7 +4,7 @@ import * as fs from "fs/promises";
 import fsSync from "fs";
 import * as path from "path";
 import * as os from "os";
-import { Bicep, CompileResponseDiagnostic } from "bicep-node";
+import { Bicep, CompileResponseDiagnostic } from "@azure/bicep-rpc-client";
 
 import { FileConfig } from "./config";
 import { Logger } from "./logging";
