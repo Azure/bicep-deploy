@@ -45,7 +45,7 @@
     "@azure/arm-resources": "^6.0.0",
     "@azure/arm-resourcesdeploymentstacks": "^1.0.0",
     "@azure/bicep-rpc-client": "*",
-    "@azure/identity": "^4.10.2",
+    "@azure/identity": "^4.13.1",
     "yaml": "^2.7.0"
   },
   "devDependencies": {
