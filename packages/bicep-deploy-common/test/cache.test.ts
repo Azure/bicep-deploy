@@ -6,13 +6,14 @@ import {
   configureCompileMock,
   configureCompileParamsMock,
 } from "./mocks/bicepNodeMocks";
-import { configureReadFile } from "./mocks/fsMocks";
+import { configureAccessSync, configureReadFile } from "./mocks/fsMocks";
 import { mockBicepCache } from "./mocks/cacheMocks";
 import { Bicep } from "@azure/bicep-rpc-client";
 import { FileConfig } from "../src/config";
 import { TestLogger } from "./logging";
 import { getTemplateAndParameters } from "../src/file";
 import { readTestFile } from "./utils";
+import path from "path";
 
 function setupBicepCompile() {
   configureCompileMock(() => ({
@@ -33,6 +34,100 @@ function setupBicepCompileParams() {
 
 describe("BicepCache", () => {
   describe("pinned version", () => {
+    it("uses Bicep from PATH when explicitly requested and found", async () => {
+      const cache = new mockBicepCache();
+      const installMock = vi.fn();
+      configureBicepInstallMock(installMock);
+      setupBicepCompile();
+
+      configureReadFile(filePath => {
+        if (filePath === "/path/to/parameters.json")
+          return readTestFile("files/basic/main.parameters.json");
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      const oldPath = process.env.PATH;
+      const bicepPath = path.join(
+        "/tools",
+        process.platform === "win32" ? "bicep.exe" : "bicep",
+      );
+      process.env.PATH = `/tools${path.delimiter}/other`;
+      configureAccessSync(filePath => {
+        if (filePath !== bicepPath) {
+          throw new Error(`Unexpected path: ${filePath}`);
+        }
+      });
+
+      const config: FileConfig = {
+        templateFile: "/path/to/main.bicep",
+        parametersFile: "/path/to/parameters.json",
+        bicepVersion: "0.30.23",
+        useBicepFromPath: true,
+      };
+
+      const logger = new TestLogger();
+      vi.mocked(Bicep.getDownloadUrl).mockClear();
+      vi.mocked(Bicep.initialize).mockClear();
+
+      try {
+        await getTemplateAndParameters(config, logger, cache);
+      } finally {
+        process.env.PATH = oldPath;
+      }
+
+      expect(Bicep.initialize).toHaveBeenCalledWith(bicepPath);
+      expect(Bicep.getDownloadUrl).not.toHaveBeenCalled();
+      expect(cache.find).not.toHaveBeenCalled();
+      expect(installMock).not.toHaveBeenCalled();
+      expect(cache.save).not.toHaveBeenCalled();
+    });
+
+    it("falls back to download/cache when explicitly requested Bicep is not on PATH", async () => {
+      const cache = new mockBicepCache();
+      cache.find.mockResolvedValue(undefined);
+
+      configureBicepInstallMock(async (tmpDir, version) => {
+        expect(version).toBe("0.30.23");
+        return "/tmp/bicep-abc/bicep";
+      });
+      setupBicepCompile();
+
+      configureReadFile(filePath => {
+        if (filePath === "/path/to/parameters.json")
+          return readTestFile("files/basic/main.parameters.json");
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      const oldPath = process.env.PATH;
+      process.env.PATH = "/missing";
+      configureAccessSync(() => {
+        throw new Error("not found");
+      });
+
+      const config: FileConfig = {
+        templateFile: "/path/to/main.bicep",
+        parametersFile: "/path/to/parameters.json",
+        bicepVersion: "0.30.23",
+        useBicepFromPath: true,
+      };
+
+      const logger = new TestLogger();
+      vi.mocked(Bicep.initialize).mockClear();
+
+      try {
+        await getTemplateAndParameters(config, logger, cache);
+      } finally {
+        process.env.PATH = oldPath;
+      }
+
+      expect(cache.find).toHaveBeenCalledWith("0.30.23");
+      expect(cache.save).toHaveBeenCalledWith(
+        "/tmp/bicep-abc/bicep",
+        "0.30.23",
+      );
+      expect(Bicep.initialize).toHaveBeenCalledWith("/tmp/bicep-abc/bicep");
+    });
+
     it("skips download on cache hit", async () => {
       const cache = new mockBicepCache();
       cache.find.mockResolvedValue("/cached/bicep");
@@ -312,6 +407,7 @@ describe("BicepCache", () => {
       const config: FileConfig = {
         templateFile: "/path/to/template.json",
         parametersFile: "/path/to/parameters.json",
+        useBicepFromPath: true,
       };
 
       const logger = new TestLogger();

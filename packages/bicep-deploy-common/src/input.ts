@@ -18,6 +18,7 @@ export interface InputParameterNames {
   parametersFile: string;
   parameters: string;
   bicepVersion: string;
+  useBicepFromPath: string;
   description: string;
   tags: string;
   maskedOutputs: string;
