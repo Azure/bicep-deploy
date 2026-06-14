@@ -50,7 +50,7 @@
   "devDependencies": {
     "@types/node": "^24.1.0",
     "@vitest/eslint-plugin": "^1.4.3",
-    "esbuild": "^0.25.8",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-notice": "^1.0.0",
