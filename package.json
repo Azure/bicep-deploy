@@ -60,6 +60,6 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.32.0",
     "vitest": "^4.1.1",
-    "yaml": "^2.8.3"
+    "yaml": "^2.9.0"
   }
 }
