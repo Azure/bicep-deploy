@@ -51,6 +51,7 @@ export type FileConfig = {
   parametersFile?: string;
   parameters?: Record<string, unknown>;
   bicepVersion?: string;
+  useBicepFromPath?: boolean;
 };
 
 type CommonConfig = {
@@ -140,6 +141,10 @@ export function parseConfig(
     inputParameterNames.bicepVersion,
     inputReader,
   );
+  const useBicepFromPath = getOptionalBooleanInput(
+    inputParameterNames.useBicepFromPath,
+    inputReader,
+  );
   const description = getOptionalStringInput(
     inputParameterNames.description,
     inputReader,
@@ -174,6 +179,7 @@ export function parseConfig(
         parametersFile,
         parameters,
         bicepVersion,
+        useBicepFromPath,
         tags,
         maskedOutputs,
         environment: environment,
@@ -214,6 +220,7 @@ export function parseConfig(
         parametersFile,
         parameters,
         bicepVersion,
+        useBicepFromPath,
         description,
         tags,
         maskedOutputs,

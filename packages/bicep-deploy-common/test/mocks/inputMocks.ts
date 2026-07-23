@@ -33,6 +33,7 @@ export class TestInputParameterNames {
   parametersFile = "parameters-file";
   parameters = "parameters";
   bicepVersion = "bicep-version";
+  useBicepFromPath = "use-bicep-from-path";
   description = "description";
   tags = "tags";
   maskedOutputs = "masked-outputs";
