@@ -59,6 +59,17 @@ describe("input validation", () => {
     );
   });
 
+  it("requires use-bicep-from-path to be boolean when provided", async () => {
+    configureGetInputMock(
+      { type: "deployment", "use-bicep-from-path": "invalid" },
+      inputReader,
+    );
+
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
+      "Input 'use-bicep-from-path' must be a boolean value",
+    );
+  });
+
   it("requires valid operation for deployment", async () => {
     configureGetInputMock(
       { type: "deployment", operation: "delete" },
@@ -381,6 +392,7 @@ describe("input parsing", () => {
         "masked-outputs": "abc,def",
         "what-if-exclude-change-types": "noChange",
         "validation-level": "providerNoRbac",
+        "use-bicep-from-path": "true",
         environment: "azureUSGovernment",
       },
       inputReader,
@@ -403,6 +415,7 @@ describe("input parsing", () => {
       parameters: {
         foo: "bar2",
       },
+      useBicepFromPath: true,
       tags: {
         foo: "bar",
       },
@@ -480,6 +493,7 @@ describe("input parsing", () => {
           prop2: "val2",
         },
       },
+      useBicepFromPath: false,
       description: "mockDescription",
       tags: {
         foo: "bar",
@@ -558,6 +572,7 @@ objectParam:
           prop2: "val2",
         },
       },
+      useBicepFromPath: false,
       tags: {
         foo: "bar",
       },
@@ -600,6 +615,7 @@ objectParam:
       parametersFile: undefined,
       parameters: undefined,
       bicepVersion: "0.30.23", // This should contain the specified version
+      useBicepFromPath: false,
       tags: undefined,
       maskedOutputs: undefined,
       whatIf: {
@@ -627,5 +643,6 @@ objectParam:
     const config = parseConfig(inputReader, inputParameterNames);
 
     expect(config.bicepVersion).toBeUndefined();
+    expect(config.useBicepFromPath).toBe(false);
   });
 });

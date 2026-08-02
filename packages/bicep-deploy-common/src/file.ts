@@ -47,7 +47,15 @@ async function installBicep(
   cache: BicepCache,
   logger: Logger,
   bicepVersion?: string,
+  useBicepFromPath?: boolean,
 ) {
+  if (useBicepFromPath) {
+    const bicepPath = getBicepPath();
+    if (bicepPath) {
+      return bicepPath;
+    }
+  }
+
   const resolvedVersion = await resolveVersion(bicepVersion);
 
   const cached = await cache.find(resolvedVersion);
@@ -75,8 +83,14 @@ async function compileBicepParams(
   cache: BicepCache,
   parameters?: Record<string, unknown>,
   bicepVersion?: string,
+  useBicepFromPath?: boolean,
 ) {
-  const bicepPath = await installBicep(cache, logger, bicepVersion);
+  const bicepPath = await installBicep(
+    cache,
+    logger,
+    bicepVersion,
+    useBicepFromPath,
+  );
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compileParams({
@@ -103,8 +117,14 @@ async function compileBicep(
   logger: Logger,
   cache: BicepCache,
   bicepVersion?: string,
+  useBicepFromPath?: boolean,
 ) {
-  const bicepPath = await installBicep(cache, logger, bicepVersion);
+  const bicepPath = await installBicep(
+    cache,
+    logger,
+    bicepVersion,
+    useBicepFromPath,
+  );
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compile({
@@ -162,6 +182,7 @@ export async function getTemplateAndParameters(
         cache,
         config.parameters,
         config.bicepVersion,
+        config.useBicepFromPath,
       ),
     );
   }
@@ -182,6 +203,7 @@ export async function getTemplateAndParameters(
       logger,
       cache,
       config.bicepVersion,
+      config.useBicepFromPath,
     );
 
     return parse({ template, parameters });
@@ -228,6 +250,22 @@ async function withBicep<T>(
 
 export function resolvePath(fileName: string) {
   return path.resolve(fileName);
+}
+
+function getBicepPath() {
+  const pathValue = process.env.PATH ?? process.env.Path ?? process.env.path;
+  for (const dir of pathValue?.split(path.delimiter) ?? []) {
+    const bicepPath = path.join(
+      dir,
+      process.platform === "win32" ? "bicep.exe" : "bicep",
+    );
+    try {
+      fsSync.accessSync(bicepPath, fsSync.constants.X_OK);
+      return bicepPath;
+    } catch {
+      // Keep looking, then fall back to download/cache behavior.
+    }
+  }
 }
 
 function logDiagnostics(

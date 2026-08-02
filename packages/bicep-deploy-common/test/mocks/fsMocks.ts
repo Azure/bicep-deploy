@@ -7,6 +7,7 @@ const mockFsPromises = {
 };
 
 const existsSyncMock = vi.fn().mockReturnValue(true);
+const accessSyncMock = vi.fn();
 
 export function configureReadFile(mock: (filePath: string) => string) {
   mockFsPromises.readFile.mockImplementation(filePath =>
@@ -19,6 +20,10 @@ export function configureExistsSync(returnValue: boolean) {
   existsSyncMock.mockReturnValue(returnValue);
 }
 
+export function configureAccessSync(mock: (filePath: string) => void) {
+  accessSyncMock.mockImplementation(mock);
+}
+
 vi.mock("fs/promises", () => mockFsPromises);
 vi.mock("fs", async importOriginal => {
   const actual = await importOriginal<typeof import("fs")>();
@@ -27,6 +32,7 @@ vi.mock("fs", async importOriginal => {
     default: {
       ...actual,
       existsSync: existsSyncMock,
+      accessSync: accessSyncMock,
     },
   };
 });
