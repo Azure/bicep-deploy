@@ -13,5 +13,11 @@ export default defineConfig({
   outputOptions: {
     inlineDynamicImports: true,
   },
+  inputOptions: {
+    resolve: {
+      mainFields: ['module', 'main'],
+      conditionNames: ['import', 'module', 'default'],
+    },
+  },
   noExternal: [/.*/], // bundle all dependencies
 })
