@@ -183,6 +183,26 @@ describe("Bicep class", () => {
     );
   });
 
+  it("should generate a snapshot at management group scope", async () => {
+    const bicepPath = path.join(
+      __dirname,
+      "samples/managementgroup/main.bicepparam",
+    );
+    const result = await bicep.getSnapshot({
+      path: bicepPath,
+      metadata: {
+        tenantId: "00000000-0000-0000-0000-000000000000",
+        managementGroupId: "test-management-group",
+        location: "eastus",
+        deploymentName: "test-deployment",
+      },
+    });
+
+    expect(result.snapshot).toContain(
+      "/providers/Microsoft.Management/managementGroups/test-management-group",
+    );
+  });
+
   it("should format a bicep file", async () => {
     const bicepPath = path.join(__dirname, "samples/good.bicep");
     const result = await bicep.format({
