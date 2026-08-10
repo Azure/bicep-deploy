@@ -123,6 +123,7 @@ export interface GetSnapshotRequest {
 export interface GetSnapshotRequestMetadataDefinition {
   tenantId?: string;
   subscriptionId?: string;
+  managementGroupId?: string;
   resourceGroup?: string;
   location?: string;
   deploymentName?: string;
