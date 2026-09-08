@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import type {
-  DeploymentStacksChangeBase,
-  DeploymentStacksChangeDeltaDenySettings,
   DeploymentStacksChangeDeltaRecord,
   DeploymentStacksDiagnostic,
   DeploymentStacksWhatIfChange,
@@ -97,21 +95,6 @@ export function formatDeploymentStacksWhatIfChange(
 ): string {
   return new DeploymentStacksWhatIfResultFormatter(colorMode).format(
     whatIfInput,
-  );
-}
-
-export function stackWhatIfHasChanges(whatIfInput: StackWhatIfInput): boolean {
-  const whatIfChanges = getWhatIfChanges(whatIfInput);
-  if (!whatIfChanges) {
-    return false;
-  }
-
-  return (
-    (whatIfChanges.resourceChanges ?? []).some(
-      resourceChange => !strLowerEq(resourceChange.changeType, "noChange"),
-    ) ||
-    hasChangeDelta(whatIfChanges.denySettingsChange) ||
-    hasPrimitiveChange(whatIfChanges.deploymentScopeChange)
   );
 }
 
@@ -649,12 +632,6 @@ function getWhatIfProperties(
   };
 }
 
-function getWhatIfChanges(
-  whatIfInput: StackWhatIfInput,
-): DeploymentStacksWhatIfChange | undefined {
-  return getWhatIfProperties(whatIfInput).changes;
-}
-
 function compareResourceChanges(
   left: DeploymentStacksWhatIfResourceChange,
   right: DeploymentStacksWhatIfResourceChange,
@@ -706,18 +683,6 @@ function strLowerEq(left?: string | null, right?: string | null): boolean {
 
 function normalizeComparable(value: string): string {
   return value.toLowerCase().replace(/[^a-z]/gu, "");
-}
-
-function hasChangeDelta(
-  change?: DeploymentStacksChangeDeltaDenySettings | null,
-): boolean {
-  return !!change?.delta && change.delta.length > 0;
-}
-
-function hasPrimitiveChange(
-  change?: DeploymentStacksChangeBase | null,
-): boolean {
-  return !!change && change.before !== change.after;
 }
 
 function isPotentialChange(changeCertainty?: string | null): boolean {

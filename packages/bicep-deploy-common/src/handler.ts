@@ -9,14 +9,8 @@ import {
   deploymentWhatIf,
 } from "./deployments";
 import { stackCreate, stackDelete, stackValidate, stackWhatIf } from "./stacks";
-import {
-  deploymentWhatIfHasChanges,
-  formatWhatIfOperationResult,
-} from "./whatif";
-import {
-  formatDeploymentStacksWhatIfChange,
-  stackWhatIfHasChanges,
-} from "./stackWhatIf";
+import { formatWhatIfOperationResult } from "./whatif";
+import { formatDeploymentStacksWhatIfChange } from "./stackWhatIf";
 import {
   logDiagnostics,
   validateFileScope,
@@ -115,10 +109,6 @@ export async function execute(
                 const formatted = formatWhatIfOperationResult(result, "ansii");
                 logger.logInfoRaw(formatted);
                 logDiagnostics(result.diagnostics ?? [], logger);
-                outputSetter.setOutput(
-                  "hasChanges",
-                  deploymentWhatIfHasChanges(result),
-                );
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
@@ -171,10 +161,6 @@ export async function execute(
                   "ansii",
                 );
                 logger.logInfoRaw(formatted);
-                outputSetter.setOutput(
-                  "hasChanges",
-                  stackWhatIfHasChanges(result),
-                );
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));

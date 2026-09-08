@@ -99,14 +99,6 @@ export function formatJson(value: UnknownValue, colorMode: ColorMode): string {
   return builder.build();
 }
 
-export function deploymentWhatIfHasChanges(
-  whatIfOperationResult: WhatIfOperationResult,
-): boolean {
-  return (whatIfOperationResult.changes ?? []).some(
-    change => change.changeType !== "NoChange",
-  );
-}
-
 export function formatWhatIfOperationResult(
   whatIfOperationResult: WhatIfOperationResult,
   colorMode: ColorMode,

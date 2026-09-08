@@ -5,10 +5,7 @@ import type {
   DeploymentStacksWhatIfChange,
   DeploymentStacksWhatIfResult,
 } from "@azure/arm-resourcesdeploymentstacks";
-import {
-  formatDeploymentStacksWhatIfChange,
-  stackWhatIfHasChanges,
-} from "../src/stackWhatIf";
+import { formatDeploymentStacksWhatIfChange } from "../src/stackWhatIf";
 import whatIf1 from "./files/stacks-what-if/what-if-1.json";
 import whatIf2 from "./files/stacks-what-if/what-if-2.json";
 import {
@@ -18,70 +15,6 @@ import {
 
 const testStackResourceId =
   "/subscriptions/00000000-0000-0000-0000-000000000001/providers/Microsoft.Resources/deploymentStacks/testStack";
-
-describe("stackWhatIfHasChanges", () => {
-  it("returns false when there are no changes", () => {
-    const changes: DeploymentStacksWhatIfChange = {
-      resourceChanges: [
-        {
-          id: "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/p1/foo1",
-          changeType: "noChange",
-          changeCertainty: "definite",
-        },
-      ],
-      denySettingsChange: {},
-    };
-
-    expect(stackWhatIfHasChanges(changes)).toBe(false);
-  });
-
-  it("returns true when a resource change is present", () => {
-    const changes: DeploymentStacksWhatIfChange = {
-      resourceChanges: [
-        {
-          id: "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/p1/foo1",
-          changeType: "modify",
-          changeCertainty: "definite",
-        },
-      ],
-      denySettingsChange: {},
-    };
-
-    expect(stackWhatIfHasChanges(changes)).toBe(true);
-  });
-
-  it("returns true when the deny settings change", () => {
-    const changes: DeploymentStacksWhatIfChange = {
-      resourceChanges: [],
-      denySettingsChange: {
-        delta: [
-          {
-            path: "mode",
-            changeType: "modify",
-            before: "none",
-            after: "denyDelete",
-          },
-        ],
-      },
-    };
-
-    expect(stackWhatIfHasChanges(changes)).toBe(true);
-  });
-
-  it("returns true when the deployment scope changes", () => {
-    const changes: DeploymentStacksWhatIfChange = {
-      resourceChanges: [],
-      denySettingsChange: {},
-      deploymentScopeChange: {
-        before: "/subscriptions/00000000-0000-0000-0000-000000000001",
-        after:
-          "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1",
-      },
-    };
-
-    expect(stackWhatIfHasChanges(changes)).toBe(true);
-  });
-});
 
 describe("formatDeploymentStacksWhatIfChange", () => {
   it("formats resource, deny settings, and deployment scope changes", () => {

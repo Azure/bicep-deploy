@@ -1,10 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import {
-  deploymentWhatIfHasChanges,
-  formatJson,
-  formatWhatIfOperationResult,
-} from "../src/whatif";
+import { formatJson, formatWhatIfOperationResult } from "../src/whatif";
 import { WhatIfChange } from "@azure/arm-resources";
 
 describe("formatJson tests", () => {
@@ -790,35 +786,5 @@ Scope: /subscriptions/a1bfa635-f2bf-42f1-86b5-848c674fc321
         .map(x => x.trimEnd())
         .join("\n"),
     ).toContain(expected);
-  });
-});
-
-describe("deploymentWhatIfHasChanges", () => {
-  it("returns false when there are no changes", () => {
-    const changes: WhatIfChange[] = [
-      {
-        resourceId:
-          "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/p1/foo1",
-        changeType: "NoChange",
-      },
-    ];
-
-    expect(deploymentWhatIfHasChanges({ changes })).toBe(false);
-  });
-
-  it("returns true when a change is present", () => {
-    const changes: WhatIfChange[] = [
-      {
-        resourceId:
-          "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/p1/foo1",
-        changeType: "Modify",
-      },
-    ];
-
-    expect(deploymentWhatIfHasChanges({ changes })).toBe(true);
-  });
-
-  it("returns false when there are no changes at all", () => {
-    expect(deploymentWhatIfHasChanges({})).toBe(false);
   });
 });

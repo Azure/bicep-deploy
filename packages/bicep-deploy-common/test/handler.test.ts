@@ -188,7 +188,6 @@ describe("deployment execution", () => {
       expect(
         mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
-      expect(outputSetter.setOutput).toHaveBeenCalledWith("hasChanges", true);
     });
   });
 
@@ -759,7 +758,6 @@ describe("stack execution", () => {
       expect(
         mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait,
       ).toHaveBeenCalledWith(config.name);
-      expect(outputSetter.setOutput).toHaveBeenCalledWith("hasChanges", true);
     });
 
     it.each([
