@@ -1,10 +1,23 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+import type {
+  DeploymentStacksDiagnostic,
+  DeploymentStacksWhatIfChange,
+  DeploymentStacksWhatIfResult,
+} from "@azure/arm-resourcesdeploymentstacks";
 import {
   formatDeploymentStacksWhatIfChange,
   stackWhatIfHasChanges,
 } from "../src/stackWhatIf";
-import { DeploymentStacksWhatIfChange } from "@azure/arm-resourcesdeploymentstacks";
+import whatIf1 from "./files/stacks-what-if/what-if-1.json";
+import whatIf2 from "./files/stacks-what-if/what-if-2.json";
+import {
+  expectedStacksWhatIf1,
+  expectedStacksWhatIf2,
+} from "./stackWhatIfReference";
+
+const testStackResourceId =
+  "/subscriptions/00000000-0000-0000-0000-000000000001/providers/Microsoft.Resources/deploymentStacks/testStack";
 
 describe("stackWhatIfHasChanges", () => {
   it("returns false when there are no changes", () => {
@@ -94,9 +107,6 @@ describe("formatDeploymentStacksWhatIfChange", () => {
           id: "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/p2/bar",
           changeType: "create",
           changeCertainty: "definite",
-          resourceConfigurationChanges: {
-            after: { name: "bar" },
-          },
         },
         {
           id: "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/p3/baz",
@@ -121,36 +131,74 @@ describe("formatDeploymentStacksWhatIfChange", () => {
       },
     };
 
-    const result = formatDeploymentStacksWhatIfChange(changes, "debug");
+    const result = formatDeploymentStacksWhatIfChange(
+      createWhatIfResult(changes),
+      "debug",
+    );
 
     expect(result).toContain("Resource and property changes are indicated");
     expect(result).toContain("<GREEN>+<RESET> Create");
-    expect(result).toContain("<YELLOW>*<RESET> Detach");
+    expect(result).toContain("! Unsupported");
     expect(result).toContain("<MAGENTA>~<RESET> Modify");
-    expect(result).toContain("The deployment stack settings will change:");
-    expect(result).toContain("deploymentScope");
+    expect(result).toContain("<BLUE>v<RESET> Detach");
+    expect(result).toContain(`Changes to Stack ${testStackResourceId}:`);
+    expect(result).toContain("Changes to Managed Resources:");
     expect(result).toContain(
-      "/subscriptions/00000000-0000-0000-0000-000000000001 => /subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1",
+      '<MAGENTA>~<RESET> DeploymentScope: <MAGENTA>"/subscriptions/00000000-0000-0000-0000-000000000001"<RESET> => <MAGENTA>"/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1"<RESET>',
     );
     expect(result).toContain(
-      "The deployment stack will update the following resources:",
+      '<MAGENTA>~<RESET> DenySettings.mode: <MAGENTA>"none"<RESET> => <MAGENTA>"denyDelete"<RESET>',
     );
     expect(result).toContain("p2/bar");
     expect(result).toContain("p3/baz");
-    expect(result).toContain("p1/foo1");
-    expect(result).toContain(
-      "Resource changes: 1 to create, 1 to detach, 1 to modify.",
-    );
+    expect(result).toContain("p1/foo1 [2023-01-01]");
+    expect(result).not.toContain("Resource changes:");
   });
 
-  it("reports no change when there are no resource changes", () => {
+  it("renders only the legend when there are no resource changes", () => {
     const changes: DeploymentStacksWhatIfChange = {
       resourceChanges: [],
       denySettingsChange: {},
     };
 
-    const result = formatDeploymentStacksWhatIfChange(changes, "debug");
+    const result = formatDeploymentStacksWhatIfChange(
+      createWhatIfResult(changes),
+      "debug",
+    );
 
-    expect(result).toContain("Resource changes: no change.");
+    expect(result).toContain("Resource and property changes are indicated");
+    expect(result).not.toContain("Changes to Managed Resources:");
+    expect(result).not.toContain("Diagnostics (");
+  });
+
+  it("formats what-if example 1 exactly like the Azure CLI tests", () => {
+    expect(
+      formatDeploymentStacksWhatIfChange(
+        whatIf1 as unknown as DeploymentStacksWhatIfResult,
+        "debug",
+      ),
+    ).toBe(expectedStacksWhatIf1);
+  });
+
+  it("formats what-if example 2 exactly like the Azure CLI tests", () => {
+    expect(
+      formatDeploymentStacksWhatIfChange(
+        whatIf2 as unknown as DeploymentStacksWhatIfResult,
+        "debug",
+      ),
+    ).toBe(expectedStacksWhatIf2);
   });
 });
+
+function createWhatIfResult(
+  changes: DeploymentStacksWhatIfChange,
+  diagnostics: DeploymentStacksDiagnostic[] = [],
+): DeploymentStacksWhatIfResult {
+  return {
+    properties: {
+      changes,
+      deploymentStackResourceId: testStackResourceId,
+      diagnostics,
+    },
+  } as unknown as DeploymentStacksWhatIfResult;
+}

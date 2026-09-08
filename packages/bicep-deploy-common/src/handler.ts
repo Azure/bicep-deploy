@@ -166,19 +166,14 @@ export async function execute(
             await tryWithErrorHandling(
               async () => {
                 const result = await stackWhatIf(config, files, logger);
-                const changes = result.properties?.changes ?? {
-                  resourceChanges: [],
-                  denySettingsChange: {},
-                };
                 const formatted = formatDeploymentStacksWhatIfChange(
-                  changes,
+                  result,
                   "ansii",
                 );
                 logger.logInfoRaw(formatted);
-                logDiagnostics(result.properties?.diagnostics ?? [], logger);
                 outputSetter.setOutput(
                   "hasChanges",
-                  stackWhatIfHasChanges(changes),
+                  stackWhatIfHasChanges(result),
                 );
               },
               error => {
