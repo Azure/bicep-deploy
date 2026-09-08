@@ -19,15 +19,16 @@ export const mockDeploymentsOps: Partial<MockedObjectDeep<Deployments>> = {
   beginCreateOrUpdateAtTenantScopeAndWait: vi.fn(),
 };
 
-export const mockStacksOps: Partial<MockedObjectDeep<DeploymentStacksOperations>> =
-  {
-    beginCreateOrUpdateAtSubscriptionAndWait: vi.fn(),
-    beginValidateStackAtSubscriptionAndWait: vi.fn(),
-    beginDeleteAtSubscriptionAndWait: vi.fn(),
-    beginCreateOrUpdateAtResourceGroupAndWait: vi.fn(),
-    beginValidateStackAtResourceGroupAndWait: vi.fn(),
-    beginDeleteAtResourceGroupAndWait: vi.fn(),
-  };
+export const mockStacksOps: Partial<
+  MockedObjectDeep<DeploymentStacksOperations>
+> = {
+  beginCreateOrUpdateAtSubscriptionAndWait: vi.fn(),
+  beginValidateStackAtSubscriptionAndWait: vi.fn(),
+  beginDeleteAtSubscriptionAndWait: vi.fn(),
+  beginCreateOrUpdateAtResourceGroupAndWait: vi.fn(),
+  beginValidateStackAtResourceGroupAndWait: vi.fn(),
+  beginDeleteAtResourceGroupAndWait: vi.fn(),
+};
 
 export const mockStacksWhatIfAtResourceGroupOps: Partial<
   MockedObjectDeep<DeploymentStacksWhatIfResultsAtResourceGroupOperations>

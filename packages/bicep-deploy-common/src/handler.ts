@@ -8,8 +8,15 @@ import {
   deploymentValidate,
   deploymentWhatIf,
 } from "./deployments";
-import { stackCreate, stackDelete, stackValidate } from "./stacks";
-import { formatWhatIfOperationResult } from "./whatif";
+import { stackCreate, stackDelete, stackValidate, stackWhatIf } from "./stacks";
+import {
+  deploymentWhatIfHasChanges,
+  formatWhatIfOperationResult,
+} from "./whatif";
+import {
+  formatDeploymentStacksWhatIfChange,
+  stackWhatIfHasChanges,
+} from "./stackWhatIf";
 import {
   logDiagnostics,
   validateFileScope,
@@ -108,6 +115,10 @@ export async function execute(
                 const formatted = formatWhatIfOperationResult(result, "ansii");
                 logger.logInfoRaw(formatted);
                 logDiagnostics(result.diagnostics ?? [], logger);
+                outputSetter.setOutput(
+                  "hasChanges",
+                  deploymentWhatIfHasChanges(result),
+                );
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));
@@ -149,6 +160,33 @@ export async function execute(
           }
           case "delete": {
             await stackDelete(config, logger);
+            break;
+          }
+          case "whatIf": {
+            await tryWithErrorHandling(
+              async () => {
+                const result = await stackWhatIf(config, files, logger);
+                const changes = result.properties?.changes ?? {
+                  resourceChanges: [],
+                  denySettingsChange: {},
+                };
+                const formatted = formatDeploymentStacksWhatIfChange(
+                  changes,
+                  "ansii",
+                );
+                logger.logInfoRaw(formatted);
+                logDiagnostics(result.properties?.diagnostics ?? [], logger);
+                outputSetter.setOutput(
+                  "hasChanges",
+                  stackWhatIfHasChanges(changes),
+                );
+              },
+              error => {
+                logger.logError(JSON.stringify(error, null, 2));
+                outputSetter.setFailed(errorMessages.whatIfFailed);
+              },
+              logger,
+            );
             break;
           }
         }

@@ -73,7 +73,7 @@ The inputs for this action provide flexibility and control for managing deployme
 | Name                                  | Description                                                                                                   | Allowed Values                                                                                                                                   | Required |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | `type`                                | Specifies the execution type, which can be either 'deployment' or 'deploymentStack'.                                                              | `deployment`, `deploymentStack`                                                                                                                  | Yes      |
-| `operation`                           | Specifies the operation to perform. For deployment, choose from 'create', 'validate', 'whatIf'. For deploymentStack, choose from 'create', 'delete', 'validate'. | deployment: `create`, `validate`, `whatIf` <br> deploymentStack: `create`, `delete`, `validate`                                                  | Yes      |
+| `operation`                           | Specifies the operation to perform. For deployment, choose from 'create', 'validate', 'whatIf'. For deploymentStack, choose from 'create', 'delete', 'validate', 'whatIf'. | deployment: `create`, `validate`, `whatIf` <br> deploymentStack: `create`, `delete`, `validate`, `whatIf`                                                  | Yes      |
 | `scope`                               | Specifies the scope of the deployment or deploymentStack. For deployment, choose from 'resourceGroup', 'subscription', 'managementGroup', 'tenant'. For deploymentStack, choose from 'resourceGroup', 'subscription', 'managementGroup'. | deployment: `tenant`, `managementGroup`, `subscription`, `resourceGroup` <br> deploymentStack: `managementGroup`, `subscription`,`resourceGroup` | Yes      |
 | `name`                                | Specifies the name of the deployment or deploymentStack.                                                      | Free-text                                                                                                                                        | No       |
 | `location`                            | Specifies the location of the deployment or deploymentStack. Must be provided if the 'scope' parameter is 'subscription', 'managementGroup' or 'tenant'. | Free-text                                                                                                                                        | No       |
@@ -136,6 +136,36 @@ These outputs can then be leveraged for:
 - Debugging deployment results.
 - Passing values dynamically to other steps or jobs.
 - Integrating deployment results into a CI/CD pipeline.
+
+**`hasChanges` Output**
+
+For the `whatIf` operation (supported for both `deployment` and `deploymentStack`), the action sets a `hasChanges` output to `true` or `false` depending on whether the what-if analysis detected any changes. This can be used to conditionally gate a subsequent `create` operation:
+
+```yaml
+- id: whatif
+  uses: azure/bicep-deploy@v2
+  with:
+    type: deploymentStack
+    operation: whatIf
+    name: Development
+    location: westus2
+    scope: subscription
+    subscription-id: 00000000-0000-0000-0000-000000000000
+    template-file: ./main.bicep
+    parameters-file: ./main.bicepparam
+
+- if: steps.whatif.outputs.hasChanges == 'true'
+  uses: azure/bicep-deploy@v2
+  with:
+    type: deploymentStack
+    operation: create
+    name: Development
+    location: westus2
+    scope: subscription
+    subscription-id: 00000000-0000-0000-0000-000000000000
+    template-file: ./main.bicep
+    parameters-file: ./main.bicepparam
+```
 
 ## Contributing
 
