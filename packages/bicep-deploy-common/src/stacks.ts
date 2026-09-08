@@ -8,10 +8,17 @@ import {
   defaultName,
   getStacksClient,
   getCreateOperationOptions,
+  getDeploymentStackResourceId,
   requireLocation,
 } from "./utils";
 
-import { DeploymentStack } from "@azure/arm-resourcesdeploymentstacks";
+import { DeploymentStack, DeploymentStacksWhatIfResult } from "@azure/arm-resourcesdeploymentstacks";
+
+// the retention interval for what-if results is required by the service, and must be between
+// 1 and 30 days. Since we only need the result for the lifetime of this operation, we use the
+// minimum allowed value.
+const whatIfRetentionInterval = "P1D";
+
 
 export async function stackCreate(
   config: DeploymentStackConfig,
