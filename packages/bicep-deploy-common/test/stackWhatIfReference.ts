@@ -1,28 +1,276 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-const colorTokenMap: Record<string, string> = {
-  "{Color.BLUE}": "<BLUE>",
-  "{Color.CYAN}": "<CYAN>",
-  "{Color.DARK_YELLOW}": "<YELLOW>",
-  "{Color.GREEN}": "<GREEN>",
-  "{Color.PURPLE}": "<MAGENTA>",
-  "{Color.RED}": "<RED>",
-  "{Color.RESET}": "<RESET>",
-};
+export const expectedStacksWhatIf1 = `Resource and property changes are indicated with these symbols:
+  <GREEN>+<RESET> Create              ! Unsupported
+  <MAGENTA>~<RESET> Modify              <RED>-<RESET> Delete
+  = NoChange            <BLUE>v<RESET> Detach
 
-function pythonExpectedToDebugTags(value: string): string {
-  for (const [token, replacement] of Object.entries(colorTokenMap)) {
-    value = value.replaceAll(token, replacement);
-  }
+<YELLOW>Changes to Stack /subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Resources/deploymentStacks/testStack_9ef16884f0dad7d0e5de3d3ec57:<RESET>
+<MAGENTA>~<RESET> DeploymentScope: <MAGENTA>"ThisIsBefore"<RESET> => <MAGENTA>"ThisIsAfter"<RESET>
+<MAGENTA>~<RESET> DenySettings.Mode: <MAGENTA>"None"<RESET> => <MAGENTA>"DenyDelete"<RESET>
+<MAGENTA>~<RESET> DenySettings.ApplyToChildScopes: <MAGENTA>"False"<RESET> => <MAGENTA>"True"<RESET>
+<MAGENTA>~<RESET> DenySettings.ExcludedPrincipals:
+  <GREEN>+<RESET> <GREEN>"004afc20-146e-4932-a8b5-3098461c46a5"<RESET>
+  <GREEN>+<RESET> <GREEN>"e6a513a0-b872-4355-82b9-47645fb30d3a"<RESET>
+<MAGENTA>~<RESET> DenySettings.ArrayOfMixed:
+  <MAGENTA>~<RESET> 0:
+    <MAGENTA>~<RESET> properties.something: <MAGENTA>"B4"<RESET> => <MAGENTA>"Now"<RESET>
+  <GREEN>+<RESET> 1:
+    <GREEN>+<RESET> <GREEN>"now"<RESET>
+  <RED>-<RESET> 2:
+    <RED>-<RESET> <RED>"iWasDeleted"<RESET>
 
-  return value.replaceAll("{{", "{").replaceAll("}}", "}");
-}
+<YELLOW>Changes to Managed Resources:<RESET>
 
-export const expectedStacksWhatIf1 = pythonExpectedToDebugTags(
-  'Resource and property changes are indicated with these symbols:\n  {Color.GREEN}+{Color.RESET} Create              ! Unsupported\n  {Color.PURPLE}~{Color.RESET} Modify              {Color.RED}-{Color.RESET} Delete\n  = NoChange            {Color.BLUE}v{Color.RESET} Detach\n\n{Color.DARK_YELLOW}Changes to Stack /subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Resources/deploymentStacks/testStack_9ef16884f0dad7d0e5de3d3ec57:{Color.RESET}\n{Color.PURPLE}~{Color.RESET} DeploymentScope: {Color.PURPLE}"ThisIsBefore"{Color.RESET} => {Color.PURPLE}"ThisIsAfter"{Color.RESET}\n{Color.PURPLE}~{Color.RESET} DenySettings.Mode: {Color.PURPLE}"None"{Color.RESET} => {Color.PURPLE}"DenyDelete"{Color.RESET}\n{Color.PURPLE}~{Color.RESET} DenySettings.ApplyToChildScopes: {Color.PURPLE}"False"{Color.RESET} => {Color.PURPLE}"True"{Color.RESET}\n{Color.PURPLE}~{Color.RESET} DenySettings.ExcludedPrincipals:\n  {Color.GREEN}+{Color.RESET} {Color.GREEN}"004afc20-146e-4932-a8b5-3098461c46a5"{Color.RESET}\n  {Color.GREEN}+{Color.RESET} {Color.GREEN}"e6a513a0-b872-4355-82b9-47645fb30d3a"{Color.RESET}\n{Color.PURPLE}~{Color.RESET} DenySettings.ArrayOfMixed:\n  {Color.PURPLE}~{Color.RESET} 0:\n    {Color.PURPLE}~{Color.RESET} properties.something: {Color.PURPLE}"B4"{Color.RESET} => {Color.PURPLE}"Now"{Color.RESET}\n  {Color.GREEN}+{Color.RESET} 1:\n    {Color.GREEN}+{Color.RESET} {Color.GREEN}"now"{Color.RESET}\n  {Color.RED}-{Color.RESET} 2:\n    {Color.RED}-{Color.RESET} {Color.RED}"iWasDeleted"{Color.RESET}\n\n{Color.DARK_YELLOW}Changes to Managed Resources:{Color.RESET}\n\nAzure\n  {Color.PURPLE}~{Color.RESET} {Color.PURPLE}/subscriptions/648e207a-a8cf-4a20-a557-59ee31ea46a3/resourceGroups/WhatIfTestNew/providers/Microsoft.Web/sites/web-gwfjnc7423h2a/providers/Microsoft.Insights/diagnosticSettings/diag-web-gwfjnc7423h2a [2021-05-01-preview]{Color.RESET}\n    = Management Status: "managed"\n    = Deny Status: "none"\n    {Color.PURPLE}~{Color.RESET} properties.nestedArrays:\n      {Color.GREEN}+{Color.RESET} 0:\n          {Color.GREEN}[]{Color.RESET}\n      {Color.GREEN}+{Color.RESET} 1:\n          {Color.GREEN}[{Color.RESET}\n          {Color.GREEN}  "1",{Color.RESET}\n          {Color.GREEN}  "2"{Color.RESET}\n          {Color.GREEN}]{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.logs:\n      {Color.PURPLE}~{Color.RESET} 0:\n        {Color.PURPLE}~{Color.RESET} enabled: {Color.PURPLE}True{Color.RESET} => {Color.PURPLE}False{Color.RESET}\n        {Color.RED}-{Color.RESET} retentionPolicy.days: {Color.RED}0{Color.RESET}\n      {Color.PURPLE}~{Color.RESET} 1:\n        {Color.RED}-{Color.RESET} retentionPolicy.days: {Color.RED}0{Color.RESET}\n      {Color.PURPLE}~{Color.RESET} 2:\n        {Color.PURPLE}~{Color.RESET} category: {Color.PURPLE}"AppServiceAppLogs"{Color.RESET} => {Color.PURPLE}"DanteFunLogs"{Color.RESET}\n        {Color.PURPLE}~{Color.RESET} enabled: {Color.PURPLE}False{Color.RESET} => {Color.PURPLE}True{Color.RESET}\n        {Color.RED}-{Color.RESET} retentionPolicy.days: {Color.RED}0{Color.RESET}\n      {Color.RED}-{Color.RESET} 3:\n          {Color.RED}{{{Color.RESET}\n          {Color.RED}  "category": "AppServiceAuditLogs",{Color.RESET}\n          {Color.RED}  "enabled": false,{Color.RESET}\n          {Color.RED}  "retentionPolicy": {{{Color.RESET}\n          {Color.RED}    "days": 0,{Color.RESET}\n          {Color.RED}    "enabled": false{Color.RESET}\n          {Color.RED}  }}{Color.RESET}\n          {Color.RED}}}{Color.RESET}\n      {Color.RED}-{Color.RESET} 4:\n          {Color.RED}{{{Color.RESET}\n          {Color.RED}  "category": "AppServiceIPSecAuditLogs",{Color.RESET}\n          {Color.RED}  "enabled": false,{Color.RESET}\n          {Color.RED}  "retentionPolicy": {{{Color.RESET}\n          {Color.RED}    "days": 0,{Color.RESET}\n          {Color.RED}    "enabled": false{Color.RESET}\n          {Color.RED}  }}{Color.RESET}\n          {Color.RED}}}{Color.RESET}\n      {Color.RED}-{Color.RESET} 5:\n          {Color.RED}{{{Color.RESET}\n          {Color.RED}  "category": "AppServicePlatformLogs",{Color.RESET}\n          {Color.RED}  "enabled": false,{Color.RESET}\n          {Color.RED}  "retentionPolicy": {{{Color.RESET}\n          {Color.RED}    "days": 0,{Color.RESET}\n          {Color.RED}    "enabled": false{Color.RESET}\n          {Color.RED}  }}{Color.RESET}\n          {Color.RED}}}{Color.RESET}\n      {Color.RED}-{Color.RESET} 6:\n          {Color.RED}{{{Color.RESET}\n          {Color.RED}  "category": "AppServiceAuthenticationLogs",{Color.RESET}\n          {Color.RED}  "enabled": false,{Color.RESET}\n          {Color.RED}  "retentionPolicy": {{{Color.RESET}\n          {Color.RED}    "days": 0,{Color.RESET}\n          {Color.RED}    "enabled": false{Color.RESET}\n          {Color.RED}  }}{Color.RESET}\n          {Color.RED}}}{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.metrics:\n      {Color.PURPLE}~{Color.RESET} 0:\n        {Color.PURPLE}~{Color.RESET} category: {Color.PURPLE}"AllMetrics"{Color.RESET} => {Color.PURPLE}"DanteMetrics"{Color.RESET}\n        {Color.RED}-{Color.RESET} retentionPolicy.days: {Color.RED}0{Color.RESET}\n      {Color.GREEN}+{Color.RESET} 1:\n          {Color.GREEN}{{{Color.RESET}\n          {Color.GREEN}  "category": "AllMetrics",{Color.RESET}\n          {Color.GREEN}  "enabled": false,{Color.RESET}\n          {Color.GREEN}  "retentionPolicy": {{{Color.RESET}\n          {Color.GREEN}    "enabled": false{Color.RESET}\n          {Color.GREEN}  }}{Color.RESET}\n          {Color.GREEN}}}{Color.RESET}\n  {Color.PURPLE}~{Color.RESET} {Color.PURPLE}/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testA/resourceA [2021-05-01]{Color.RESET}\n    = Management Status: "Managed"\n    {Color.PURPLE}~{Color.RESET} Deny Status: {Color.PURPLE}"None"{Color.RESET} => {Color.PURPLE}"DenyDelete"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.properties1: {Color.PURPLE}"resourceA-before"{Color.RESET} => {Color.PURPLE}"resourceA-after"{Color.RESET}\n  = /subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testB/resourceB [2021-05-01]\n    = Management Status: "Managed"\n    {Color.PURPLE}~{Color.RESET} Deny Status: {Color.PURPLE}"None"{Color.RESET} => {Color.PURPLE}"DenyDelete"{Color.RESET}\n  {Color.GREEN}+{Color.RESET} {Color.GREEN}/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testD/resourceD [2021-05-01]{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"NotManaged"{Color.RESET} => {Color.PURPLE}"Managed"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Deny Status: {Color.PURPLE}"None"{Color.RESET} => {Color.PURPLE}"DenyDelete"{Color.RESET}\n\n  >> {Color.PURPLE}Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges){Color.RESET}\n  {Color.CYAN}?{Color.RESET}{Color.PURPLE}~{Color.RESET} {Color.CYAN}[Potential] {Color.RESET}{Color.PURPLE}/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testC/resourceC [2021-05-01]{Color.RESET}\n    = Management Status: "Managed"\n    {Color.PURPLE}~{Color.RESET} Deny Status: {Color.PURPLE}"None"{Color.RESET} => {Color.PURPLE}"DenyDelete"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.properties1: {Color.PURPLE}"resourceC-before"{Color.RESET} => {Color.PURPLE}"resourceC-potential-after"{Color.RESET}\n  {Color.CYAN}?{Color.RESET}{Color.RED}-{Color.RESET} {Color.CYAN}[Potential] {Color.RESET}{Color.RED}/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testC/resourceC{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"Managed"{Color.RESET} => {Color.PURPLE}"NotManaged"{Color.RESET}\n    = Deny Status: "None"\n\nContoso@2.0.0\n  {Color.PURPLE}~{Color.RESET} {Color.PURPLE}Contoso/example name="abcResource" [v1]{Color.RESET}\n    = Management Status: "Managed"\n    = Deny Status: "NotSupported"\n    {Color.PURPLE}~{Color.RESET} properties.properties1: {Color.PURPLE}"resourceA-before"{Color.RESET} => {Color.PURPLE}"resourceA-after"{Color.RESET}\n    {Color.GREEN}+{Color.RESET} properties.someConfig: {Color.GREEN}{{{Color.RESET}\n      {Color.GREEN}  "type": "object",{Color.RESET}\n      {Color.GREEN}  "value": {{{Color.RESET}\n      {Color.GREEN}    "enabled": true,{Color.RESET}\n      {Color.GREEN}    "values": [{Color.RESET}\n      {Color.GREEN}      1,{Color.RESET}\n      {Color.GREEN}      2,{Color.RESET}\n      {Color.GREEN}      3{Color.RESET}\n      {Color.GREEN}    ]{Color.RESET}\n      {Color.GREEN}  }}{Color.RESET}\n      {Color.GREEN}}}{Color.RESET}\n    {Color.RED}-{Color.RESET} properties.some.deeply.nested.array: {Color.RED}[{Color.RESET}\n      {Color.RED}  "one",{Color.RESET}\n      {Color.RED}  "two"{Color.RESET}\n      {Color.RED}]{Color.RESET}\n  {Color.RED}-{Color.RESET} {Color.RED}Contoso/example name="defResource"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"Managed"{Color.RESET} => {Color.PURPLE}"Unmanaged"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Deny Status: {Color.PURPLE}"NotSupported"{Color.RESET} => {Color.PURPLE}"None"{Color.RESET}\n\n  >> {Color.PURPLE}Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges){Color.RESET}\n  {Color.CYAN}?{Color.RESET}! {Color.CYAN}[Potential] {Color.RESET}Contoso/noPreview \n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}null{Color.RESET} => {Color.PURPLE}"Managed"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Deny Status: {Color.PURPLE}null{Color.RESET} => {Color.PURPLE}"NotSupported"{Color.RESET}\n\nKubernetes@2.0.0 namespace="myNs", kubeconfig=<Secret \'mySecret\' in key vault \'/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.KeyVault/vaults/myKeyVault\'>\n  {Color.GREEN}+{Color.RESET} {Color.GREEN}app/Deployment name="kubeAppDeployment" [v1]{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}null{Color.RESET} => {Color.PURPLE}"Managed"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Deny Status: {Color.PURPLE}null{Color.RESET} => {Color.PURPLE}"NotApplicable"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.property1: {Color.PURPLE}"kubeAppDeployment-before"{Color.RESET} => {Color.PURPLE}"kubeAppDeployment-after"{Color.RESET}\n\n{Color.RED}Deleting - {Color.RESET}Resources Marked for Deletion 2 total:\n\nAzure\n\n  >> {Color.RED}Potential Deletions 1 total (Learn more at https://aka.ms/whatIfPotentialChanges){Color.RESET}\n  {Color.CYAN}?{Color.RESET}{Color.RED}-{Color.RESET} {Color.CYAN}[Potential] {Color.RESET}{Color.RED}/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testC/resourceC{Color.RESET}\n\nContoso@2.0.0\n  {Color.RED}-{Color.RESET} {Color.RED}Contoso/example name="defResource"{Color.RESET}\n\nDiagnostics (5):\n\nINFO: [InfoCode]\n  Message: InfoMessage\n\n{Color.DARK_YELLOW}WARNING: [Abc]{Color.RESET}\n  {Color.DARK_YELLOW}Message: Xyz{Color.RESET}\n\n{Color.DARK_YELLOW}WARNING: [NoSupportForExtensibleResources]{Color.RESET}\n  {Color.DARK_YELLOW}Message: Extensible resources are currently not supported{Color.RESET}\n\n{Color.RED}ERROR: [ErrorCode]{Color.RESET}\n  {Color.RED}Message: ErrorMessage{Color.RESET}\n\n{Color.RED}ERROR: [ErrorCode]{Color.RESET}\n  {Color.RED}Message: This is an error diagnostic with a target.{Color.RESET}\n  {Color.RED}Target: /subscriptions/d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/tests/testResource{Color.RESET}\n\n',
-);
+Azure
+  <MAGENTA>~<RESET> <MAGENTA>/subscriptions/648e207a-a8cf-4a20-a557-59ee31ea46a3/resourceGroups/WhatIfTestNew/providers/Microsoft.Web/sites/web-gwfjnc7423h2a/providers/Microsoft.Insights/diagnosticSettings/diag-web-gwfjnc7423h2a [2021-05-01-preview]<RESET>
+    = Management Status: "managed"
+    = Deny Status: "none"
+    <MAGENTA>~<RESET> properties.nestedArrays:
+      <GREEN>+<RESET> 0:
+          <GREEN>[]<RESET>
+      <GREEN>+<RESET> 1:
+          <GREEN>[<RESET>
+          <GREEN>  "1",<RESET>
+          <GREEN>  "2"<RESET>
+          <GREEN>]<RESET>
+    <MAGENTA>~<RESET> properties.logs:
+      <MAGENTA>~<RESET> 0:
+        <MAGENTA>~<RESET> enabled: <MAGENTA>True<RESET> => <MAGENTA>False<RESET>
+        <RED>-<RESET> retentionPolicy.days: <RED>0<RESET>
+      <MAGENTA>~<RESET> 1:
+        <RED>-<RESET> retentionPolicy.days: <RED>0<RESET>
+      <MAGENTA>~<RESET> 2:
+        <MAGENTA>~<RESET> category: <MAGENTA>"AppServiceAppLogs"<RESET> => <MAGENTA>"DanteFunLogs"<RESET>
+        <MAGENTA>~<RESET> enabled: <MAGENTA>False<RESET> => <MAGENTA>True<RESET>
+        <RED>-<RESET> retentionPolicy.days: <RED>0<RESET>
+      <RED>-<RESET> 3:
+          <RED>{<RESET>
+          <RED>  "category": "AppServiceAuditLogs",<RESET>
+          <RED>  "enabled": false,<RESET>
+          <RED>  "retentionPolicy": {<RESET>
+          <RED>    "days": 0,<RESET>
+          <RED>    "enabled": false<RESET>
+          <RED>  }<RESET>
+          <RED>}<RESET>
+      <RED>-<RESET> 4:
+          <RED>{<RESET>
+          <RED>  "category": "AppServiceIPSecAuditLogs",<RESET>
+          <RED>  "enabled": false,<RESET>
+          <RED>  "retentionPolicy": {<RESET>
+          <RED>    "days": 0,<RESET>
+          <RED>    "enabled": false<RESET>
+          <RED>  }<RESET>
+          <RED>}<RESET>
+      <RED>-<RESET> 5:
+          <RED>{<RESET>
+          <RED>  "category": "AppServicePlatformLogs",<RESET>
+          <RED>  "enabled": false,<RESET>
+          <RED>  "retentionPolicy": {<RESET>
+          <RED>    "days": 0,<RESET>
+          <RED>    "enabled": false<RESET>
+          <RED>  }<RESET>
+          <RED>}<RESET>
+      <RED>-<RESET> 6:
+          <RED>{<RESET>
+          <RED>  "category": "AppServiceAuthenticationLogs",<RESET>
+          <RED>  "enabled": false,<RESET>
+          <RED>  "retentionPolicy": {<RESET>
+          <RED>    "days": 0,<RESET>
+          <RED>    "enabled": false<RESET>
+          <RED>  }<RESET>
+          <RED>}<RESET>
+    <MAGENTA>~<RESET> properties.metrics:
+      <MAGENTA>~<RESET> 0:
+        <MAGENTA>~<RESET> category: <MAGENTA>"AllMetrics"<RESET> => <MAGENTA>"DanteMetrics"<RESET>
+        <RED>-<RESET> retentionPolicy.days: <RED>0<RESET>
+      <GREEN>+<RESET> 1:
+          <GREEN>{<RESET>
+          <GREEN>  "category": "AllMetrics",<RESET>
+          <GREEN>  "enabled": false,<RESET>
+          <GREEN>  "retentionPolicy": {<RESET>
+          <GREEN>    "enabled": false<RESET>
+          <GREEN>  }<RESET>
+          <GREEN>}<RESET>
+  <MAGENTA>~<RESET> <MAGENTA>/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testA/resourceA [2021-05-01]<RESET>
+    = Management Status: "Managed"
+    <MAGENTA>~<RESET> Deny Status: <MAGENTA>"None"<RESET> => <MAGENTA>"DenyDelete"<RESET>
+    <MAGENTA>~<RESET> properties.properties1: <MAGENTA>"resourceA-before"<RESET> => <MAGENTA>"resourceA-after"<RESET>
+  = /subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testB/resourceB [2021-05-01]
+    = Management Status: "Managed"
+    <MAGENTA>~<RESET> Deny Status: <MAGENTA>"None"<RESET> => <MAGENTA>"DenyDelete"<RESET>
+  <GREEN>+<RESET> <GREEN>/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testD/resourceD [2021-05-01]<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"NotManaged"<RESET> => <MAGENTA>"Managed"<RESET>
+    <MAGENTA>~<RESET> Deny Status: <MAGENTA>"None"<RESET> => <MAGENTA>"DenyDelete"<RESET>
 
-export const expectedStacksWhatIf2 = pythonExpectedToDebugTags(
-  'Resource and property changes are indicated with these symbols:\n  {Color.GREEN}+{Color.RESET} Create              ! Unsupported\n  {Color.PURPLE}~{Color.RESET} Modify              {Color.RED}-{Color.RESET} Delete\n  = NoChange            {Color.BLUE}v{Color.RESET} Detach\n\n{Color.DARK_YELLOW}Changes to Managed Resources:{Color.RESET}\n\nAzure\n  {Color.BLUE}v{Color.RESET} {Color.BLUE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Network/networkSecurityGroups/wv-nsg-mjwo5pow6lmvm{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"managed"{Color.RESET} => {Color.PURPLE}"notManaged"{Color.RESET}\n    = Deny Status: "none"\n  {Color.BLUE}v{Color.RESET} {Color.BLUE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Network/routeTables/wv-routes-mjwo5pow6lmvm{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"managed"{Color.RESET} => {Color.PURPLE}"notManaged"{Color.RESET}\n    = Deny Status: "none"\n  {Color.BLUE}v{Color.RESET} {Color.BLUE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Network/virtualNetworks/wv-vnet-mjwo5pow6lmvm{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"managed"{Color.RESET} => {Color.PURPLE}"notManaged"{Color.RESET}\n    = Deny Status: "none"\n  {Color.PURPLE}~{Color.RESET} {Color.PURPLE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Resources/templateSpecs/wv-spec-mjwo5pow6lmvm [2022-02-01]{Color.RESET}\n    = Management Status: "managed"\n    = Deny Status: "none"\n    {Color.PURPLE}~{Color.RESET} properties.description: {Color.PURPLE}"Baseline description"{Color.RESET} => {Color.PURPLE}"Updated description with nested content changes"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.displayName: {Color.PURPLE}"WhatIf visual validation"{Color.RESET} => {Color.PURPLE}"WhatIf visual validation updated"{Color.RESET}\n  {Color.PURPLE}~{Color.RESET} {Color.PURPLE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Resources/templateSpecs/wv-spec-mjwo5pow6lmvm/versions/v1 [2022-02-01]{Color.RESET}\n    = Management Status: "managed"\n    = Deny Status: "none"\n    {Color.PURPLE}~{Color.RESET} properties.mainTemplate.contentVersion: {Color.PURPLE}"1.0.0.0"{Color.RESET} => {Color.PURPLE}"2.0.0.0"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.mainTemplate.outputs.state.value: {Color.PURPLE}"before"{Color.RESET} => {Color.PURPLE}"after"{Color.RESET}\n    {Color.GREEN}+{Color.RESET} properties.mainTemplate.outputs.nested: {Color.GREEN}{{{Color.RESET}\n      {Color.GREEN}  "type": "object",{Color.RESET}\n      {Color.GREEN}  "value": {{{Color.RESET}\n      {Color.GREEN}    "enabled": true,{Color.RESET}\n      {Color.GREEN}    "values": [{Color.RESET}\n      {Color.GREEN}      1,{Color.RESET}\n      {Color.GREEN}      2,{Color.RESET}\n      {Color.GREEN}      3{Color.RESET}\n      {Color.GREEN}    ]{Color.RESET}\n      {Color.GREEN}  }}{Color.RESET}\n      {Color.GREEN}}}{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} properties.mainTemplate.variables.nestedObject.level1.level2: {Color.PURPLE}"before"{Color.RESET} => {Color.PURPLE}"after"{Color.RESET}\n    {Color.GREEN}+{Color.RESET} properties.mainTemplate.variables.nestedObject.level1.addedArray: {Color.GREEN}[{Color.RESET}\n      {Color.GREEN}  "one",{Color.RESET}\n      {Color.GREEN}  "two"{Color.RESET}\n      {Color.GREEN}]{Color.RESET}\n    {Color.GREEN}+{Color.RESET} properties.mainTemplate.variables.nestedObject.level1.addedBoolean: {Color.GREEN}True{Color.RESET}\n    {Color.GREEN}+{Color.RESET} properties.mainTemplate.parameters: {Color.GREEN}{{{Color.RESET}\n      {Color.GREEN}  "message": {{{Color.RESET}\n      {Color.GREEN}    "defaultValue": "hello",{Color.RESET}\n      {Color.GREEN}    "type": "string"{Color.RESET}\n      {Color.GREEN}  }}{Color.RESET}\n      {Color.GREEN}}}{Color.RESET}\n  {Color.GREEN}+{Color.RESET} {Color.GREEN}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvcreatemjwo5pow6lmvm [2023-05-01]{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"notManaged"{Color.RESET} => {Color.PURPLE}"managed"{Color.RESET}\n    = Deny Status: "none"\n  {Color.PURPLE}~{Color.RESET} {Color.PURPLE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvmodmjwo5pow6lmvm [2023-05-01]{Color.RESET}\n    = Management Status: "managed"\n    = Deny Status: "none"\n    {Color.PURPLE}~{Color.RESET} sku.name: {Color.PURPLE}"Standard_LRS"{Color.RESET} => {Color.PURPLE}"Standard_GRS"{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} tags.modifiedTag: {Color.PURPLE}"before"{Color.RESET} => {Color.PURPLE}"after"{Color.RESET}\n    {Color.RED}-{Color.RESET} tags.oldTag: {Color.RED}"deleted-in-updated-template"{Color.RESET}\n    {Color.GREEN}+{Color.RESET} tags.newTag: {Color.GREEN}"created-in-updated-template"{Color.RESET}\n  {Color.BLUE}v{Color.RESET} {Color.BLUE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvremovemjwo5pow6lmvm{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"managed"{Color.RESET} => {Color.PURPLE}"notManaged"{Color.RESET}\n    = Deny Status: "none"\n  = /subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvsamemjwo5pow6lmvm [2023-05-01]\n    = Management Status: "managed"\n    = Deny Status: "none"\n  {Color.GREEN}+{Color.RESET} {Color.GREEN}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/bar [1999-12-31]{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"notManaged"{Color.RESET} => {Color.PURPLE}"managed"{Color.RESET}\n    = Deny Status: "none"\n  {Color.GREEN}+{Color.RESET} {Color.GREEN}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/foo [1999-12-31]{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"notManaged"{Color.RESET} => {Color.PURPLE}"managed"{Color.RESET}\n    = Deny Status: "none"\n\n  >> {Color.PURPLE}Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges){Color.RESET}\n  {Color.CYAN}?{Color.RESET}{Color.GREEN}+{Color.RESET} {Color.CYAN}[Potential] {Color.RESET}{Color.GREEN}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotcreatemjwo5pow6lmvm [2023-05-01]{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"notManaged"{Color.RESET} => {Color.PURPLE}"managed"{Color.RESET}\n    = Deny Status: "none"\n  {Color.CYAN}?{Color.RESET}{Color.PURPLE}~{Color.RESET} {Color.CYAN}[Potential] {Color.RESET}{Color.PURPLE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotremovemjwo5pow6lmvm [2023-05-01]{Color.RESET}\n    = Management Status: "managed"\n    = Deny Status: "none"\n    {Color.GREEN}+{Color.RESET} condition: {Color.GREEN}"[greater(int(utcNow(\'%f\')), 4)]"{Color.RESET}\n  {Color.CYAN}?{Color.RESET}{Color.BLUE}v{Color.RESET} {Color.CYAN}[Potential] {Color.RESET}{Color.BLUE}/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotremovemjwo5pow6lmvm{Color.RESET}\n    {Color.PURPLE}~{Color.RESET} Management Status: {Color.PURPLE}"managed"{Color.RESET} => {Color.PURPLE}"notManaged"{Color.RESET}\n    = Deny Status: "none"\n\nDiagnostics (2):\n\n{Color.DARK_YELLOW}WARNING: [ResourceDeployedMultipleTimes]{Color.RESET}\n  {Color.DARK_YELLOW}Message: The resource \'/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/bar\' is defined multiple times in this deployment. Only the final state of the resource is shown.{Color.RESET}\n  {Color.DARK_YELLOW}Target: /subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/bar{Color.RESET}\n\n{Color.DARK_YELLOW}WARNING: [ResourceDeployedMultipleTimes]{Color.RESET}\n  {Color.DARK_YELLOW}Message: The resource \'/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/foo\' is defined multiple times in this deployment. Only the final state of the resource is shown.{Color.RESET}\n  {Color.DARK_YELLOW}Target: /subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/foo{Color.RESET}\n\n',
-);
+  >> <MAGENTA>Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges)<RESET>
+  <CYAN>?<RESET><MAGENTA>~<RESET> <CYAN>[Potential] <RESET><MAGENTA>/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testC/resourceC [2021-05-01]<RESET>
+    = Management Status: "Managed"
+    <MAGENTA>~<RESET> Deny Status: <MAGENTA>"None"<RESET> => <MAGENTA>"DenyDelete"<RESET>
+    <MAGENTA>~<RESET> properties.properties1: <MAGENTA>"resourceC-before"<RESET> => <MAGENTA>"resourceC-potential-after"<RESET>
+  <CYAN>?<RESET><RED>-<RESET> <CYAN>[Potential] <RESET><RED>/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testC/resourceC<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"Managed"<RESET> => <MAGENTA>"NotManaged"<RESET>
+    = Deny Status: "None"
+
+Contoso@2.0.0
+  <MAGENTA>~<RESET> <MAGENTA>Contoso/example name="abcResource" [v1]<RESET>
+    = Management Status: "Managed"
+    = Deny Status: "NotSupported"
+    <MAGENTA>~<RESET> properties.properties1: <MAGENTA>"resourceA-before"<RESET> => <MAGENTA>"resourceA-after"<RESET>
+    <GREEN>+<RESET> properties.someConfig: <GREEN>{<RESET>
+      <GREEN>  "type": "object",<RESET>
+      <GREEN>  "value": {<RESET>
+      <GREEN>    "enabled": true,<RESET>
+      <GREEN>    "values": [<RESET>
+      <GREEN>      1,<RESET>
+      <GREEN>      2,<RESET>
+      <GREEN>      3<RESET>
+      <GREEN>    ]<RESET>
+      <GREEN>  }<RESET>
+      <GREEN>}<RESET>
+    <RED>-<RESET> properties.some.deeply.nested.array: <RED>[<RESET>
+      <RED>  "one",<RESET>
+      <RED>  "two"<RESET>
+      <RED>]<RESET>
+  <RED>-<RESET> <RED>Contoso/example name="defResource"<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"Managed"<RESET> => <MAGENTA>"Unmanaged"<RESET>
+    <MAGENTA>~<RESET> Deny Status: <MAGENTA>"NotSupported"<RESET> => <MAGENTA>"None"<RESET>
+
+  >> <MAGENTA>Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges)<RESET>
+  <CYAN>?<RESET>! <CYAN>[Potential] <RESET>Contoso/noPreview 
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>null<RESET> => <MAGENTA>"Managed"<RESET>
+    <MAGENTA>~<RESET> Deny Status: <MAGENTA>null<RESET> => <MAGENTA>"NotSupported"<RESET>
+
+Kubernetes@2.0.0 namespace="myNs", kubeconfig=<Secret 'mySecret' in key vault '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/myResourceGroup/providers/Microsoft.KeyVault/vaults/myKeyVault'>
+  <GREEN>+<RESET> <GREEN>app/Deployment name="kubeAppDeployment" [v1]<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>null<RESET> => <MAGENTA>"Managed"<RESET>
+    <MAGENTA>~<RESET> Deny Status: <MAGENTA>null<RESET> => <MAGENTA>"NotApplicable"<RESET>
+    <MAGENTA>~<RESET> properties.property1: <MAGENTA>"kubeAppDeployment-before"<RESET> => <MAGENTA>"kubeAppDeployment-after"<RESET>
+
+<RED>Deleting - <RESET>Resources Marked for Deletion 2 total:
+
+Azure
+
+  >> <RED>Potential Deletions 1 total (Learn more at https://aka.ms/whatIfPotentialChanges)<RESET>
+  <CYAN>?<RESET><RED>-<RESET> <CYAN>[Potential] <RESET><RED>/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testC/resourceC<RESET>
+
+Contoso@2.0.0
+  <RED>-<RESET> <RED>Contoso/example name="defResource"<RESET>
+
+Diagnostics (5):
+
+INFO: [InfoCode]
+  Message: InfoMessage
+
+<YELLOW>WARNING: [Abc]<RESET>
+  <YELLOW>Message: Xyz<RESET>
+
+<YELLOW>WARNING: [NoSupportForExtensibleResources]<RESET>
+  <YELLOW>Message: Extensible resources are currently not supported<RESET>
+
+<RED>ERROR: [ErrorCode]<RESET>
+  <RED>Message: ErrorMessage<RESET>
+
+<RED>ERROR: [ErrorCode]<RESET>
+  <RED>Message: This is an error diagnostic with a target.<RESET>
+  <RED>Target: /subscriptions/d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/tests/testResource<RESET>
+
+`;
+
+export const expectedStacksWhatIf2 = `Resource and property changes are indicated with these symbols:
+  <GREEN>+<RESET> Create              ! Unsupported
+  <MAGENTA>~<RESET> Modify              <RED>-<RESET> Delete
+  = NoChange            <BLUE>v<RESET> Detach
+
+<YELLOW>Changes to Managed Resources:<RESET>
+
+Azure
+  <BLUE>v<RESET> <BLUE>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Network/networkSecurityGroups/wv-nsg-mjwo5pow6lmvm<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"managed"<RESET> => <MAGENTA>"notManaged"<RESET>
+    = Deny Status: "none"
+  <BLUE>v<RESET> <BLUE>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Network/routeTables/wv-routes-mjwo5pow6lmvm<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"managed"<RESET> => <MAGENTA>"notManaged"<RESET>
+    = Deny Status: "none"
+  <BLUE>v<RESET> <BLUE>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Network/virtualNetworks/wv-vnet-mjwo5pow6lmvm<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"managed"<RESET> => <MAGENTA>"notManaged"<RESET>
+    = Deny Status: "none"
+  <MAGENTA>~<RESET> <MAGENTA>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Resources/templateSpecs/wv-spec-mjwo5pow6lmvm [2022-02-01]<RESET>
+    = Management Status: "managed"
+    = Deny Status: "none"
+    <MAGENTA>~<RESET> properties.description: <MAGENTA>"Baseline description"<RESET> => <MAGENTA>"Updated description with nested content changes"<RESET>
+    <MAGENTA>~<RESET> properties.displayName: <MAGENTA>"WhatIf visual validation"<RESET> => <MAGENTA>"WhatIf visual validation updated"<RESET>
+  <MAGENTA>~<RESET> <MAGENTA>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Resources/templateSpecs/wv-spec-mjwo5pow6lmvm/versions/v1 [2022-02-01]<RESET>
+    = Management Status: "managed"
+    = Deny Status: "none"
+    <MAGENTA>~<RESET> properties.mainTemplate.contentVersion: <MAGENTA>"1.0.0.0"<RESET> => <MAGENTA>"2.0.0.0"<RESET>
+    <MAGENTA>~<RESET> properties.mainTemplate.outputs.state.value: <MAGENTA>"before"<RESET> => <MAGENTA>"after"<RESET>
+    <GREEN>+<RESET> properties.mainTemplate.outputs.nested: <GREEN>{<RESET>
+      <GREEN>  "type": "object",<RESET>
+      <GREEN>  "value": {<RESET>
+      <GREEN>    "enabled": true,<RESET>
+      <GREEN>    "values": [<RESET>
+      <GREEN>      1,<RESET>
+      <GREEN>      2,<RESET>
+      <GREEN>      3<RESET>
+      <GREEN>    ]<RESET>
+      <GREEN>  }<RESET>
+      <GREEN>}<RESET>
+    <MAGENTA>~<RESET> properties.mainTemplate.variables.nestedObject.level1.level2: <MAGENTA>"before"<RESET> => <MAGENTA>"after"<RESET>
+    <GREEN>+<RESET> properties.mainTemplate.variables.nestedObject.level1.addedArray: <GREEN>[<RESET>
+      <GREEN>  "one",<RESET>
+      <GREEN>  "two"<RESET>
+      <GREEN>]<RESET>
+    <GREEN>+<RESET> properties.mainTemplate.variables.nestedObject.level1.addedBoolean: <GREEN>True<RESET>
+    <GREEN>+<RESET> properties.mainTemplate.parameters: <GREEN>{<RESET>
+      <GREEN>  "message": {<RESET>
+      <GREEN>    "defaultValue": "hello",<RESET>
+      <GREEN>    "type": "string"<RESET>
+      <GREEN>  }<RESET>
+      <GREEN>}<RESET>
+  <GREEN>+<RESET> <GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvcreatemjwo5pow6lmvm [2023-05-01]<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
+    = Deny Status: "none"
+  <MAGENTA>~<RESET> <MAGENTA>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvmodmjwo5pow6lmvm [2023-05-01]<RESET>
+    = Management Status: "managed"
+    = Deny Status: "none"
+    <MAGENTA>~<RESET> sku.name: <MAGENTA>"Standard_LRS"<RESET> => <MAGENTA>"Standard_GRS"<RESET>
+    <MAGENTA>~<RESET> tags.modifiedTag: <MAGENTA>"before"<RESET> => <MAGENTA>"after"<RESET>
+    <RED>-<RESET> tags.oldTag: <RED>"deleted-in-updated-template"<RESET>
+    <GREEN>+<RESET> tags.newTag: <GREEN>"created-in-updated-template"<RESET>
+  <BLUE>v<RESET> <BLUE>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvremovemjwo5pow6lmvm<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"managed"<RESET> => <MAGENTA>"notManaged"<RESET>
+    = Deny Status: "none"
+  = /subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvsamemjwo5pow6lmvm [2023-05-01]
+    = Management Status: "managed"
+    = Deny Status: "none"
+  <GREEN>+<RESET> <GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/bar [1999-12-31]<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
+    = Deny Status: "none"
+  <GREEN>+<RESET> <GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/foo [1999-12-31]<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
+    = Deny Status: "none"
+
+  >> <MAGENTA>Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges)<RESET>
+  <CYAN>?<RESET><GREEN>+<RESET> <CYAN>[Potential] <RESET><GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotcreatemjwo5pow6lmvm [2023-05-01]<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
+    = Deny Status: "none"
+  <CYAN>?<RESET><MAGENTA>~<RESET> <CYAN>[Potential] <RESET><MAGENTA>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotremovemjwo5pow6lmvm [2023-05-01]<RESET>
+    = Management Status: "managed"
+    = Deny Status: "none"
+    <GREEN>+<RESET> condition: <GREEN>"[greater(int(utcNow('%f')), 4)]"<RESET>
+  <CYAN>?<RESET><BLUE>v<RESET> <CYAN>[Potential] <RESET><BLUE>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotremovemjwo5pow6lmvm<RESET>
+    <MAGENTA>~<RESET> Management Status: <MAGENTA>"managed"<RESET> => <MAGENTA>"notManaged"<RESET>
+    = Deny Status: "none"
+
+Diagnostics (2):
+
+<YELLOW>WARNING: [ResourceDeployedMultipleTimes]<RESET>
+  <YELLOW>Message: The resource '/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/bar' is defined multiple times in this deployment. Only the final state of the resource is shown.<RESET>
+  <YELLOW>Target: /subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/bar<RESET>
+
+<YELLOW>WARNING: [ResourceDeployedMultipleTimes]<RESET>
+  <YELLOW>Message: The resource '/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/foo' is defined multiple times in this deployment. Only the final state of the resource is shown.<RESET>
+  <YELLOW>Target: /subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/foo<RESET>
+
+`;
