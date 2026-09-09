@@ -102,48 +102,6 @@ export class ColorStringBuilder {
     this.popColor();
   }
 
-  insert(
-    index: number,
-    value: string = "",
-    color?: Color,
-    noIndent: boolean = false,
-  ): this {
-    let insertion = "";
-
-    if (!noIndent && this.shouldIndent(index, true)) {
-      insertion += this.indents.join("");
-    }
-
-    if (color && this.colorMode !== "off") {
-      insertion += getColorString(this.colorMode, color);
-    }
-
-    insertion += value;
-
-    if (color && this.colorMode !== "off") {
-      insertion += getColorString(this.colorMode, Color.Reset);
-    }
-
-    this.buffer =
-      this.buffer.slice(0, index) + insertion + this.buffer.slice(index);
-
-    return this;
-  }
-
-  insertLine(
-    index: number,
-    value: string = "",
-    color?: Color,
-    noIndent: boolean = false,
-  ): this {
-    this.insert(index, "\n", undefined, true);
-    return this.insert(index, value, color, noIndent);
-  }
-
-  getCurrentIndex(): number {
-    return this.buffer.length;
-  }
-
   pushIndent(indent: string): this {
     this.indents.push(indent);
     return this;
@@ -194,21 +152,12 @@ export class ColorStringBuilder {
     }
   }
 
-  private shouldIndent(index: number = -1, isInsert: boolean = false): boolean {
+  private shouldIndent(): boolean {
     if (this.indents.length === 0) {
       return false;
     }
 
-    if (this.buffer.length === 0) {
-      return true;
-    }
-
-    if (!isInsert) {
-      return this.buffer.endsWith("\n");
-    }
-
-    const lookupIndex = Math.max(index - 1, 0);
-    return this.buffer.charAt(lookupIndex) === "\n";
+    return this.buffer.length === 0 || this.buffer.endsWith("\n");
   }
 
   build(): string {

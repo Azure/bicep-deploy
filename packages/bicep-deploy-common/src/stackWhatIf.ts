@@ -99,11 +99,13 @@ export function formatDeploymentStacksWhatIfChange(
 }
 
 class DeploymentStacksWhatIfResultFormatter {
-  private readonly builder: ColorStringBuilder;
+  private builder: ColorStringBuilder;
+  private readonly colorMode: ColorMode;
   private whatIfProps?: StackWhatIfResultProperties;
   private whatIfChanges?: DeploymentStacksWhatIfChange;
 
   constructor(colorMode: ColorMode) {
+    this.colorMode = colorMode;
     this.builder = new ColorStringBuilder(colorMode);
   }
 
@@ -170,8 +172,11 @@ class DeploymentStacksWhatIfResultFormatter {
       return false;
     }
 
+    const outerBuilder = this.builder;
+    const sectionBuilder = new ColorStringBuilder(this.colorMode);
+    this.builder = sectionBuilder;
+
     let printed = false;
-    const titleIndex = this.builder.getCurrentIndex();
     const allStackChanges: Record<string, StackChangeLike | undefined> = {
       DeploymentScope: this.whatIfChanges.deploymentScopeChange,
       DenySettings: this.whatIfChanges.denySettingsChange,
@@ -183,12 +188,14 @@ class DeploymentStacksWhatIfResultFormatter {
       }
     }
 
+    this.builder = outerBuilder;
+
     if (printed) {
-      this.builder.insertLine(
-        titleIndex,
+      this.builder.appendLine(
         `Changes to Stack ${this.whatIfProps?.deploymentStackResourceId ?? ""}:`,
         Color.DarkYellow,
       );
+      this.builder.append(sectionBuilder.build(), undefined, true);
     }
 
     return printed;
