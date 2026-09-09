@@ -65,20 +65,20 @@ export function getColorString(colorMode: ColorMode, color: Color): string {
 
 export class ColorStringBuilder {
   private colorStack: Color[] = [];
-  private contents: string[] = [];
+  private buffer: string = "";
   private indents: string[] = [];
   constructor(private colorMode: ColorMode) {}
 
   append(value: string, color?: Color, noIndent: boolean = false): this {
     if (!noIndent && this.shouldIndent()) {
-      this.contents.push(this.indents.join(""));
+      this.buffer += this.indents.join("");
     }
 
     if (color) {
       this.pushColor(color);
     }
 
-    this.contents.push(value);
+    this.buffer += value;
 
     if (color) {
       this.popColor();
@@ -108,23 +108,24 @@ export class ColorStringBuilder {
     color?: Color,
     noIndent: boolean = false,
   ): this {
-    if (color && this.colorMode !== "off") {
-      this.contents.splice(
-        index,
-        0,
-        getColorString(this.colorMode, Color.Reset),
-      );
-    }
-
-    this.contents.splice(index, 0, value);
-
-    if (color && this.colorMode !== "off") {
-      this.contents.splice(index, 0, getColorString(this.colorMode, color));
-    }
+    let insertion = "";
 
     if (!noIndent && this.shouldIndent(index, true)) {
-      this.contents.splice(index, 0, this.indents.join(""));
+      insertion += this.indents.join("");
     }
+
+    if (color && this.colorMode !== "off") {
+      insertion += getColorString(this.colorMode, color);
+    }
+
+    insertion += value;
+
+    if (color && this.colorMode !== "off") {
+      insertion += getColorString(this.colorMode, Color.Reset);
+    }
+
+    this.buffer =
+      this.buffer.slice(0, index) + insertion + this.buffer.slice(index);
 
     return this;
   }
@@ -140,7 +141,7 @@ export class ColorStringBuilder {
   }
 
   getCurrentIndex(): number {
-    return this.contents.length;
+    return this.buffer.length;
   }
 
   pushIndent(indent: string): this {
@@ -154,33 +155,24 @@ export class ColorStringBuilder {
   }
 
   ensureNumNewLines(numNewLines: number): this {
-    if (this.contents.length === 0) {
+    if (this.buffer.length === 0) {
       this.append("\n".repeat(numNewLines));
       return this;
     }
 
-    let existingNewLines = 0;
-
-    for (let i = this.contents.length - 1; i >= 0; i--) {
-      const entry = this.contents[i];
-      const trimmedLength = entry.replace(/\n+$/u, "").length;
-      existingNewLines += entry.length - trimmedLength;
-
-      if (trimmedLength > 0) {
-        break;
-      }
-    }
+    const trimmedLength = this.buffer.replace(/\n+$/u, "").length;
+    const existingNewLines = this.buffer.length - trimmedLength;
 
     const remainingNewLines = numNewLines - existingNewLines;
     if (remainingNewLines > 0) {
-      this.contents.push("\n".repeat(remainingNewLines));
+      this.buffer += "\n".repeat(remainingNewLines);
     }
 
     return this;
   }
 
   clear(): this {
-    this.contents = [];
+    this.buffer = "";
     this.colorStack = [];
     this.indents = [];
     return this;
@@ -189,7 +181,7 @@ export class ColorStringBuilder {
   private pushColor(color: Color) {
     this.colorStack.push(color);
     if (this.colorMode !== "off") {
-      this.contents.push(getColorString(this.colorMode, color));
+      this.buffer += getColorString(this.colorMode, color);
     }
   }
 
@@ -198,7 +190,7 @@ export class ColorStringBuilder {
     const prevColor =
       this.colorStack[this.colorStack.length - 1] ?? Color.Reset;
     if (this.colorMode !== "off") {
-      this.contents.push(getColorString(this.colorMode, prevColor));
+      this.buffer += getColorString(this.colorMode, prevColor);
     }
   }
 
@@ -207,20 +199,19 @@ export class ColorStringBuilder {
       return false;
     }
 
-    if (this.contents.length === 0) {
+    if (this.buffer.length === 0) {
       return true;
     }
 
-    const lookupIndex = isInsert ? Math.max(index - 1, 0) : index;
-    const entry =
-      lookupIndex >= 0
-        ? this.contents[lookupIndex]
-        : this.contents[this.contents.length - 1];
+    if (!isInsert) {
+      return this.buffer.endsWith("\n");
+    }
 
-    return entry?.endsWith("\n") ?? false;
+    const lookupIndex = Math.max(index - 1, 0);
+    return this.buffer.charAt(lookupIndex) === "\n";
   }
 
   build(): string {
-    return this.contents.join("");
+    return this.buffer;
   }
 }
