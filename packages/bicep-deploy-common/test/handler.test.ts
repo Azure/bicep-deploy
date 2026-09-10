@@ -5,6 +5,7 @@ import {
   azureMock,
   mockDeploymentsOps,
   mockStacksOps,
+  mockStacksWhatIfAtSubscriptionOps,
 } from "./mocks/azureMocks";
 import { mockFile } from "./mocks/fileMocks";
 import { RestError } from "@azure/core-rest-pipeline";
@@ -31,6 +32,7 @@ import {
 import {
   DeploymentStack,
   DeploymentStackProperties,
+  DeploymentStacksWhatIfResult,
 } from "@azure/arm-resourcesdeploymentstacks";
 
 const outputSetter = new mockOutputSetter();
@@ -159,7 +161,15 @@ describe("deployment execution", () => {
 
     it("what-ifs", async () => {
       mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait!.mockResolvedValue(
-        {},
+        {
+          changes: [
+            {
+              resourceId:
+                "/subscriptions/mockSub/resourceGroups/mockRg/providers/p1/foo1",
+              changeType: "Modify",
+            },
+          ],
+        },
       );
 
       await execute(
@@ -686,6 +696,68 @@ describe("stack execution", () => {
         bypassStackOutOfSyncError: true,
         unmanageActionResources: "delete",
       });
+    });
+
+    it("what-ifs", async () => {
+      const mockWhatIfResult: DeploymentStacksWhatIfResult = {
+        properties: {
+          actionOnUnmanage: config.actionOnUnManage,
+          denySettings: config.denySettings,
+          deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
+          retentionInterval: "P1D",
+          changes: {
+            resourceChanges: [
+              {
+                id: "/subscriptions/mockSub/resourceGroups/mockRg/providers/Microsoft.Storage/storageAccounts/mockStorage",
+                apiVersion: "2023-01-01",
+                changeType: "modify",
+                changeCertainty: "definite",
+                resourceConfigurationChanges: {
+                  delta: [
+                    {
+                      path: "properties.accessTier",
+                      changeType: "modify",
+                      before: "Hot",
+                      after: "Cool",
+                    },
+                  ],
+                },
+              },
+            ],
+            denySettingsChange: {},
+          },
+          diagnostics: [],
+        },
+      };
+
+      mockStacksWhatIfAtSubscriptionOps.beginCreateOrUpdateAndWait!.mockResolvedValue(
+        mockWhatIfResult,
+      );
+      mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait!.mockResolvedValue(
+        mockWhatIfResult,
+      );
+
+      await execute(
+        { ...config, operation: "whatIf" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      expect(
+        mockStacksWhatIfAtSubscriptionOps.beginCreateOrUpdateAndWait,
+      ).toHaveBeenCalledWith(config.name, {
+        ...expectedPayload,
+        properties: {
+          ...expectedProperties,
+          bypassStackOutOfSyncError: undefined,
+          deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
+          retentionInterval: "P1D",
+        },
+      });
+      expect(
+        mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait,
+      ).toHaveBeenCalledWith(config.name);
     });
 
     it.each([

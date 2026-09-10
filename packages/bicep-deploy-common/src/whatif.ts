@@ -327,7 +327,7 @@ function formatResourceChangeApiVersion(
   });
 }
 
-function formatPropertyChanges(
+export function formatPropertyChanges(
   builder: ColorStringBuilder,
   propertyChanges: WhatIfPropertyChange[],
   indentLevel: number = 2,
@@ -649,7 +649,7 @@ function shouldConsiderPropertyChangePath(
   return !propertyChange.children;
 }
 
-function formatJsonValue(
+export function formatJsonValue(
   builder: ColorStringBuilder,
   value: UnknownValue,
   path: string = "",
@@ -769,7 +769,7 @@ function formatJsonPath(
   formatPath(builder, path, paddingWidth, indentLevel, undefined, formatColon);
 }
 
-function formatPath(
+export function formatPath(
   builder: ColorStringBuilder,
   path: string,
   paddingWidth: number,
@@ -794,11 +794,11 @@ function formatPath(
   builder.append(" ".repeat(paddingWidth));
 }
 
-function formatColon(builder: ColorStringBuilder): void {
+export function formatColon(builder: ColorStringBuilder): void {
   builder.append(Symbol.Colon, Color.Reset);
 }
 
-function formatIndent(
+export function formatIndent(
   builder: ColorStringBuilder,
   indentLevel: number = 1,
 ): void {
@@ -861,7 +861,7 @@ function isNonEmptyObject(
   );
 }
 
-function sortChanges(changes: WhatIfPropertyChange[]) {
+export function sortChanges(changes: WhatIfPropertyChange[]) {
   return changes
     .slice()
     .sort(
@@ -873,7 +873,7 @@ function sortChanges(changes: WhatIfPropertyChange[]) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function groupBy<K extends keyof any, T>(
+export function groupBy<K extends keyof any, T>(
   array: T[],
   getKey: (item: T) => K,
 ): Record<K, T[]> {
@@ -888,7 +888,9 @@ function groupBy<K extends keyof any, T>(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function entries<K extends keyof any, T>(record: Record<K, T>): [K, T][] {
+export function entries<K extends keyof any, T>(
+  record: Record<K, T>,
+): [K, T][] {
   return Object.entries(record) as [K, T][];
 }
 
