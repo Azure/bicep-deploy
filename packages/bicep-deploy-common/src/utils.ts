@@ -111,6 +111,20 @@ export function requireLocation(config: DeployConfig) {
   return config.location;
 }
 
+export function getDeploymentStackResourceId(
+  scope: ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
+  name: string,
+): string {
+  switch (scope.type) {
+    case "resourceGroup":
+      return `/subscriptions/${scope.subscriptionId}/resourceGroups/${scope.resourceGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+    case "subscription":
+      return `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+    case "managementGroup":
+      return `/providers/Microsoft.Management/managementGroups/${scope.managementGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+  }
+}
+
 export function logDiagnostics(
   diagnostics: DeploymentDiagnosticsDefinition[],
   logger: Logger,

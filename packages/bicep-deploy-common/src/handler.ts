@@ -8,8 +8,9 @@ import {
   deploymentValidate,
   deploymentWhatIf,
 } from "./deployments";
-import { stackCreate, stackDelete, stackValidate } from "./stacks";
+import { stackCreate, stackDelete, stackValidate, stackWhatIf } from "./stacks";
 import { formatWhatIfOperationResult } from "./whatif";
+import { formatDeploymentStacksWhatIfChange } from "./stackWhatIf";
 import {
   logDiagnostics,
   validateFileScope,
@@ -149,6 +150,24 @@ export async function execute(
           }
           case "delete": {
             await stackDelete(config, logger);
+            break;
+          }
+          case "whatIf": {
+            await tryWithErrorHandling(
+              async () => {
+                const result = await stackWhatIf(config, files, logger);
+                const formatted = formatDeploymentStacksWhatIfChange(
+                  result,
+                  "ansii",
+                );
+                logger.logInfoRaw(formatted);
+              },
+              error => {
+                logger.logError(JSON.stringify(error, null, 2));
+                outputSetter.setFailed(errorMessages.whatIfFailed);
+              },
+              logger,
+            );
             break;
           }
         }
