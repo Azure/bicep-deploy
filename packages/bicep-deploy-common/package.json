@@ -43,7 +43,7 @@
   "license": "MIT",
   "dependencies": {
     "@azure/arm-resources": "^6.0.0",
-    "@azure/arm-resourcesdeploymentstacks": "^1.0.0",
+    "@azure/arm-resourcesdeploymentstacks": "^2.0.0",
     "@azure/bicep-rpc-client": "*",
     "@azure/identity": "^4.13.1",
     "jsonc-parser": "^3.3.1",
