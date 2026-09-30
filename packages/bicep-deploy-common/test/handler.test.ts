@@ -27,6 +27,7 @@ import {
   DeploymentExtended,
   DeploymentProperties,
   ErrorResponse,
+  WhatIfOperationResult,
 } from "@azure/arm-resources";
 import {
   DeploymentStack,
@@ -34,6 +35,34 @@ import {
 } from "@azure/arm-resourcesdeploymentstacks";
 
 const outputSetter = new mockOutputSetter();
+const desiredValueCommand =
+  "before\n::set-output name=unsafe::desired\n##vso[task.setvariable variable=unsafe]desired\nafter";
+const existingValueCommand =
+  "before\n::set-output name=unsafe::existing\n##vso[task.setvariable variable=unsafe]existing\nafter";
+
+function createWhatIfChange(
+  propertyChangeType: "Create" | "Delete",
+  value: string,
+): WhatIfOperationResult {
+  return {
+    changes: [
+      {
+        resourceId:
+          "/subscriptions/mockSub/resourceGroups/mockRg/providers/Microsoft.Storage/storageAccounts/mockStorage",
+        changeType: "Modify",
+        delta: [
+          {
+            path: "tags",
+            propertyChangeType,
+            ...(propertyChangeType === "Create"
+              ? { after: { reviewMarker: value } }
+              : { before: { reviewMarker: value } }),
+          },
+        ],
+      },
+    ],
+  };
+}
 
 describe("deployment execution", () => {
   afterEach(() => {
@@ -157,11 +186,12 @@ describe("deployment execution", () => {
       ).toHaveBeenCalledWith(config.name, expectedPayload);
     });
 
-    it("what-ifs", async () => {
+    it("logs desired What-If values as remote external output", async () => {
       mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait!.mockResolvedValue(
-        {},
+        createWhatIfChange("Create", desiredValueCommand),
       );
 
+      logger.clear();
       await execute(
         { ...config, operation: "whatIf" },
         logger,
@@ -178,6 +208,27 @@ describe("deployment execution", () => {
       expect(
         mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
+      const externalMessages = logger.getExternalMessages("remote");
+      expect(externalMessages).toHaveLength(1);
+      expect(externalMessages[0]).toContain(desiredValueCommand);
+    });
+
+    it("logs existing removed What-If values as remote external output", async () => {
+      mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait!.mockResolvedValue(
+        createWhatIfChange("Delete", existingValueCommand),
+      );
+
+      logger.clear();
+      await execute(
+        { ...config, operation: "whatIf" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      const externalMessages = logger.getExternalMessages("remote");
+      expect(externalMessages).toHaveLength(1);
+      expect(externalMessages[0]).toContain(existingValueCommand);
     });
   });
 

@@ -106,7 +106,7 @@ export async function execute(
               async () => {
                 const result = await deploymentWhatIf(config, files, logger);
                 const formatted = formatWhatIfOperationResult(result, "ansii");
-                logger.logInfoRaw(formatted);
+                logger.logExternalOutput(formatted, "remote");
                 logDiagnostics(result.diagnostics ?? [], logger);
               },
               error => {
