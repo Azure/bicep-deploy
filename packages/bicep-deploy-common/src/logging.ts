@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+export type ExternalOutputSource = "remote" | "repository" | "childProcess";
+
 export interface Logger {
   isDebugEnabled(): boolean;
   debug(message: string): void;
   logInfo(message: string): void;
   logWarning(message: string): void;
   logError(message: string): void;
-  logInfoRaw(message: string): void;
+  logExternalOutput(message: string, source: ExternalOutputSource): void;
 }
 
 export type ColorMode = "off" | "ansii" | "debug"; // debug is just used for unit testing
