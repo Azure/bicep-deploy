@@ -6,17 +6,17 @@ This mirrors the pattern used by [`vscode-bicep`](https://github.com/Azure/bicep
 
 ## How it works
 
-- [`version.json`](./packages/bicep-deploy-common/version.json) declares the base version (e.g. `"0.1"`) and a `pathFilters` array scoping NBGV to this package's directory.
+- [`version.json`](./version.json) declares the shared base version for the published workspace packages and scopes NBGV commit height to this repository.
 - `nerdbank-gitversioning` is declared as a devDependency so the `nbgv-setversion` binary is resolved from local `node_modules/.bin` (matching `vscode-bicep`).
 - [`package.json`](./packages/bicep-deploy-common/package.json) exposes two npm scripts that wrap NBGV:
   - `npm run stamp-version` (`nbgv-setversion`) — rewrites the `"version"` field to `<version>.<commitHeight>`.
   - `npm run reset-version` (`nbgv-setversion --reset`) — restores the `"0.0.0-placeholder"` sentinel.
-- On every run of the `Upload bicep-deploy-common Package` GitHub workflow (`.github/workflows/upload-package.yml`):
+- On every run of the `Upload Packages` GitHub workflow (`.github/workflows/upload-package.yml`):
   1. The repo is checked out with full history (`fetch-depth: 0`).
   2. `npm run stamp-version` stamps the real version.
   3. The package is built and packed (`npm pack`).
   4. `npm run reset-version` restores the placeholder so the working tree matches what's committed.
-- `commitHeight` is the number of commits touching `packages/bicep-deploy-common/` since `version.json` was added. `pathFilters: ["."]` keeps changes elsewhere in the repo from incrementing this package's patch number.
+- `commitHeight` is the number of commits in this repository since the current base version was introduced. The repository-level `pathFilters: ["."]` applies the same release line to the published workspace packages.
 - `publicReleaseRefSpec` ensures only publishes built from `main` produce a clean `X.Y.Z` — branch builds get a `-g<sha>` suffix.
 
 ### Why a placeholder version?
@@ -29,9 +29,9 @@ NBGV resets the patch height whenever `version` changes. To bump:
 
 | Change         | Edit `version.json`         | First published version |
 | -------------- | --------------------------- | ----------------------- |
-| **Patch only** | _(no action — automatic)_   | next `0.1.x`            |
-| **Minor**      | Set `"version": "0.2"`       | `0.2.1`                 |
-| **Major**      | Set `"version": "1.0"`       | `1.0.1`                 |
+| **Patch only** | _(no action — automatic)_   | next `0.3.x`            |
+| **Minor**      | Set `"version": "0.3"`       | `0.3.0`                 |
+| **Major**      | Set `"version": "1.0"`       | `1.0.0`                 |
 
 ## Local preview
 
@@ -53,4 +53,3 @@ npm run build
 npm pack
 npm run reset-version
 ```
-
