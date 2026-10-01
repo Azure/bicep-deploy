@@ -38,19 +38,14 @@ jobs:
       - name: Build packages
         run: npm run build:packages
 
-      - name: Create package tarball (bicep-rpc-client)
-        id: pack-bicep-rpc-client
+      - name: Create and validate package tarballs
+        id: pack-packages
         run: |
-          packOutput=$(npm pack --workspace @azure/bicep-rpc-client --json)
-          echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
-          echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
-
-      - name: Create package tarball (bicep-deploy-common)
-        id: pack-bicep-deploy-common
-        run: |
-          packOutput=$(npm pack --workspace @azure/bicep-deploy-common --json)
-          echo "filename=$(echo $packOutput | jq -r '.[0].filename')" >> $GITHUB_OUTPUT
-          echo "version=$(echo $packOutput | jq -r '.[0].version')" >> $GITHUB_OUTPUT
+          packOutput=$(npm run pack:validate --workspace @azure/bicep-deploy-common --silent)
+          echo "rpc-filename=$(echo "$packOutput" | jq -r '.rpc.filename')" >> $GITHUB_OUTPUT
+          echo "rpc-version=$(echo "$packOutput" | jq -r '.rpc.version')" >> $GITHUB_OUTPUT
+          echo "common-filename=$(echo "$packOutput" | jq -r '.common.filename')" >> $GITHUB_OUTPUT
+          echo "common-version=$(echo "$packOutput" | jq -r '.common.version')" >> $GITHUB_OUTPUT
 
       - name: Reset versions
         if: always()
@@ -68,7 +63,7 @@ jobs:
       # Upload packages to partner drop folder to allow external distribution under the @azure scope
       - name: Upload packages to partner drop folder
         run: |
-          echo "Uploading ${{ steps.pack-bicep-rpc-client.outputs.filename }} to partner drop folder at drops/bicep-rpc-client/npm/${{ steps.pack-bicep-rpc-client.outputs.version }}..."
-          az storage blob upload -f ${{ steps.pack-bicep-rpc-client.outputs.filename }} -c drops/bicep-rpc-client/npm/${{ steps.pack-bicep-rpc-client.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login
-          echo "Uploading ${{ steps.pack-bicep-deploy-common.outputs.filename }} to partner drop folder at drops/bicep-deploy-common/npm/${{ steps.pack-bicep-deploy-common.outputs.version }}..."
-          az storage blob upload -f ${{ steps.pack-bicep-deploy-common.outputs.filename }} -c drops/bicep-deploy-common/npm/${{ steps.pack-bicep-deploy-common.outputs.version }} --account-name azuresdkpartnerdrops --auth-mode login
+          echo "Uploading ${{ steps.pack-packages.outputs.rpc-filename }} to partner drop folder at drops/bicep-rpc-client/npm/${{ steps.pack-packages.outputs.rpc-version }}..."
+          az storage blob upload -f "${{ steps.pack-packages.outputs.rpc-filename }}" -c "drops/bicep-rpc-client/npm/${{ steps.pack-packages.outputs.rpc-version }}" --account-name azuresdkpartnerdrops --auth-mode login
+          echo "Uploading ${{ steps.pack-packages.outputs.common-filename }} to partner drop folder at drops/bicep-deploy-common/npm/${{ steps.pack-packages.outputs.common-version }}..."
+          az storage blob upload -f "${{ steps.pack-packages.outputs.common-filename }}" -c "drops/bicep-deploy-common/npm/${{ steps.pack-packages.outputs.common-version }}" --account-name azuresdkpartnerdrops --auth-mode login

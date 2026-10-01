@@ -29,12 +29,15 @@
     "./README.md"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "clean": "rimraf ./dist",
     "build": "npm run typecheck && tsdown --config ./tsdown.config.mts",
+    "test": "vitest --config ../../vitest.config.unit.ts test",
+    "test:consumer": "npm --prefix ../bicep-rpc-client run build && npm run build && node ./test-consumer/run.cjs",
+    "pack:validate": "node ./test-consumer/run.cjs --retain-tarballs --json",
     "lint": "eslint src test",
     "lint:fix": "eslint src test --fix",
     "stamp-version": "nbgv-setversion",
