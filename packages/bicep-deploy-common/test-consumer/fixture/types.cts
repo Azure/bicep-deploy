@@ -17,8 +17,14 @@ import {
   stackDelete,
   stackValidate,
 } from "@azure/bicep-deploy-common/stacks";
+import {
+  Bicep,
+  type CompileRequest,
+  type CompileResponse,
+} from "@azure/bicep-rpc-client";
 
 const publicContract = {
+  Bicep,
   execute,
   deploymentCreate,
   deploymentValidate,
@@ -35,5 +41,11 @@ type ConsumerContract = {
   bicepCache: BicepCache;
 };
 
+type RpcConsumerContract = {
+  request: CompileRequest;
+  response: CompileResponse;
+};
+
 void publicContract;
 void ({} as ConsumerContract);
+void ({} as RpcConsumerContract);

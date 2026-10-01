@@ -56,18 +56,8 @@ function copyFixture(targetDirectory) {
   fs.cpSync(fixtureSourceDirectory, targetDirectory, { recursive: true });
 }
 
-function assertPackageContents(packResult) {
+function assertPackageContents(packResult, requiredFiles) {
   const publishedFiles = new Set(packResult.files.map(file => file.path));
-  const requiredFiles = [
-    "README.md",
-    "package.json",
-    "dist/index.cjs",
-    "dist/index.d.cts",
-    "dist/deployments.cjs",
-    "dist/deployments.d.cts",
-    "dist/stacks.cjs",
-    "dist/stacks.d.cts",
-  ];
 
   for (const requiredFile of requiredFiles) {
     assert(
@@ -166,7 +156,25 @@ function assertInstalledPackagePair(
 try {
   const rpcPackage = pack(rpcPackageDirectory);
   const commonPackage = packCommon(rpcPackage.packResult.version);
-  assertPackageContents(commonPackage.packResult);
+  assertPackageContents(rpcPackage.packResult, [
+    "README.md",
+    "package.json",
+    "dist/index.cjs",
+    "dist/index.d.cts",
+    "dist/utils/bicep.cjs",
+    "dist/utils/bicep.d.cts",
+    "dist/utils/types.d.cts",
+  ]);
+  assertPackageContents(commonPackage.packResult, [
+    "README.md",
+    "package.json",
+    "dist/index.cjs",
+    "dist/index.d.cts",
+    "dist/deployments.cjs",
+    "dist/deployments.d.cts",
+    "dist/stacks.cjs",
+    "dist/stacks.d.cts",
+  ]);
 
   fixtureDirectory = fs.mkdtempSync(
     path.join(os.tmpdir(), "bicep-deploy-common-consumer-"),
@@ -201,10 +209,7 @@ try {
     commonPackage.packResult.version,
     rpcPackage.packResult.version,
   );
-  runNpm(
-    ["exec", "--", "tsc", "--project", "tsconfig.json"],
-    fixtureDirectory,
-  );
+  runNpm(["exec", "--", "tsc", "--project", "tsconfig.json"], fixtureDirectory);
   run(process.execPath, ["runtime.cjs"], fixtureDirectory);
 
   if (outputJson) {

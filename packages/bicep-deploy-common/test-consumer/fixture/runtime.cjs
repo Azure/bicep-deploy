@@ -64,10 +64,12 @@ async function main() {
     const common = require("@azure/bicep-deploy-common");
     const deployments = require("@azure/bicep-deploy-common/deployments");
     const stacks = require("@azure/bicep-deploy-common/stacks");
+    const rpc = require("@azure/bicep-rpc-client");
 
     assert.equal(typeof common.execute, "function");
     assert.equal(typeof deployments.deploymentCreate, "function");
     assert.equal(typeof stacks.stackCreate, "function");
+    assert.equal(typeof rpc.Bicep, "function");
 
     await common.execute(
       {
