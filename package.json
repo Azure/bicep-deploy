@@ -37,7 +37,9 @@
     "test": "vitest --config vitest.config.unit.ts",
     "test:live": "vitest --config vitest.config.live.ts",
     "lint": "eslint src test test-live && npm run lint --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common",
-    "lint:fix": "eslint src test test-live --fix && npm run lint:fix --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common --fix"
+    "lint:fix": "eslint src test test-live --fix && npm run lint:fix --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common --fix",
+    "validate": "npm run lint && npm run test:consumer --workspace @azure/bicep-deploy-common && npm run build && npm test -- --run",
+    "validate:fix": "npm run lint:fix && npm run validate"
   },
   "license": "MIT",
   "dependencies": {
@@ -55,6 +57,7 @@
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-notice": "^1.0.0",
     "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^14.0.0",
     "ts-node": "^10.9.2",
     "tsdown": "^0.16.5",
     "typescript": "^5.8.3",

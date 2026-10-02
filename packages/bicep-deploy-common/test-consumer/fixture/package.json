@@ -1,0 +1,14 @@
+{
+  "name": "bicep-deploy-common-consumer-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@azure/bicep-deploy-common": "file:replaced-by-runner",
+    "@azure/bicep-rpc-client": "file:replaced-by-runner"
+  },
+  "devDependencies": {
+    "@types/node": "24.1.0",
+    "rewiremock": "3.14.6",
+    "typescript": "5.8.3"
+  }
+}
