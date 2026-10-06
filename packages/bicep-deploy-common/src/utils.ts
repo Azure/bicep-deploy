@@ -125,13 +125,22 @@ export function logDiagnostics(
     const message = `[${diagnostic.level}] ${diagnostic.code}: ${diagnostic.message}`;
     switch (diagnostic.level.toLowerCase()) {
       case "error":
-        logger.logError(message);
+        logger.logExternalOutput(message, {
+          source: "remote",
+          level: "error",
+        });
         break;
       case "warning":
-        logger.logWarning(message);
+        logger.logExternalOutput(message, {
+          source: "remote",
+          level: "warning",
+        });
         break;
       default:
-        logger.logInfo(message);
+        logger.logExternalOutput(message, {
+          source: "remote",
+          level: "info",
+        });
         break;
     }
   }
@@ -192,8 +201,9 @@ export async function tryWithErrorHandling<T>(
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
-      logger.logError(
+      logger.logExternalOutput(
         errorMessages.requestFailedCorrelation(correlationId ?? "unknown"),
+        { source: "remote", level: "error" },
       );
 
       const { error } = ex.details as CloudError;
@@ -207,8 +217,9 @@ export async function tryWithErrorHandling<T>(
       const correlationId = ex.response?.headers.get(
         "x-ms-correlation-request-id",
       );
-      logger.logError(
+      logger.logExternalOutput(
         loggingMessages.requestFailedCorrelation(correlationId ?? null),
+        { source: "remote", level: "error" },
       );
 
       const { error } = ex.details;

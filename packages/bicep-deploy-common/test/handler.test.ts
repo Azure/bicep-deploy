@@ -147,7 +147,7 @@ describe("deployment execution", () => {
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
 
       // Validate expected log sequence
-      const infoLogs = logger.getInfoMessages();
+      const infoLogs = logger.getExternalMessages("repository", "info");
       expect(infoLogs[0]).toContain("Starting deployment create");
       expect(infoLogs[0]).toContain("subscription 'mockSub'");
     });
@@ -208,7 +208,7 @@ describe("deployment execution", () => {
       expect(
         mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
-      const externalMessages = logger.getExternalMessages("remote");
+      const externalMessages = logger.getExternalMessages("remote", "info");
       expect(externalMessages).toHaveLength(1);
       expect(externalMessages[0]).toContain(desiredExternalValue);
     });
@@ -226,7 +226,7 @@ describe("deployment execution", () => {
         noopCache,
       );
 
-      const externalMessages = logger.getExternalMessages("remote");
+      const externalMessages = logger.getExternalMessages("remote", "info");
       expect(externalMessages).toHaveLength(1);
       expect(externalMessages[0]).toContain(existingExternalValue);
     });
@@ -352,7 +352,7 @@ describe("deployment execution", () => {
         getMockRestError(mockError),
       );
 
-      const spyLogError = vi.spyOn(logger, "logError");
+      const spyLogExternalOutput = vi.spyOn(logger, "logExternalOutput");
 
       await execute(
         { ...config, operation: "create" },
@@ -376,14 +376,16 @@ describe("deployment execution", () => {
         expect.anything(),
       );
 
-      expect(spyLogError).toHaveBeenNthCalledWith(
-        1,
+      expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
+        2,
         expect.stringContaining("Request failed. CorrelationId: "),
+        { source: "remote", level: "error" },
       );
 
-      expect(spyLogError).toHaveBeenNthCalledWith(
-        2,
+      expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
+        3,
         JSON.stringify(mockError, null, 2),
+        { source: "remote", level: "error" },
       );
     });
 
@@ -413,7 +415,7 @@ describe("deployment execution", () => {
         getMockRestError(mockError),
       );
 
-      const spyLogError = vi.spyOn(logger, "logError");
+      const spyLogExternalOutput = vi.spyOn(logger, "logExternalOutput");
 
       await execute(
         { ...config, operation: "validate" },
@@ -434,14 +436,16 @@ describe("deployment execution", () => {
         expectedPayload,
       );
 
-      expect(spyLogError).toHaveBeenNthCalledWith(
-        1,
+      expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
+        2,
         expect.stringContaining("Request failed. CorrelationId: "),
+        { source: "remote", level: "error" },
       );
 
-      expect(spyLogError).toHaveBeenNthCalledWith(
-        2,
+      expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
+        3,
         JSON.stringify(mockError, null, 2),
+        { source: "remote", level: "error" },
       );
     });
 
@@ -473,7 +477,7 @@ describe("deployment execution", () => {
         getMockRestError(mockError),
       );
 
-      const spyLogError = vi.spyOn(logger, "logError");
+      const spyLogExternalOutput = vi.spyOn(logger, "logExternalOutput");
 
       await execute(
         { ...config, operation: "whatIf" },
@@ -494,14 +498,16 @@ describe("deployment execution", () => {
         expectedPayload,
       );
 
-      expect(spyLogError).toHaveBeenNthCalledWith(
-        1,
+      expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
+        2,
         expect.stringContaining("Request failed. CorrelationId: "),
+        { source: "remote", level: "error" },
       );
 
-      expect(spyLogError).toHaveBeenNthCalledWith(
-        2,
+      expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
+        3,
         JSON.stringify(mockError, null, 2),
+        { source: "remote", level: "error" },
       );
     });
   });
@@ -583,7 +589,7 @@ describe("deployment execution", () => {
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
 
       // Validate expected log sequence - tenant scope has no scopedId
-      const infoLogs = logger.getInfoMessages();
+      const infoLogs = logger.getExternalMessages("repository", "info");
       expect(infoLogs[0]).toContain("Starting deployment create");
       // Tenant scope should show "at tenant scope" without a scopedId in between
       expect(infoLogs[0]).toMatch(/at tenant scope/);
@@ -678,7 +684,7 @@ describe("stack execution", () => {
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
 
       // Validate expected log sequence for stacks
-      const infoLogs = logger.getInfoMessages();
+      const infoLogs = logger.getExternalMessages("repository", "info");
       expect(infoLogs[0]).toContain("Starting deploymentStack create");
       expect(infoLogs[0]).toContain("subscription 'mockSub'");
     });
@@ -1010,16 +1016,17 @@ describe("custom error messages", () => {
       getMockRestError(mockError),
     );
 
-    const spyLogError = vi.spyOn(logger, "logError");
+    const spyLogExternalOutput = vi.spyOn(logger, "logExternalOutput");
 
     await execute(config, logger, outputSetter, noopCache, {
       requestFailedCorrelation: (id: string) =>
         `Request failed with correlation ID: ${id}`,
     });
 
-    expect(spyLogError).toHaveBeenNthCalledWith(
-      1,
+    expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
+      2,
       expect.stringContaining("Request failed with correlation ID: "),
+      { source: "remote", level: "error" },
     );
   });
 });
