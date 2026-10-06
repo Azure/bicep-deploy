@@ -46,7 +46,7 @@ describe("file parsing", () => {
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
 
     // Validate logging
-    const infoLogs = logger.getInfoMessages();
+    const infoLogs = logger.getExternalMessages("repository", "info");
     expect(
       infoLogs.some(log =>
         log.includes("Using parameters file: /path/to/parameters.json"),
@@ -84,7 +84,7 @@ describe("file parsing", () => {
     expect(parametersContents["parameters"]).toStrictEqual({});
 
     // Validate logging - only template file should be logged
-    const infoLogs = logger.getInfoMessages();
+    const infoLogs = logger.getExternalMessages("repository", "info");
     expect(
       infoLogs.some(log =>
         log.includes("Using template file: /path/to/template.json"),
@@ -183,7 +183,7 @@ describe("file parsing", () => {
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
 
     // Validate logging - bicepparam includes template, so only params file logged
-    const infoLogs = logger.getInfoMessages();
+    const infoLogs = logger.getExternalMessages("repository", "info");
     expect(
       infoLogs.some(log =>
         log.includes("Using parameters file: /path/to/main.bicepparam"),
@@ -239,7 +239,7 @@ describe("file parsing", () => {
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
 
     // Validate logging - both template and parameters file should be logged
-    const infoLogs = logger.getInfoMessages();
+    const infoLogs = logger.getExternalMessages("repository", "info");
     expect(
       infoLogs.some(log =>
         log.includes("Using template file: /path/to/main.bicep"),
@@ -250,6 +250,74 @@ describe("file parsing", () => {
         log.includes("Using parameters file: /path/to/parameters.json"),
       ),
     ).toBe(true);
+  });
+
+  it("logs Bicep diagnostics as child process output at their severity", async () => {
+    const config: FileConfig = {
+      templateFile: "/path/to/main.bicep",
+    };
+
+    configureBicepInstallMock(async () => "/path/to/bicep");
+    configureCompileMock(() => ({
+      success: true,
+      diagnostics: [
+        {
+          source: "/path/to/main.bicep",
+          range: {
+            start: { line: 0, char: 1 },
+            end: { line: 0, char: 2 },
+          },
+          level: "Info",
+          code: "BCP001",
+          message: "info diagnostic",
+        },
+        {
+          source: "/path/to/main.bicep",
+          range: {
+            start: { line: 1, char: 2 },
+            end: { line: 1, char: 3 },
+          },
+          level: "Warning",
+          code: "BCP002",
+          message: "warning diagnostic",
+        },
+        {
+          source: "/path/to/main.bicep",
+          range: {
+            start: { line: 2, char: 3 },
+            end: { line: 2, char: 4 },
+          },
+          level: "Error",
+          code: "BCP003",
+          message: "error diagnostic",
+        },
+      ],
+      contents: readTestFile("files/basic/main.json"),
+    }));
+
+    const logger = new TestLogger();
+    await getTemplateAndParameters(config, logger, noopCache);
+
+    expect(
+      logger.externalLogs.filter(log => log.source === "childProcess"),
+    ).toEqual([
+      {
+        message: "/path/to/main.bicep(1,2) : Info BCP001: info diagnostic",
+        source: "childProcess",
+        level: "info",
+      },
+      {
+        message:
+          "/path/to/main.bicep(2,3) : Warning BCP002: warning diagnostic",
+        source: "childProcess",
+        level: "warning",
+      },
+      {
+        message: "/path/to/main.bicep(3,4) : Error BCP003: error diagnostic",
+        source: "childProcess",
+        level: "error",
+      },
+    ]);
   });
 
   it("compiles Bicep files with specific version", async () => {

@@ -7,7 +7,7 @@ import { EOL } from "node:os";
 import {
   Color,
   colorize,
-  ExternalOutputSource,
+  ExternalOutputOptions,
   Logger,
 } from "@azure/bicep-deploy-common";
 
@@ -28,14 +28,35 @@ export class ActionLogger implements Logger {
   debug = (message: string) => core.debug(message);
   logInfoRaw = (message: string) => core.info(message);
   logInfo = (message: string) => this.logInfoRaw(colorize(message, Color.Blue));
-  logExternalOutput = (message: string, source: ExternalOutputSource): void => {
-    void source;
-    const token = createExternalOutputToken(message);
-    process.stdout.write(`::stop-commands::${token}${EOL}`);
-    try {
-      core.info(message);
-    } finally {
-      process.stdout.write(`::${token}::${EOL}`);
+  logExternalOutput = (
+    message: string,
+    options: ExternalOutputOptions,
+  ): void => {
+    void options.source;
+    switch (options.level) {
+      case "info": {
+        const token = createExternalOutputToken(message);
+        process.stdout.write(`::stop-commands::${token}${EOL}`);
+        try {
+          core.info(message);
+        } finally {
+          process.stdout.write(`::${token}::${EOL}`);
+        }
+        break;
+      }
+      case "debug":
+        core.debug(message);
+        break;
+      case "warning":
+        core.warning(message);
+        break;
+      case "error":
+        core.error(message);
+        break;
+      default: {
+        const exhaustiveCheck: never = options.level;
+        return exhaustiveCheck;
+      }
     }
   };
   logWarning = (message: string) =>

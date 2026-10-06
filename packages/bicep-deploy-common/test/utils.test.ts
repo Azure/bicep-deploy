@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+import { DeploymentDiagnosticsDefinition } from "@azure/arm-resources";
+
 import { ScopeType } from "../src/config";
-import { getScopedId, validateFileScope } from "../src/utils";
+import { getScopedId, logDiagnostics, validateFileScope } from "../src/utils";
+import { TestLogger } from "./logging";
 
 describe("getScopedId", () => {
   it("returns resource group name for resourceGroup scope", () => {
@@ -53,6 +56,41 @@ describe("validateFileScope", () => {
         templateContents: {},
       }),
     ).not.toThrow();
+  });
+
+  describe("logDiagnostics", () => {
+    it("keeps the static heading trusted and logs ARM diagnostics externally", () => {
+      const diagnostics: DeploymentDiagnosticsDefinition[] = [
+        { level: "Info", code: "InfoCode", message: "info message" },
+        { level: "Warning", code: "WarningCode", message: "warning message" },
+        { level: "Error", code: "ErrorCode", message: "error message" },
+      ];
+      const logger = new TestLogger();
+
+      logDiagnostics(diagnostics, logger);
+
+      expect(logger.getInfoMessages()).toHaveLength(1);
+      expect(logger.getInfoMessages()[0]).toContain(
+        "Diagnostics returned by the API",
+      );
+      expect(logger.externalLogs).toEqual([
+        {
+          message: "[Info] InfoCode: info message",
+          source: "remote",
+          level: "info",
+        },
+        {
+          message: "[Warning] WarningCode: warning message",
+          source: "remote",
+          level: "warning",
+        },
+        {
+          message: "[Error] ErrorCode: error message",
+          source: "remote",
+          level: "error",
+        },
+      ]);
+    });
   });
 
   it("should ignore non-Bicep templates", () => {

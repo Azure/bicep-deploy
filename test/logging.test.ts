@@ -15,6 +15,7 @@ vi.mock("node:crypto", () => ({
 
 const firstToken = "00000000-0000-4000-8000-000000000001";
 const secondToken = "00000000-0000-4000-8000-000000000002";
+const remoteInfo = { source: "remote", level: "info" } as const;
 
 function getCommandToken(command: string): string {
   const match = command.match(/^::stop-commands::(.+)\r?\n$/);
@@ -48,7 +49,7 @@ describe("ActionLogger external output framing", () => {
       "::stop-commands::embedded-token",
     ].join("\n");
 
-    logger.logExternalOutput(message, "remote");
+    logger.logExternalOutput(message, remoteInfo);
 
     expect(stdoutWrite).toHaveBeenCalledTimes(2);
     const token = getCommandToken(String(stdoutWrite.mock.calls[0][0]));
@@ -72,8 +73,8 @@ describe("ActionLogger external output framing", () => {
       .mockImplementation(() => true);
     const logger = new ActionLogger();
 
-    logger.logExternalOutput("first", "remote");
-    logger.logExternalOutput("second", "remote");
+    logger.logExternalOutput("first", remoteInfo);
+    logger.logExternalOutput("second", remoteInfo);
 
     const firstToken = getCommandToken(String(stdoutWrite.mock.calls[0][0]));
     const secondToken = getCommandToken(String(stdoutWrite.mock.calls[2][0]));
@@ -88,7 +89,7 @@ describe("ActionLogger external output framing", () => {
     const logger = new ActionLogger();
     const message = `external output\n::${firstToken}::\nmore output`;
 
-    logger.logExternalOutput(message, "remote");
+    logger.logExternalOutput(message, remoteInfo);
 
     expect(randomUUIDMock).toHaveBeenCalledTimes(2);
     expect(stdoutWrite.mock.calls[0][0]).toBe(
@@ -106,9 +107,9 @@ describe("ActionLogger external output framing", () => {
       });
     const logger = new ActionLogger();
 
-    expect(() => logger.logExternalOutput("external output", "remote")).toThrow(
-      stopError,
-    );
+    expect(() =>
+      logger.logExternalOutput("external output", remoteInfo),
+    ).toThrow(stopError);
 
     expect(stdoutWrite).toHaveBeenCalledOnce();
     expect(mockActionsCore.info).not.toHaveBeenCalled();
@@ -123,9 +124,9 @@ describe("ActionLogger external output framing", () => {
       throw new Error("write failed");
     });
 
-    expect(() => logger.logExternalOutput("external output", "remote")).toThrow(
-      "write failed",
-    );
+    expect(() =>
+      logger.logExternalOutput("external output", remoteInfo),
+    ).toThrow("write failed");
 
     expect(stdoutWrite).toHaveBeenCalledTimes(2);
     const token = getCommandToken(String(stdoutWrite.mock.calls[0][0]));
@@ -140,7 +141,7 @@ describe("ActionLogger external output framing", () => {
 
     logger.logExternalOutput(
       "::set-output name=externalValue::external-value",
-      "remote",
+      remoteInfo,
     );
     mockActionsCore.setOutput("trusted", "trusted-value");
 
@@ -169,9 +170,31 @@ describe("ActionLogger external output framing", () => {
       vi.spyOn(process.stdout, "write").mockImplementation(() => true);
       const logger = new ActionLogger();
 
-      logger.logExternalOutput(message, "remote");
+      logger.logExternalOutput(message, remoteInfo);
 
       expect(mockActionsCore.info).toHaveBeenCalledWith(message);
     },
   );
+
+  it.each([
+    ["info", "info"],
+    ["debug", "debug"],
+    ["warning", "warning"],
+    ["error", "error"],
+  ] as const)("preserves the %s external output level", (level, method) => {
+    const stdoutWrite = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const logger = new ActionLogger();
+
+    logger.logExternalOutput("external output", {
+      source: "remote",
+      level,
+    });
+
+    expect(mockActionsCore[method]).toHaveBeenCalledExactlyOnceWith(
+      "external output",
+    );
+    expect(stdoutWrite).toHaveBeenCalledTimes(level === "info" ? 2 : 0);
+  });
 });
