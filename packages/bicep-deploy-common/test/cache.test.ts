@@ -126,6 +126,11 @@ describe("BicepCache", () => {
       // Then check cache with resolved version, miss, download, and save
       expect(cache.find).toHaveBeenCalledWith("1.2.3");
       expect(cache.save).toHaveBeenCalledWith("/tmp/bicep-xyz/bicep", "1.2.3");
+      expect(
+        logger
+          .getExternalMessages("remote", "info")
+          .some(log => log.includes("Downloading Bicep version 1.2.3")),
+      ).toBe(true);
     });
 
     it("skips download when resolved version is already cached", async () => {
@@ -155,6 +160,13 @@ describe("BicepCache", () => {
       expect(cache.find).toHaveBeenCalledWith("1.2.3");
       expect(installMock).not.toHaveBeenCalled();
       expect(cache.save).not.toHaveBeenCalled();
+      expect(
+        logger
+          .getExternalMessages("remote", "info")
+          .some(log =>
+            log.includes("Using cached Bicep version 1.2.3 from /cached/bicep"),
+          ),
+      ).toBe(true);
     });
   });
 
@@ -205,7 +217,7 @@ describe("BicepCache", () => {
       const logger = new TestLogger();
       await getTemplateAndParameters(config, logger, cache);
 
-      const infoLogs = logger.getInfoMessages();
+      const infoLogs = logger.getExternalMessages("repository", "info");
       expect(
         infoLogs.some(log =>
           log.includes("Using cached Bicep version 0.30.23 from /cached/bicep"),
@@ -235,7 +247,7 @@ describe("BicepCache", () => {
       const logger = new TestLogger();
       await getTemplateAndParameters(config, logger, cache);
 
-      const infoLogs = logger.getInfoMessages();
+      const infoLogs = logger.getExternalMessages("repository", "info");
       expect(
         infoLogs.some(log =>
           log.includes("Downloading Bicep version 0.30.23..."),

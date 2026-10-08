@@ -52,7 +52,7 @@ export async function execute(
   try {
     // Log what operation we're starting
     const scopedId = getScopedId(config);
-    logger.logInfo(
+    logger.logExternalOutput(
       loggingMessages.startingOperation(
         config.type,
         config.operation,
@@ -60,6 +60,7 @@ export async function execute(
         scopedId,
         config.name ?? "",
       ),
+      { source: "repository", level: "info" },
     );
 
     if (config.operation !== "delete") {
@@ -81,7 +82,10 @@ export async function execute(
                 setOutputs(config, outputSetter, result?.properties?.outputs);
               },
               error => {
-                logger.logError(JSON.stringify(error, null, 2));
+                logger.logExternalOutput(JSON.stringify(error, null, 2), {
+                  source: "remote",
+                  level: "error",
+                });
                 outputSetter.setFailed(errorMessages.createFailed);
               },
               logger,
@@ -95,7 +99,10 @@ export async function execute(
                 logDiagnostics(result?.properties?.diagnostics ?? [], logger);
               },
               error => {
-                logger.logError(JSON.stringify(error, null, 2));
+                logger.logExternalOutput(JSON.stringify(error, null, 2), {
+                  source: "remote",
+                  level: "error",
+                });
                 outputSetter.setFailed(errorMessages.validationFailed);
               },
               logger,
@@ -107,11 +114,17 @@ export async function execute(
               async () => {
                 const result = await deploymentWhatIf(config, files, logger);
                 const formatted = formatWhatIfOperationResult(result, "ansii");
-                logger.logInfoRaw(formatted);
+                logger.logExternalOutput(formatted, {
+                  source: "remote",
+                  level: "info",
+                });
                 logDiagnostics(result.diagnostics ?? [], logger);
               },
               error => {
-                logger.logError(JSON.stringify(error, null, 2));
+                logger.logExternalOutput(JSON.stringify(error, null, 2), {
+                  source: "remote",
+                  level: "error",
+                });
                 outputSetter.setFailed(errorMessages.whatIfFailed);
               },
               logger,
@@ -130,7 +143,10 @@ export async function execute(
                 setOutputs(config, outputSetter, result?.properties?.outputs);
               },
               error => {
-                logger.logError(JSON.stringify(error, null, 2));
+                logger.logExternalOutput(JSON.stringify(error, null, 2), {
+                  source: "remote",
+                  level: "error",
+                });
                 outputSetter.setFailed(errorMessages.createFailed);
               },
               logger,
@@ -141,7 +157,10 @@ export async function execute(
             await tryWithErrorHandling(
               () => stackValidate(config, files, logger),
               error => {
-                logger.logError(JSON.stringify(error, null, 2));
+                logger.logExternalOutput(JSON.stringify(error, null, 2), {
+                  source: "remote",
+                  level: "error",
+                });
                 outputSetter.setFailed(errorMessages.validationFailed);
               },
               logger,
@@ -179,12 +198,16 @@ export async function execute(
       const correlationId = error.response.headers.get(
         "x-ms-correlation-request-id",
       );
-      logger.logError(
+      logger.logExternalOutput(
         errorMessages.requestFailedCorrelation(correlationId ?? "unknown"),
+        { source: "remote", level: "error" },
       );
 
       const responseBody = JSON.parse(error.response.bodyAsText);
-      logger.logError(JSON.stringify(responseBody, null, 2));
+      logger.logExternalOutput(JSON.stringify(responseBody, null, 2), {
+        source: "remote",
+        level: "error",
+      });
     }
 
     outputSetter.setFailed(errorMessages.operationFailed);

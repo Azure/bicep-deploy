@@ -8,7 +8,7 @@ import { parse as parseJsonc } from "jsonc-parser";
 import { Bicep, CompileResponseDiagnostic } from "@azure/bicep-rpc-client";
 
 import { FileConfig } from "./config";
-import { Logger } from "./logging";
+import { ExternalOutputSource, Logger } from "./logging";
 import { errorMessages } from "./errorMessages";
 import { loggingMessages } from "./loggingMessages";
 
@@ -25,9 +25,11 @@ export interface BicepCache {
   save(installedPath: string, version: string): Promise<string>;
 }
 
-async function resolveVersion(bicepVersion?: string): Promise<string> {
+async function resolveVersion(
+  bicepVersion?: string,
+): Promise<{ version: string; source: ExternalOutputSource }> {
   if (bicepVersion) {
-    return bicepVersion;
+    return { version: bicepVersion, source: "repository" };
   }
 
   // Bicep.getDownloadUrl() calls the lightweight https://downloads.bicep.azure.com/releases/latest
@@ -41,7 +43,7 @@ async function resolveVersion(bicepVersion?: string): Promise<string> {
     throw new Error(errorMessages.failedToResolveBicepVersion(url));
   }
 
-  return versionMatch.groups.version;
+  return { version: versionMatch.groups.version, source: "remote" };
 }
 
 async function installBicep(
@@ -49,15 +51,22 @@ async function installBicep(
   logger: Logger,
   bicepVersion?: string,
 ) {
-  const resolvedVersion = await resolveVersion(bicepVersion);
+  const { version: resolvedVersion, source: versionSource } =
+    await resolveVersion(bicepVersion);
 
   const cached = await cache.find(resolvedVersion);
   if (cached) {
-    logger.logInfo(loggingMessages.bicepCacheHit(resolvedVersion, cached));
+    logger.logExternalOutput(
+      loggingMessages.bicepCacheHit(resolvedVersion, cached),
+      { source: versionSource, level: "info" },
+    );
     return cached;
   }
 
-  logger.logInfo(loggingMessages.bicepDownloading(resolvedVersion));
+  logger.logExternalOutput(loggingMessages.bicepDownloading(resolvedVersion), {
+    source: versionSource,
+    level: "info",
+  });
   const bicepTmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "bicep-"));
   const bicepPath = await Bicep.install(bicepTmpDir, resolvedVersion);
 
@@ -132,7 +141,10 @@ export async function getJsonParameters(config: FileConfig, logger: Logger) {
 
   let contents;
   if (parametersFile) {
-    logger.logInfo(loggingMessages.usingParametersFile(parametersFile));
+    logger.logExternalOutput(
+      loggingMessages.usingParametersFile(parametersFile),
+      { source: "repository", level: "info" },
+    );
     if (!fsSync.existsSync(parametersFile)) {
       throw new Error(errorMessages.parametersFileNotFound(parametersFile));
     }
@@ -166,7 +178,10 @@ export async function getTemplateAndParameters(
     path.extname(parametersFile).toLowerCase() === ".bicepparam"
   ) {
     // .bicepparam includes template reference, so only log parameters file
-    logger.logInfo(loggingMessages.usingParametersFile(parametersFile));
+    logger.logExternalOutput(
+      loggingMessages.usingParametersFile(parametersFile),
+      { source: "repository", level: "info" },
+    );
     return parse(
       await compileBicepParams(
         parametersFile,
@@ -185,7 +200,10 @@ export async function getTemplateAndParameters(
   const parameters = await getJsonParameters(config, logger);
 
   if (templateFile && path.extname(templateFile).toLowerCase() === ".bicep") {
-    logger.logInfo(loggingMessages.usingTemplateFile(templateFile));
+    logger.logExternalOutput(loggingMessages.usingTemplateFile(templateFile), {
+      source: "repository",
+      level: "info",
+    });
     const { template } = await compileBicep(
       templateFile,
       logger,
@@ -204,7 +222,10 @@ export async function getTemplateAndParameters(
     throw new Error(errorMessages.templateFileRequired);
   }
 
-  logger.logInfo(loggingMessages.usingTemplateFile(templateFile));
+  logger.logExternalOutput(loggingMessages.usingTemplateFile(templateFile), {
+    source: "repository",
+    level: "info",
+  });
   const template = await fs.readFile(templateFile, "utf8");
 
   return parse({ template, parameters });
@@ -249,8 +270,20 @@ function logDiagnostics(
 ) {
   for (const diag of diagnostics) {
     const message = `${diag.source}(${diag.range.start.line + 1},${diag.range.start.char + 1}) : ${diag.level} ${diag.code}: ${diag.message}`;
-    if (diag.level === "Error") logger.logError(message);
-    if (diag.level === "Warning") logger.logWarning(message);
-    if (diag.level === "Info") logger.logInfo(message);
+    if (diag.level === "Error")
+      logger.logExternalOutput(message, {
+        source: "childProcess",
+        level: "error",
+      });
+    if (diag.level === "Warning")
+      logger.logExternalOutput(message, {
+        source: "childProcess",
+        level: "warning",
+      });
+    if (diag.level === "Info")
+      logger.logExternalOutput(message, {
+        source: "childProcess",
+        level: "info",
+      });
   }
 }

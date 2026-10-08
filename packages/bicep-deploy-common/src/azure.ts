@@ -65,37 +65,63 @@ export function createStacksClient(
   );
 }
 
-// Log request + response bodies to GitHub Actions debug output if enabled
-function createDebugLoggingPolicy(logger: Logger): AdditionalPolicyConfig {
+// Log Azure SDK request and response details when debug logging is enabled.
+export function createDebugLoggingPolicy(
+  logger: Logger,
+): AdditionalPolicyConfig {
   return {
     position: "perCall",
     policy: {
       name: "debugLoggingPolicy",
       async sendRequest(request, next) {
         if (logger.isDebugEnabled()) {
-          logger.debug(`Request: ${request.method} ${request.url}`);
+          logger.logExternalOutput(
+            `Request: ${request.method} ${request.url}`,
+            { source: "repository", level: "debug" },
+          );
           if (request.body) {
             const parsed = JSON.parse(request.body.toString());
-            logger.debug(`Body: ${JSON.stringify(parsed, null, 2)}`);
+            logger.logExternalOutput(
+              `Body: ${JSON.stringify(parsed, null, 2)}`,
+              {
+                source: "repository",
+                level: "debug",
+              },
+            );
           }
         }
 
         const response = await next(request);
 
         if (logger.isDebugEnabled()) {
-          logger.debug(`Response: ${response.status}`);
+          logger.logExternalOutput(`Response: ${response.status}`, {
+            source: "remote",
+            level: "debug",
+          });
           if (response.bodyAsText) {
             const parsed = JSON.parse(response.bodyAsText);
-            logger.debug(`Body: ${JSON.stringify(parsed, null, 2)}`);
+            logger.logExternalOutput(
+              `Body: ${JSON.stringify(parsed, null, 2)}`,
+              {
+                source: "remote",
+                level: "debug",
+              },
+            );
           }
 
           const correlationId = response.headers.get(
             "x-ms-correlation-request-id",
           );
-          logger.debug(`CorrelationId: ${correlationId}`);
+          logger.logExternalOutput(`CorrelationId: ${correlationId}`, {
+            source: "remote",
+            level: "debug",
+          });
 
           const activityId = response.headers.get("x-ms-request-id");
-          logger.debug(`ActivityId: ${activityId}`);
+          logger.logExternalOutput(`ActivityId: ${activityId}`, {
+            source: "remote",
+            level: "debug",
+          });
         }
 
         return response;

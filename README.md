@@ -156,6 +156,22 @@ For more information see the
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any
 additional questions or comments.
 
+Before submitting a change, run:
+
+```sh
+npm run validate
+```
+
+This checks lint for the GitHub Action and both shared packages, builds and
+tests the packed common-package consumer under the current Node runtime, builds
+the GitHub Action, and runs the complete unit test suite.
+
+To apply automatic lint fixes before running the same validation:
+
+```sh
+npm run validate:fix
+```
+
 ## Trademarks
 
 This project may contain trademarks or logos for projects, products, or
