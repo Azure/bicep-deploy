@@ -179,7 +179,10 @@ export async function execute(
                   result,
                   "ansii",
                 );
-                logger.logInfoRaw(formatted);
+                logger.logExternalOutput(formatted, {
+                  source: "remote",
+                  level: "info",
+                });
               },
               error => {
                 logger.logError(JSON.stringify(error, null, 2));

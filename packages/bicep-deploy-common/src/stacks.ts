@@ -8,6 +8,7 @@ import {
   defaultName,
   getStacksClient,
   getCreateOperationOptions,
+  getDeploymentStackResourceId,
   requireLocation,
 } from "./utils";
 
@@ -106,7 +107,12 @@ export async function stackWhatIf(
   const name = config.name ?? defaultName;
   const scope = config.scope;
   const client = getStacksClient(config, scope, logger);
-  const whatIfResult = createStackWhatIfDefinition(config, files);
+  const deploymentStackResourceId = getDeploymentStackResourceId(scope, name);
+  const whatIfResult = createStackWhatIfDefinition(
+    config,
+    files,
+    deploymentStackResourceId,
+  );
 
   switch (scope.type) {
     case "resourceGroup":
@@ -203,6 +209,7 @@ function createStackDefinition(
 function createStackWhatIfDefinition(
   config: DeploymentStackConfig,
   files: ParsedFiles,
+  deploymentStackResourceId: string,
 ): DeploymentStacksWhatIfResult {
   const { templateContents, templateSpecId, parametersContents } = files;
 
@@ -218,6 +225,7 @@ function createStackWhatIfDefinition(
       description: config.description,
       actionOnUnmanage: config.actionOnUnManage,
       denySettings: config.denySettings,
+      deploymentStackResourceId: deploymentStackResourceId,
       retentionInterval: whatIfRetentionInterval,
     },
     tags: config.tags,
