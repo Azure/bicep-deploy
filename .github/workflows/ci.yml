@@ -211,7 +211,7 @@ jobs:
           [ "${{ steps.test-deployment-create.outputs.intOutput }}" = "42" ] || exit 1
           [ "${{ steps.test-deployment-create.outputs.stringOutput }}" = "hello world" ] || exit 1
 
-      - name: Test Local Action (Stack)
+      - name: Test Stack - Create
         id: test-stack-create
         uses: ./
         with:
@@ -230,3 +230,16 @@ jobs:
         run: |
           [ "${{ steps.test-stack-create.outputs.intOutput }}" = "42" ] || exit 1
           [ "${{ steps.test-stack-create.outputs.stringOutput }}" = "hello world" ] || exit 1
+
+      - name: Test Stack - WhatIf
+        uses: ./
+        with:
+          type: deploymentStack
+          operation: whatIf
+          name: ci-stack-${{ matrix.os }}
+          scope: resourceGroup
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resource-group-name: azure-bicep-deploy-ci
+          parameters-file: test/files/basic/main.bicepparam
+          action-on-unmanage-resources: delete
+          deny-settings-mode: denyDelete

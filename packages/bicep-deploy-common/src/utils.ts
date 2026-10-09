@@ -3,6 +3,7 @@
 
 import {
   DeployConfig,
+  DeploymentStackConfig,
   ManagementGroupScope,
   ResourceGroupScope,
   ScopeType,
@@ -109,6 +110,20 @@ export function requireLocation(config: DeployConfig) {
   }
 
   return config.location;
+}
+
+export function getDeploymentStackResourceId(
+  config: DeploymentStackConfig,
+): string {
+  const name = config.name ?? defaultName;
+  switch (config.scope.type) {
+    case "resourceGroup":
+      return `/subscriptions/${config.scope.subscriptionId}/resourceGroups/${config.scope.resourceGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+    case "subscription":
+      return `/subscriptions/${config.scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+    case "managementGroup":
+      return `/providers/Microsoft.Management/managementGroups/${config.scope.managementGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+  }
 }
 
 export function logDiagnostics(
@@ -229,6 +244,33 @@ export async function tryWithErrorHandling<T>(
       }
     }
 
+    const longRunningOperationError = getLongRunningOperationError(ex);
+    if (longRunningOperationError) {
+      onError(longRunningOperationError);
+      return;
+    }
+
     throw ex;
   }
+}
+
+function getLongRunningOperationError(
+  error: unknown,
+): ErrorResponse | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+
+  const match =
+    /^The long-running operation has failed(?:\. ([^.]+)\. ([\s\S]*))?$/u.exec(
+      error.message,
+    );
+  if (!match) {
+    return undefined;
+  }
+
+  return {
+    code: match[1],
+    message: match[2] ?? error.message,
+  };
 }

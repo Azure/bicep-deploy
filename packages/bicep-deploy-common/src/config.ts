@@ -91,7 +91,7 @@ export type DeploymentsConfig = CommonConfig & {
 
 export type DeploymentStackConfig = CommonConfig & {
   type: "deploymentStack";
-  operation: "create" | "delete" | "validate";
+  operation: "create" | "delete" | "validate" | "whatIf";
   scope: ManagementGroupScope | SubscriptionScope | ResourceGroupScope;
   description?: string;
   actionOnUnManage: {
@@ -220,7 +220,7 @@ export function parseConfig(
         environment: environment,
         operation: getRequiredEnumInput(
           inputParameterNames.operation,
-          ["create", "validate", "delete"],
+          ["create", "validate", "delete", "whatIf"],
           inputReader,
         ),
         scope: parseDeploymentStackScope(inputReader, inputParameterNames),

@@ -5,6 +5,7 @@ import {
   azureMock,
   mockDeploymentsOps,
   mockStacksOps,
+  mockStacksWhatIfAtSubscriptionOps,
 } from "./mocks/azureMocks";
 import { mockFile } from "./mocks/fileMocks";
 import { RestError } from "@azure/core-rest-pipeline";
@@ -32,6 +33,8 @@ import {
 import {
   DeploymentStack,
   DeploymentStackProperties,
+  DeploymentStacksWhatIfResult,
+  DeploymentStacksWhatIfResultProperties,
 } from "@azure/arm-resourcesdeploymentstacks";
 
 const outputSetter = new mockOutputSetter();
@@ -640,12 +643,30 @@ describe("stack execution", () => {
       mockFile.getTemplateAndParameters.mockResolvedValue(files);
     });
 
+    const expectedWhatIfProperties: DeploymentStacksWhatIfResultProperties = {
+      actionOnUnmanage: config.actionOnUnManage,
+      denySettings: config.denySettings,
+      description: config.description,
+      template: files.templateContents,
+      templateLink: undefined,
+      parameters: files.parametersContents["parameters"],
+      deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
+      retentionInterval: "PT3H",
+    };
+
+    const expectedWhatIfPayload: DeploymentStacksWhatIfResult = {
+      location: config.location,
+      properties: expectedWhatIfProperties,
+      tags: config.tags,
+    };
+
     const expectedProperties: DeploymentStackProperties = {
       actionOnUnmanage: config.actionOnUnManage,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
       denySettings: config.denySettings,
       description: config.description,
       template: files.templateContents,
+      templateLink: undefined,
       parameters: files.parametersContents["parameters"],
     };
 
@@ -743,6 +764,60 @@ describe("stack execution", () => {
         bypassStackOutOfSyncError: true,
         unmanageActionResources: "delete",
       });
+    });
+
+    it("what-ifs", async () => {
+      const mockWhatIfResult: DeploymentStacksWhatIfResult = {
+        properties: {
+          actionOnUnmanage: config.actionOnUnManage,
+          denySettings: config.denySettings,
+          deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
+          retentionInterval: "PT3H",
+          changes: {
+            resourceChanges: [
+              {
+                id: "/subscriptions/mockSub/resourceGroups/mockRg/providers/Microsoft.Storage/storageAccounts/mockStorage",
+                apiVersion: "2023-01-01",
+                changeType: "modify",
+                changeCertainty: "definite",
+                resourceConfigurationChanges: {
+                  delta: [
+                    {
+                      path: "properties.accessTier",
+                      changeType: "modify",
+                      before: "Hot",
+                      after: "Cool",
+                    },
+                  ],
+                },
+              },
+            ],
+            denySettingsChange: {},
+          },
+          diagnostics: [],
+        },
+      };
+
+      mockStacksWhatIfAtSubscriptionOps.beginCreateOrUpdateAndWait!.mockResolvedValue(
+        mockWhatIfResult,
+      );
+      mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait!.mockResolvedValue(
+        mockWhatIfResult,
+      );
+
+      await execute(
+        { ...config, operation: "whatIf" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      expect(
+        mockStacksWhatIfAtSubscriptionOps.beginCreateOrUpdateAndWait,
+      ).toHaveBeenCalledWith(expect.any(String), expectedWhatIfPayload);
+      expect(
+        mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait,
+      ).toHaveBeenCalledWith(expect.any(String));
     });
 
     it.each([
@@ -872,6 +947,29 @@ describe("stack execution", () => {
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
     });
 
+    it("handles long-running create failures", async () => {
+      mockStacksOps.beginCreateOrUpdateAtResourceGroupAndWait!.mockRejectedValueOnce(
+        new Error(
+          "The long-running operation has failed. DeploymentStackDeploymentFailed. One or more resources could not be deployed.",
+        ),
+      );
+      const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+      await execute(config, logger, outputSetter, noopCache);
+
+      expect(spySetFailed).toHaveBeenCalledWith(errorMessages.createFailed);
+      expect(logger.getExternalMessages("remote", "error")).toContain(
+        JSON.stringify(
+          {
+            code: "DeploymentStackDeploymentFailed",
+            message: "One or more resources could not be deployed.",
+          },
+          null,
+          2,
+        ),
+      );
+    });
+
     it("masks secure values", async () => {
       mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockResolvedValue(
         mockReturnPayload,
@@ -904,6 +1002,34 @@ describe("stack execution", () => {
       expect(
         mockStacksOps.beginValidateStackAtResourceGroupAndWait,
       ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+    });
+
+    it("handles long-running validation failures", async () => {
+      mockStacksOps.beginValidateStackAtResourceGroupAndWait!.mockRejectedValueOnce(
+        new Error(
+          "The long-running operation has failed. InvalidTemplateDeployment. The template deployment is invalid.",
+        ),
+      );
+      const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+      await execute(
+        { ...config, operation: "validate" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      expect(spySetFailed).toHaveBeenCalledWith(errorMessages.validationFailed);
+      expect(logger.getExternalMessages("remote", "error")).toContain(
+        JSON.stringify(
+          {
+            code: "InvalidTemplateDeployment",
+            message: "The template deployment is invalid.",
+          },
+          null,
+          2,
+        ),
+      );
     });
 
     it("deletes", async () => {
