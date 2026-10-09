@@ -104,6 +104,91 @@ describe("formatDeploymentStacksWhatIfChange", () => {
     expect(result).not.toContain("Diagnostics (");
   });
 
+  it("renders NoEffect property changes with a gray cross", () => {
+    const changes: DeploymentStacksWhatIfChange = {
+      denySettingsChange: {},
+      resourceChanges: [
+        {
+          id: "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/Microsoft.Test/widgets/test",
+          changeType: "modify",
+          changeCertainty: "definite",
+          resourceConfigurationChanges: {
+            delta: [
+              {
+                path: "sku.tier",
+                changeType: "noEffect",
+                after: "Standard",
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const result = formatDeploymentStacksWhatIfChange(
+      createWhatIfResult(changes),
+      "debug",
+    );
+
+    expect(result).toContain("<GRAY>x<RESET> NoEffect");
+    expect(result).toContain(
+      '<GRAY>x<RESET> sku.tier: <GRAY>"Standard"<RESET>',
+    );
+  });
+
+  it("formats resource configuration snapshots for creates and deletes", () => {
+    const changes: DeploymentStacksWhatIfChange = {
+      denySettingsChange: {},
+      resourceChanges: [
+        {
+          id: "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/Microsoft.Test/widgets/created",
+          changeType: "create",
+          changeCertainty: "definite",
+          resourceConfigurationChanges: {
+            after: {
+              apiVersion: "2023-01-01",
+              id: "created-resource-id",
+              location: "westus",
+              name: "created",
+              type: "Microsoft.Test/widgets",
+              properties: { value: "created-value" },
+            },
+            delta: [],
+          },
+        },
+        {
+          id: "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg1/providers/Microsoft.Test/widgets/deleted",
+          changeType: "delete",
+          changeCertainty: "definite",
+          resourceConfigurationChanges: {
+            before: {
+              apiVersion: "2023-01-01",
+              id: "deleted-resource-id",
+              location: "westus",
+              name: "deleted",
+              type: "Microsoft.Test/widgets",
+              properties: { value: "deleted-value" },
+            },
+            delta: [],
+          },
+        },
+      ],
+    };
+
+    const result = formatDeploymentStacksWhatIfChange(
+      createWhatIfResult(changes),
+      "debug",
+    );
+
+    expect(result).toContain("<GREEN>+<RESET> properties: <GREEN>{<RESET>");
+    expect(result).toContain('<GREEN>  "value": "created-value"<RESET>');
+    expect(result).toContain("<RED>-<RESET> properties: <RED>{<RESET>");
+    expect(result).toContain('<RED>  "value": "deleted-value"<RESET>');
+    expect(result).not.toContain("apiVersion:");
+    expect(result).not.toContain("type:");
+    expect(result).not.toContain("name:");
+  });
+
   it("formats what-if example 1 exactly like the Azure CLI tests", () => {
     expect(
       formatDeploymentStacksWhatIfChange(

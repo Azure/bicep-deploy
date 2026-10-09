@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import type {
-  DeploymentStacksChangeDeltaRecord,
   DeploymentStacksDiagnostic,
   DeploymentStacksWhatIfChange,
   DeploymentStacksWhatIfPropertyChange,
@@ -55,6 +54,7 @@ const allWhatIfTopLevelChangeTypes = [
   "delete",
   "noChange",
   "detach",
+  "noEffect",
 ] as const;
 
 const changeTypeFormatting: Record<string, ChangeTypeInfo> = {
@@ -64,7 +64,7 @@ const changeTypeFormatting: Record<string, ChangeTypeInfo> = {
   detach: { symbol: "v", color: Color.Blue },
   modify: { symbol: "~", color: Color.Magenta },
   nochange: { symbol: "=" },
-  noeffect: { symbol: "=" },
+  noeffect: { symbol: "x", color: Color.Gray },
   unsupported: { symbol: "!" },
 };
 
@@ -276,9 +276,7 @@ class DeploymentStacksWhatIfResultFormatter {
       this.formatChange(change, path);
     }
 
-    this.formatResourcePropertyChanges(
-      resourceChange.resourceConfigurationChanges,
-    );
+    this.formatResourcePropertyChanges(resourceChange);
     this.popIndent();
 
     return true;
@@ -368,15 +366,47 @@ class DeploymentStacksWhatIfResultFormatter {
   }
 
   private formatResourcePropertyChanges(
-    propertyChanges?: DeploymentStacksChangeDeltaRecord | null,
+    resourceChange: DeploymentStacksWhatIfResourceChange,
   ): boolean {
-    if (!propertyChanges?.delta || propertyChanges.delta.length === 0) {
+    const propertyChanges = resourceChange.resourceConfigurationChanges;
+    if (!propertyChanges) {
       return false;
     }
 
     let printed = false;
 
-    for (const propertyChange of propertyChanges.delta) {
+    if (propertyChanges.delta?.length) {
+      for (const propertyChange of propertyChanges.delta) {
+        if (this.formatChange(propertyChange)) {
+          printed = true;
+        }
+      }
+
+      return printed;
+    }
+
+    const changeType = normalizeComparable(resourceChange.changeType ?? "");
+    const resourceConfiguration =
+      changeType === "create"
+        ? propertyChanges.after
+        : changeType === "delete"
+          ? propertyChanges.before
+          : undefined;
+
+    if (!isPlainObject(resourceConfiguration)) {
+      return false;
+    }
+
+    for (const [path, value] of entries(resourceConfiguration)) {
+      if (resourceConfigurationMetadataProperties.has(path)) {
+        continue;
+      }
+
+      const propertyChange: StackChangeLike =
+        changeType === "create"
+          ? { path, changeType, after: value }
+          : { path, changeType, before: value };
+
       if (this.formatChange(propertyChange)) {
         printed = true;
       }
@@ -588,7 +618,7 @@ class DeploymentStacksWhatIfResultFormatter {
     const normalizedChangeType = hasChangeType(primitiveChange)
       ? normalizeComparable(primitiveChange.changeType)
       : primitiveChange.before === primitiveChange.after
-        ? "noeffect"
+        ? "nochange"
         : "modify";
     const propertyPath = getChangePath(primitiveChange, parentPath);
     const { symbol, color } = getChangeTypeFormatting(normalizedChangeType);
@@ -908,6 +938,16 @@ function formatExtResourceIdentifiers(
     .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
     .join(", ");
 }
+
+const resourceConfigurationMetadataProperties = new Set([
+  "apiVersion",
+  "extension",
+  "id",
+  "identifiers",
+  "name",
+  "resourceGroup",
+  "type",
+]);
 
 function isPlainObject(
   value: UnknownValue,

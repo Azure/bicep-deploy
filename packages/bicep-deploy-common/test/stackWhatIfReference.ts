@@ -5,6 +5,7 @@ export const expectedStacksWhatIf1 = `Resource and property changes are indicate
   <GREEN>+<RESET> Create              ! Unsupported
   <MAGENTA>~<RESET> Modify              <RED>-<RESET> Delete
   = NoChange            <BLUE>v<RESET> Detach
+  <GRAY>x<RESET> NoEffect            
 
 <YELLOW>Changes to Stack /subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Resources/deploymentStacks/testStack_9ef16884f0dad7d0e5de3d3ec57:<RESET>
 <MAGENTA>~<RESET> DeploymentScope: <MAGENTA>"ThisIsBefore"<RESET> => <MAGENTA>"ThisIsAfter"<RESET>
@@ -103,6 +104,10 @@ Azure
   <GREEN>+<RESET> <GREEN>/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testD/resourceD [2021-05-01]<RESET>
     <MAGENTA>~<RESET> Management Status: <MAGENTA>"NotManaged"<RESET> => <MAGENTA>"Managed"<RESET>
     <MAGENTA>~<RESET> Deny Status: <MAGENTA>"None"<RESET> => <MAGENTA>"DenyDelete"<RESET>
+    <GREEN>+<RESET> location: <GREEN>"westus"<RESET>
+    <GREEN>+<RESET> properties: <GREEN>{<RESET>
+      <GREEN>  "property1": "resourceD"<RESET>
+      <GREEN>}<RESET>
 
   >> <MAGENTA>Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges)<RESET>
   <CYAN>?<RESET><MAGENTA>~<RESET> <CYAN>[Potential] <RESET><MAGENTA>/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Test/testC/resourceC [2021-05-01]<RESET>
@@ -136,6 +141,9 @@ Contoso@2.0.0
   <RED>-<RESET> <RED>Contoso/example name="defResource"<RESET>
     <MAGENTA>~<RESET> Management Status: <MAGENTA>"Managed"<RESET> => <MAGENTA>"Unmanaged"<RESET>
     <MAGENTA>~<RESET> Deny Status: <MAGENTA>"NotSupported"<RESET> => <MAGENTA>"None"<RESET>
+    <RED>-<RESET> properties: <RED>{<RESET>
+      <RED>  "property1": "resourceDef-before"<RESET>
+      <RED>}<RESET>
 
   >> <MAGENTA>Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges)<RESET>
   <CYAN>?<RESET>! <CYAN>[Potential] <RESET>Contoso/noPreview 
@@ -182,6 +190,7 @@ export const expectedStacksWhatIf2 = `Resource and property changes are indicate
   <GREEN>+<RESET> Create              ! Unsupported
   <MAGENTA>~<RESET> Modify              <RED>-<RESET> Delete
   = NoChange            <BLUE>v<RESET> Detach
+  <GRAY>x<RESET> NoEffect            
 
 <YELLOW>Changes to Managed Resources:<RESET>
 
@@ -231,6 +240,23 @@ Azure
   <GREEN>+<RESET> <GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvcreatemjwo5pow6lmvm [2023-05-01]<RESET>
     <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
     = Deny Status: "none"
+    <GREEN>+<RESET> kind: <GREEN>"StorageV2"<RESET>
+    <GREEN>+<RESET> location: <GREEN>"westus2"<RESET>
+    <GREEN>+<RESET> properties: <GREEN>{<RESET>
+      <GREEN>  "allowBlobPublicAccess": false,<RESET>
+      <GREEN>  "allowSharedKeyAccess": false,<RESET>
+      <GREEN>  "defaultToOAuthAuthentication": true,<RESET>
+      <GREEN>  "minimumTlsVersion": "TLS1_2",<RESET>
+      <GREEN>  "publicNetworkAccess": "Disabled",<RESET>
+      <GREEN>  "supportsHttpsTrafficOnly": true<RESET>
+      <GREEN>}<RESET>
+    <GREEN>+<RESET> sku: <GREEN>{<RESET>
+      <GREEN>  "name": "Standard_LRS"<RESET>
+      <GREEN>}<RESET>
+    <GREEN>+<RESET> tags: <GREEN>{<RESET>
+      <GREEN>  "owner": "what-if-visual-validation",<RESET>
+      <GREEN>  "scenario": "definite-create"<RESET>
+      <GREEN>}<RESET>
   <MAGENTA>~<RESET> <MAGENTA>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvmodmjwo5pow6lmvm [2023-05-01]<RESET>
     = Management Status: "managed"
     = Deny Status: "none"
@@ -247,14 +273,38 @@ Azure
   <GREEN>+<RESET> <GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/bar [1999-12-31]<RESET>
     <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
     = Deny Status: "none"
+    <GREEN>+<RESET> properties: <GREEN>{<RESET>
+      <GREEN>  "source": "duplicate-diagnostic.bicep"<RESET>
+      <GREEN>}<RESET>
   <GREEN>+<RESET> <GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/RP.Namespace/widgets/foo [1999-12-31]<RESET>
     <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
     = Deny Status: "none"
+    <GREEN>+<RESET> properties: <GREEN>{<RESET>
+      <GREEN>  "source": "duplicate-diagnostic.bicep"<RESET>
+      <GREEN>}<RESET>
 
   >> <MAGENTA>Potential Resource Changes (Learn more at https://aka.ms/whatIfPotentialChanges)<RESET>
   <CYAN>?<RESET><GREEN>+<RESET> <CYAN>[Potential] <RESET><GREEN>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotcreatemjwo5pow6lmvm [2023-05-01]<RESET>
     <MAGENTA>~<RESET> Management Status: <MAGENTA>"notManaged"<RESET> => <MAGENTA>"managed"<RESET>
     = Deny Status: "none"
+    <GREEN>+<RESET> condition: <GREEN>"[greater(int(utcNow('%f')), 4)]"<RESET>
+    <GREEN>+<RESET> kind: <GREEN>"StorageV2"<RESET>
+    <GREEN>+<RESET> location: <GREEN>"westus2"<RESET>
+    <GREEN>+<RESET> properties: <GREEN>{<RESET>
+      <GREEN>  "allowBlobPublicAccess": false,<RESET>
+      <GREEN>  "allowSharedKeyAccess": false,<RESET>
+      <GREEN>  "defaultToOAuthAuthentication": true,<RESET>
+      <GREEN>  "minimumTlsVersion": "TLS1_2",<RESET>
+      <GREEN>  "publicNetworkAccess": "Disabled",<RESET>
+      <GREEN>  "supportsHttpsTrafficOnly": true<RESET>
+      <GREEN>}<RESET>
+    <GREEN>+<RESET> sku: <GREEN>{<RESET>
+      <GREEN>  "name": "Standard_LRS"<RESET>
+      <GREEN>}<RESET>
+    <GREEN>+<RESET> tags: <GREEN>{<RESET>
+      <GREEN>  "owner": "what-if-visual-validation",<RESET>
+      <GREEN>  "scenario": "potential-create"<RESET>
+      <GREEN>}<RESET>
   <CYAN>?<RESET><MAGENTA>~<RESET> <CYAN>[Potential] <RESET><MAGENTA>/subscriptions/390ba170-3e2a-41c4-b372-15d9c5ae6e81/resourceGroups/whatif-change-40011/providers/Microsoft.Storage/storageAccounts/wvpotremovemjwo5pow6lmvm [2023-05-01]<RESET>
     = Management Status: "managed"
     = Deny Status: "none"

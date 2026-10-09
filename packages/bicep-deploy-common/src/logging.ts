@@ -29,6 +29,7 @@ export enum Color {
   Magenta = "\x1b[35m",
   Cyan = "\x1b[36m",
   White = "\x1b[37m",
+  Gray = "\x1b[90m",
 }
 
 const colorToName: Record<Color, string> = {
@@ -41,6 +42,7 @@ const colorToName: Record<Color, string> = {
   "\u001b[35m": "Magenta",
   "\u001b[36m": "Cyan",
   "\u001b[37m": "White",
+  "\u001b[90m": "Gray",
 };
 
 export function colorize(message: string, color: Color) {
