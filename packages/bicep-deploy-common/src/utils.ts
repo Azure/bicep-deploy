@@ -3,6 +3,7 @@
 
 import {
   DeployConfig,
+  DeploymentStackConfig,
   ManagementGroupScope,
   ResourceGroupScope,
   ScopeType,
@@ -112,16 +113,16 @@ export function requireLocation(config: DeployConfig) {
 }
 
 export function getDeploymentStackResourceId(
-  scope: ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
-  name: string,
+  config: DeploymentStackConfig,
 ): string {
-  switch (scope.type) {
+  const name = config.name ?? defaultName;
+  switch (config.scope.type) {
     case "resourceGroup":
-      return `/subscriptions/${scope.subscriptionId}/resourceGroups/${scope.resourceGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+      return `/subscriptions/${config.scope.subscriptionId}/resourceGroups/${config.scope.resourceGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
     case "subscription":
-      return `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+      return `/subscriptions/${config.scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${name}`;
     case "managementGroup":
-      return `/providers/Microsoft.Management/managementGroups/${scope.managementGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
+      return `/providers/Microsoft.Management/managementGroups/${config.scope.managementGroup}/providers/Microsoft.Resources/deploymentStacks/${name}`;
   }
 }
 

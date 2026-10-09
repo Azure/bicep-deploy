@@ -34,6 +34,7 @@ import {
   DeploymentStack,
   DeploymentStackProperties,
   DeploymentStacksWhatIfResult,
+  DeploymentStacksWhatIfResultProperties,
 } from "@azure/arm-resourcesdeploymentstacks";
 
 const outputSetter = new mockOutputSetter();
@@ -642,12 +643,30 @@ describe("stack execution", () => {
       mockFile.getTemplateAndParameters.mockResolvedValue(files);
     });
 
+    const expectedWhatIfProperties: DeploymentStacksWhatIfResultProperties = {
+      actionOnUnmanage: config.actionOnUnManage,
+      denySettings: config.denySettings,
+      description: config.description,
+      template: files.templateContents,
+      templateLink: undefined,
+      parameters: files.parametersContents["parameters"],
+      deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
+      retentionInterval: "PT3H",
+    };
+
+    const expectedWhatIfPayload: DeploymentStacksWhatIfResult = {
+      location: config.location,
+      properties: expectedWhatIfProperties,
+      tags: config.tags,
+    };
+
     const expectedProperties: DeploymentStackProperties = {
       actionOnUnmanage: config.actionOnUnManage,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
       denySettings: config.denySettings,
       description: config.description,
       template: files.templateContents,
+      templateLink: undefined,
       parameters: files.parametersContents["parameters"],
     };
 
@@ -753,7 +772,7 @@ describe("stack execution", () => {
           actionOnUnmanage: config.actionOnUnManage,
           denySettings: config.denySettings,
           deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
-          retentionInterval: "P1D",
+          retentionInterval: "PT3H",
           changes: {
             resourceChanges: [
               {
@@ -795,18 +814,10 @@ describe("stack execution", () => {
 
       expect(
         mockStacksWhatIfAtSubscriptionOps.beginCreateOrUpdateAndWait,
-      ).toHaveBeenCalledWith(config.name, {
-        ...expectedPayload,
-        properties: {
-          ...expectedProperties,
-          bypassStackOutOfSyncError: undefined,
-          deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
-          retentionInterval: "P1D",
-        },
-      });
+      ).toHaveBeenCalledWith(expect.any(String), expectedWhatIfPayload);
       expect(
         mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait,
-      ).toHaveBeenCalledWith(config.name);
+      ).toHaveBeenCalledWith(expect.any(String));
     });
 
     it.each([

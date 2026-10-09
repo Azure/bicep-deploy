@@ -886,7 +886,7 @@
     "parameters": {},
     "parametersLink": null,
     "provisioningState": "succeeded",
-    "retentionInterval": "1 day, 0:00:00",
+    "retentionInterval": "PT3H",
     "template": null,
     "templateLink": null,
     "validationLevel": null

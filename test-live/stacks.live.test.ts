@@ -26,6 +26,41 @@ deny-settings-mode: denyWriteAndDelete
     expect(failure).not.toBeDefined();
   });
 
+  it("runs what-if", async () => {
+    // what-if requires the stack to already exist
+    await runAction(
+      data => `
+type: deploymentStack
+operation: create
+name: 'e2e-whatif'
+scope: resourceGroup
+subscription-id: ${data.subscriptionId}
+resource-group-name: ${data.resourceGroup}
+parameters-file: test/files/basic/main.bicepparam
+action-on-unmanage-resources: delete
+action-on-unmanage-resourcegroups: delete
+deny-settings-mode: denyWriteAndDelete
+`,
+    );
+
+    const { failure } = await runAction(
+      data => `
+type: deploymentStack
+operation: whatIf
+name: 'e2e-whatif'
+scope: resourceGroup
+subscription-id: ${data.subscriptionId}
+resource-group-name: ${data.resourceGroup}
+parameters-file: test/files/basic/main.bicepparam
+action-on-unmanage-resources: delete
+action-on-unmanage-resourcegroups: delete
+deny-settings-mode: denyWriteAndDelete
+`,
+    );
+
+    expect(failure).not.toBeDefined();
+  });
+
   it("runs create and handles failures", async () => {
     const { failure, errors } = await runAction(
       data => `

@@ -1,7 +1,7 @@
 {
   "properties": {
     "deploymentStackResourceId": "/subscriptions/6d41d86d-eb6b-473a-b31d-bbd084e1814d/resourceGroups/503ace4c-9b1c-4059-a3e9-09553d24e9e1/providers/Microsoft.Resources/deploymentStacks/testStack_9ef16884f0dad7d0e5de3d3ec57",
-    "retentionInterval": "P1D",
+    "retentionInterval": "PT3H",
     "provisioningState": "Succeeded",
     "deploymentStackLastModified": "2026-02-23T16:44:05+00:00",
     "deploymentExtensions": [

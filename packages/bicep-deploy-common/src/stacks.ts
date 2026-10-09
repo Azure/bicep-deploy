@@ -17,10 +17,9 @@ import {
   DeploymentStacksWhatIfResult,
 } from "@azure/arm-resourcesdeploymentstacks";
 
-// the retention interval for what-if results is required by the service, and must be between
-// 1 and 30 days. Since we only need the result for the lifetime of this operation, we use the
-// minimum allowed value.
-const whatIfRetentionInterval = "P1D";
+// The retention interval for what-if results is required by the service.
+// Since we only need the result for the lifetime of this operation, we use the minimum allowed value.
+const whatIfRetentionInterval = "PT3H";
 
 export async function stackCreate(
   config: DeploymentStackConfig,
@@ -104,10 +103,12 @@ export async function stackWhatIf(
   files: ParsedFiles,
   logger: Logger,
 ) {
-  const name = config.name ?? defaultName;
+  const stackName = config.name ?? defaultName;
+  const epochSeconds = Math.floor(Date.now() / 1000);
+  const resultsName = `${stackName}-${epochSeconds}`;
   const scope = config.scope;
   const client = getStacksClient(config, scope, logger);
-  const deploymentStackResourceId = getDeploymentStackResourceId(scope, name);
+  const deploymentStackResourceId = getDeploymentStackResourceId(config);
   const whatIfResult = createStackWhatIfDefinition(
     config,
     files,
@@ -118,28 +119,28 @@ export async function stackWhatIf(
     case "resourceGroup":
       await client.deploymentStacksWhatIfResultsAtResourceGroup.beginCreateOrUpdateAndWait(
         scope.resourceGroup,
-        name,
+        resultsName,
         whatIfResult,
       );
       return await client.deploymentStacksWhatIfResultsAtResourceGroup.beginWhatIfAndWait(
         scope.resourceGroup,
-        name,
+        resultsName,
       );
     case "subscription":
       await client.deploymentStacksWhatIfResultsAtSubscription.beginCreateOrUpdateAndWait(
-        name,
+        resultsName,
         {
           ...whatIfResult,
           location: requireLocation(config),
         },
       );
       return await client.deploymentStacksWhatIfResultsAtSubscription.beginWhatIfAndWait(
-        name,
+        resultsName,
       );
     case "managementGroup":
       await client.deploymentStacksWhatIfResultsAtManagementGroup.beginCreateOrUpdateAndWait(
         scope.managementGroup,
-        name,
+        resultsName,
         {
           ...whatIfResult,
           location: requireLocation(config),
@@ -147,7 +148,7 @@ export async function stackWhatIf(
       );
       return await client.deploymentStacksWhatIfResultsAtManagementGroup.beginWhatIfAndWait(
         scope.managementGroup,
-        name,
+        resultsName,
       );
   }
 }
