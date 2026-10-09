@@ -244,6 +244,33 @@ export async function tryWithErrorHandling<T>(
       }
     }
 
+    const longRunningOperationError = getLongRunningOperationError(ex);
+    if (longRunningOperationError) {
+      onError(longRunningOperationError);
+      return;
+    }
+
     throw ex;
   }
+}
+
+function getLongRunningOperationError(
+  error: unknown,
+): ErrorResponse | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+
+  const match =
+    /^The long-running operation has failed(?:\. ([^.]+)\. ([\s\S]*))?$/u.exec(
+      error.message,
+    );
+  if (!match) {
+    return undefined;
+  }
+
+  return {
+    code: match[1],
+    message: match[2] ?? error.message,
+  };
 }

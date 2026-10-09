@@ -947,6 +947,29 @@ describe("stack execution", () => {
       expect(outputSetter.setSecret).not.toHaveBeenCalled();
     });
 
+    it("handles long-running create failures", async () => {
+      mockStacksOps.beginCreateOrUpdateAtResourceGroupAndWait!.mockRejectedValueOnce(
+        new Error(
+          "The long-running operation has failed. DeploymentStackDeploymentFailed. One or more resources could not be deployed.",
+        ),
+      );
+      const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+      await execute(config, logger, outputSetter, noopCache);
+
+      expect(spySetFailed).toHaveBeenCalledWith(errorMessages.createFailed);
+      expect(logger.getExternalMessages("remote", "error")).toContain(
+        JSON.stringify(
+          {
+            code: "DeploymentStackDeploymentFailed",
+            message: "One or more resources could not be deployed.",
+          },
+          null,
+          2,
+        ),
+      );
+    });
+
     it("masks secure values", async () => {
       mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockResolvedValue(
         mockReturnPayload,
@@ -979,6 +1002,34 @@ describe("stack execution", () => {
       expect(
         mockStacksOps.beginValidateStackAtResourceGroupAndWait,
       ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+    });
+
+    it("handles long-running validation failures", async () => {
+      mockStacksOps.beginValidateStackAtResourceGroupAndWait!.mockRejectedValueOnce(
+        new Error(
+          "The long-running operation has failed. InvalidTemplateDeployment. The template deployment is invalid.",
+        ),
+      );
+      const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+      await execute(
+        { ...config, operation: "validate" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      expect(spySetFailed).toHaveBeenCalledWith(errorMessages.validationFailed);
+      expect(logger.getExternalMessages("remote", "error")).toContain(
+        JSON.stringify(
+          {
+            code: "InvalidTemplateDeployment",
+            message: "The template deployment is invalid.",
+          },
+          null,
+          2,
+        ),
+      );
     });
 
     it("deletes", async () => {
