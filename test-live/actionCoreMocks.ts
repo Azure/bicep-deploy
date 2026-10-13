@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import * as yaml from "yaml";
 import { removeColors } from "../packages/bicep-deploy-common/src/logging";
 

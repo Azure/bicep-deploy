@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");

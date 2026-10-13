@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import {
   configureCompileMock,
   configureCompileParamsMock,
@@ -391,7 +392,7 @@ describe("file parsing", () => {
       const logger = new TestLogger();
 
       await expect(
-        async () => await getTemplateAndParameters(config, logger, noopCache),
+        getTemplateAndParameters(config, logger, noopCache),
       ).rejects.toThrow(expectedError);
     },
   );
@@ -411,7 +412,7 @@ describe("file parsing", () => {
     const logger = new TestLogger();
 
     await expect(
-      async () => await getTemplateAndParameters(config, logger, noopCache),
+      getTemplateAndParameters(config, logger, noopCache),
     ).rejects.toThrow("Template file is required");
   });
 
@@ -424,9 +425,9 @@ describe("file parsing", () => {
 
     const logger = new TestLogger();
 
-    await expect(
-      async () => await getJsonParameters(config, logger),
-    ).rejects.toThrow("Parameters file not found: /path/to/nonexistent.json");
+    await expect(getJsonParameters(config, logger)).rejects.toThrow(
+      "Parameters file not found: /path/to/nonexistent.json",
+    );
   });
 });
 

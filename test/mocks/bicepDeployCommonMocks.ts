@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 export const bicepDeployCommonMock = {
   execute: vi.fn(),
   resolvePath: vi.fn(),

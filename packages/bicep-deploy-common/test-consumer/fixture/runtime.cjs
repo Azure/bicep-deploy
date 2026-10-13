@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const rewiremock = require("rewiremock/node");

@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import * as main from "../src/main";
 
 // Mock the action's entrypoint

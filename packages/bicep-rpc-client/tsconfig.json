@@ -3,8 +3,8 @@
   "compilerOptions": {
     "target": "es2021",
     "moduleDetection": "force",
-    "module": "commonjs",
-    "moduleResolution": "node10",
+    "module": "node16",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true,
@@ -12,7 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals"]
+    "types": ["node", "vitest/globals"]
   },
   "include": ["src", "test"]
 }

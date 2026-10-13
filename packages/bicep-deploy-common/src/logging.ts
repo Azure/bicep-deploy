@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 export type ExternalOutputSource = "remote" | "repository" | "childProcess";
 export type ExternalOutputLevel = "info" | "debug" | "warning" | "error";
 

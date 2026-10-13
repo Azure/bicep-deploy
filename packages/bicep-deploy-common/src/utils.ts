@@ -18,7 +18,7 @@ import {
   CloudError,
   DeploymentDiagnosticsDefinition,
   ErrorResponse,
-} from "@azure/arm-resources";
+} from "@azure/arm-resourcesdeployments";
 import { OperationOptions } from "@azure/core-client";
 import { isRestError, PipelineResponse } from "@azure/core-rest-pipeline";
 

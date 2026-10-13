@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import * as process from "process";
 
 import { configureMocks } from "./actionCoreMocks";

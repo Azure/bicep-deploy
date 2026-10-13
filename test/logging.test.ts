@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import * as os from "os";
 
 import { mockActionsCore } from "./mocks/actionCoreMocks";

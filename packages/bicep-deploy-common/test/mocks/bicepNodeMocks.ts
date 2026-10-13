@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import {
   Bicep,
   CompileParamsRequest,
@@ -10,10 +11,10 @@ import {
 import type { MockedObjectDeep } from "@vitest/spy";
 
 const mockBicep: Partial<MockedObjectDeep<Bicep>> = {
-  compile: vi.fn(),
-  compileParams: vi.fn(),
-  version: vi.fn().mockReturnValue("1.2.3"),
-  dispose: vi.fn(),
+  compile: vi.fn<Bicep["compile"]>(),
+  compileParams: vi.fn<Bicep["compileParams"]>(),
+  version: vi.fn<Bicep["version"]>().mockResolvedValue("1.2.3"),
+  dispose: vi.fn<Bicep["dispose"]>(),
 };
 
 export function configureCompileMock(

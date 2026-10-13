@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import { DeploymentStackConfig } from "./config";
 import { ParsedFiles } from "./file";
 import { Logger } from "./logging";
@@ -33,31 +34,37 @@ export async function stackCreate(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deploymentStacks.beginCreateOrUpdateAtResourceGroupAndWait(
-        scope.resourceGroup,
-        name,
-        stack,
-        getCreateOperationOptions(),
-      );
+      return await client.deploymentStacks
+        .createOrUpdateAtResourceGroup(
+          scope.resourceGroup,
+          name,
+          stack,
+          getCreateOperationOptions(),
+        )
+        .pollUntilDone();
     case "subscription":
-      return await client.deploymentStacks.beginCreateOrUpdateAtSubscriptionAndWait(
-        name,
-        {
-          ...stack,
-          location: requireLocation(config),
-        },
-        getCreateOperationOptions(),
-      );
+      return await client.deploymentStacks
+        .createOrUpdateAtSubscription(
+          name,
+          {
+            ...stack,
+            location: requireLocation(config),
+          },
+          getCreateOperationOptions(),
+        )
+        .pollUntilDone();
     case "managementGroup":
-      return await client.deploymentStacks.beginCreateOrUpdateAtManagementGroupAndWait(
-        scope.managementGroup,
-        name,
-        {
-          ...stack,
-          location: requireLocation(config),
-        },
-        getCreateOperationOptions(),
-      );
+      return await client.deploymentStacks
+        .createOrUpdateAtManagementGroup(
+          scope.managementGroup,
+          name,
+          {
+            ...stack,
+            location: requireLocation(config),
+          },
+          getCreateOperationOptions(),
+        )
+        .pollUntilDone();
   }
 }
 
@@ -73,28 +80,23 @@ export async function stackValidate(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deploymentStacks.beginValidateStackAtResourceGroupAndWait(
-        scope.resourceGroup,
-        name,
-        stack,
-      );
+      return await client.deploymentStacks
+        .validateStackAtResourceGroup(scope.resourceGroup, name, stack)
+        .pollUntilDone();
     case "subscription":
-      return await client.deploymentStacks.beginValidateStackAtSubscriptionAndWait(
-        name,
-        {
+      return await client.deploymentStacks
+        .validateStackAtSubscription(name, {
           ...stack,
           location: requireLocation(config),
-        },
-      );
+        })
+        .pollUntilDone();
     case "managementGroup":
-      return await client.deploymentStacks.beginValidateStackAtManagementGroupAndWait(
-        scope.managementGroup,
-        name,
-        {
+      return await client.deploymentStacks
+        .validateStackAtManagementGroup(scope.managementGroup, name, {
           ...stack,
           location: requireLocation(config),
-        },
-      );
+        })
+        .pollUntilDone();
   }
 }
 
@@ -117,39 +119,32 @@ export async function stackWhatIf(
 
   switch (scope.type) {
     case "resourceGroup":
-      await client.deploymentStacksWhatIfResultsAtResourceGroup.beginCreateOrUpdateAndWait(
-        scope.resourceGroup,
-        resultsName,
-        whatIfResult,
-      );
-      return await client.deploymentStacksWhatIfResultsAtResourceGroup.beginWhatIfAndWait(
-        scope.resourceGroup,
-        resultsName,
-      );
+      await client.deploymentStacksWhatIfResultsAtResourceGroup
+        .createOrUpdate(scope.resourceGroup, resultsName, whatIfResult)
+        .pollUntilDone();
+      return await client.deploymentStacksWhatIfResultsAtResourceGroup
+        .whatIf(scope.resourceGroup, resultsName)
+        .pollUntilDone();
     case "subscription":
-      await client.deploymentStacksWhatIfResultsAtSubscription.beginCreateOrUpdateAndWait(
-        resultsName,
-        {
+      await client.deploymentStacksWhatIfResultsAtSubscription
+        .createOrUpdate(resultsName, {
           ...whatIfResult,
           location: requireLocation(config),
-        },
-      );
-      return await client.deploymentStacksWhatIfResultsAtSubscription.beginWhatIfAndWait(
-        resultsName,
-      );
+        })
+        .pollUntilDone();
+      return await client.deploymentStacksWhatIfResultsAtSubscription
+        .whatIf(resultsName)
+        .pollUntilDone();
     case "managementGroup":
-      await client.deploymentStacksWhatIfResultsAtManagementGroup.beginCreateOrUpdateAndWait(
-        scope.managementGroup,
-        resultsName,
-        {
+      await client.deploymentStacksWhatIfResultsAtManagementGroup
+        .createOrUpdate(scope.managementGroup, resultsName, {
           ...whatIfResult,
           location: requireLocation(config),
-        },
-      );
-      return await client.deploymentStacksWhatIfResultsAtManagementGroup.beginWhatIfAndWait(
-        scope.managementGroup,
-        resultsName,
-      );
+        })
+        .pollUntilDone();
+      return await client.deploymentStacksWhatIfResultsAtManagementGroup
+        .whatIf(scope.managementGroup, resultsName)
+        .pollUntilDone();
   }
 }
 
@@ -164,22 +159,17 @@ export async function stackDelete(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deploymentStacks.beginDeleteAtResourceGroupAndWait(
-        scope.resourceGroup,
-        name,
-        deletionOptions,
-      );
+      return await client.deploymentStacks
+        .deleteAtResourceGroup(scope.resourceGroup, name, deletionOptions)
+        .pollUntilDone();
     case "subscription":
-      return await client.deploymentStacks.beginDeleteAtSubscriptionAndWait(
-        name,
-        deletionOptions,
-      );
+      return await client.deploymentStacks
+        .deleteAtSubscription(name, deletionOptions)
+        .pollUntilDone();
     case "managementGroup":
-      return await client.deploymentStacks.beginDeleteAtManagementGroupAndWait(
-        scope.managementGroup,
-        name,
-        deletionOptions,
-      );
+      return await client.deploymentStacks
+        .deleteAtManagementGroup(scope.managementGroup, name, deletionOptions)
+        .pollUntilDone();
   }
 }
 

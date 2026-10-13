@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 export const mockActionsCore = {
   info: vi.fn().mockImplementation(console.info),
   warning: vi.fn().mockImplementation(console.warn),

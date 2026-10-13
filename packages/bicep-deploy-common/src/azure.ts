@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { ResourceManagementClient } from "@azure/arm-resources";
+
+import { DeploymentsClient } from "@azure/arm-resourcesdeployments";
 import { DeploymentStacksClient } from "@azure/arm-resourcesdeploymentstacks";
 import {
   ChainedTokenCredential,
@@ -28,8 +29,8 @@ export function createDeploymentClient(
   logger: Logger,
   subscriptionId?: string,
   tenantId?: string,
-): ResourceManagementClient {
-  return new ResourceManagementClient(
+): DeploymentsClient {
+  return new DeploymentsClient(
     getCredential(tenantId),
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId,

@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import * as core from "@actions/core";
 
 import { parseConfig, execute } from "@azure/bicep-deploy-common";

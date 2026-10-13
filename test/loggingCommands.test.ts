@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 import { ActionLogger } from "../src/logging";
 
 describe("ActionLogger external level commands", () => {

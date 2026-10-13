@@ -34,7 +34,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "clean": "rimraf ./dist",
-    "build": "npm run typecheck && tsdown --config ./tsdown.config.mts",
+    "build": "eslint src test test-consumer && npm run typecheck && tsdown --config ./tsdown.config.mts",
     "test": "vitest --config ../../vitest.config.unit.ts test",
     "test:consumer": "npm --prefix ../bicep-rpc-client run build && npm run build && node ./test-consumer/run.cjs",
     "pack:validate": "node ./test-consumer/run.cjs --retain-tarballs --json",
@@ -45,27 +45,28 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@azure/arm-resources": "^6.0.0",
+    "@azure/arm-resources": "^8.0.0",
+    "@azure/arm-resourcesdeployments": "^2.0.0",
     "@azure/arm-resourcesdeploymentstacks": "^2.0.0",
     "@azure/bicep-rpc-client": "*",
-    "@azure/identity": "^4.13.1",
+    "@azure/identity": "^4.13.3",
     "jsonc-parser": "^3.3.1",
-    "yaml": "^2.7.0"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
-    "@types/node": "^22.15.29",
-    "@vitest/eslint-plugin": "^1.4.3",
-    "eslint": "^9.39.1",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-notice": "^1.0.0",
-    "eslint-plugin-prettier": "^5.5.4",
-    "nerdbank-gitversioning": "^3.7.115",
+    "@types/node": "^26.6.4",
+    "@vitest/eslint-plugin": "^1.6.27",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-header": "^3.1.1",
+    "eslint-plugin-prettier": "^5.5.6",
+    "nerdbank-gitversioning": "^3.10.94",
     "rimraf": "^6.1.3",
     "ts-node": "^10.9.2",
-    "tsdown": "^0.16.5",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.32.0",
-    "vitest": "^4.1.11",
-    "yaml": "^2.7.1"
+    "tsdown": "^0.23.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3",
+    "yaml": "^2.9.1"
   }
 }
