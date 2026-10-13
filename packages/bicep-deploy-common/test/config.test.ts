@@ -72,12 +72,12 @@ describe("input validation", () => {
 
   it("requires valid operation for deploymentStacks", async () => {
     configureGetInputMock(
-      { type: "deploymentStack", operation: "whatIf" },
+      { type: "deploymentStack", operation: "foo" },
       inputReader,
     );
 
     expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Input 'operation' must be one of the following values: 'create', 'validate', 'delete'",
+      "Input 'operation' must be one of the following values: 'create', 'validate', 'delete', 'whatIf'",
     );
   });
 
@@ -499,6 +499,27 @@ describe("input parsing", () => {
       bypassStackOutOfSyncError: true,
       environment: "azureUSGovernment",
     });
+  });
+
+  it("parses deployment stacks whatIf operation", async () => {
+    configureGetInputMock(
+      {
+        type: "deploymentStack",
+        name: "mockName",
+        operation: "whatIf",
+        scope: "resourceGroup",
+        subscriptionId: "mockSub",
+        resourceGroupName: "mockRg",
+        "template-file": "/path/to/mockTemplateFile",
+        "action-on-unmanage-resources": "delete",
+        "deny-settings-mode": "none",
+      },
+      inputReader,
+    );
+
+    const config = parseConfig(inputReader, inputParameterNames);
+
+    expect(config.operation).toBe("whatIf");
   });
 
   it("supports YAML syntax for parameters", async () => {
