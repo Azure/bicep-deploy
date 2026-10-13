@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+import * as path from "path";
 import {
   configureCompileMock,
   configureCompileParamsMock,
   configureBicepInstallMock,
+  configureBicepListReleasesMock,
 } from "./mocks/bicepNodeMocks";
 import { configureReadFile, configureExistsSync } from "./mocks/fsMocks";
 import { FileConfig } from "../src/config";
@@ -14,6 +16,16 @@ import {
   parse,
 } from "../src/file";
 import { readTestFile, noopCache } from "./utils";
+
+// Resolves the absolute path of the bicepconfig.json that configChain.ts would look for next to
+// `sourceFilePath`, matching path.resolve()/path.join() semantics on the current platform (e.g.
+// Windows resolves "/path/to/main.bicep" to "C:\path\to\main.bicep", not "/path/to/main.bicep").
+function resolvedConfigPath(sourceFilePath: string) {
+  return path.join(
+    path.dirname(path.resolve(sourceFilePath)),
+    "bicepconfig.json",
+  );
+}
 
 describe("file parsing", () => {
   it("reads and parses JSON template and parameters files", async () => {
@@ -367,6 +379,287 @@ describe("file parsing", () => {
     expect(parametersContents["parameters"]["stringParam"]).toBeDefined();
   });
 
+  describe("config chain version resolution", () => {
+    const sourceFile = "/path/to/main.bicep";
+    const configPath = resolvedConfigPath(sourceFile);
+    const constraint = ">=1.2.0, <1.3.0";
+
+    it("resolves version from config chain when no explicit version is given", async () => {
+      const config: FileConfig = {
+        templateFile: sourceFile,
+      };
+
+      configureReadFile(filePath => {
+        if (filePath === configPath)
+          return JSON.stringify({ bicep: { version: constraint } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      configureBicepListReleasesMock(["1.2.0", "1.2.5", "1.3.0"]);
+
+      configureBicepInstallMock((tmpDir, version) => {
+        expect(version).toBe("1.2.5");
+        return Promise.resolve("/path/to/bicep");
+      });
+
+      configureCompileMock(() => ({
+        success: true,
+        diagnostics: [],
+        contents: readTestFile("files/basic/main.json"),
+      }));
+
+      const logger = new TestLogger();
+      await getTemplateAndParameters(config, logger, noopCache);
+
+      const configChainLogs = logger.getExternalMessages("repository", "info");
+      expect(
+        configChainLogs.some(log =>
+          log.includes(
+            `Resolved Bicep version 1.2.5 to satisfy the "bicep.version" constraint "${constraint}" declared in ${configPath}`,
+          ),
+        ),
+      ).toBe(true);
+    });
+
+    it("resolves an exact version pin directly without consulting the release list", async () => {
+      const config: FileConfig = {
+        templateFile: sourceFile,
+      };
+      const exactPin = "0.24.24";
+
+      configureReadFile(filePath => {
+        if (filePath === configPath)
+          return JSON.stringify({ bicep: { version: exactPin } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      // The release list only contains the most recent releases, so an older exact pin like
+      // "0.24.24" would never be found there - the fast path below must bypass it entirely.
+      const listReleasesSpy = configureBicepListReleasesMock([
+        "1.2.0",
+        "1.2.5",
+        "1.3.0",
+      ]);
+
+      configureBicepInstallMock((tmpDir, version) => {
+        expect(version).toBe(exactPin);
+        return Promise.resolve("/path/to/bicep");
+      });
+
+      configureCompileMock(() => ({
+        success: true,
+        diagnostics: [],
+        contents: readTestFile("files/basic/main.json"),
+      }));
+
+      const logger = new TestLogger();
+      await getTemplateAndParameters(config, logger, noopCache);
+
+      expect(listReleasesSpy).not.toHaveBeenCalled();
+
+      const configChainLogs = logger.getExternalMessages("repository", "info");
+      expect(
+        configChainLogs.some(log =>
+          log.includes(
+            `Resolved Bicep version ${exactPin} to satisfy the "bicep.version" constraint "${exactPin}" declared in ${configPath}`,
+          ),
+        ),
+      ).toBe(true);
+    });
+
+    it("uses the explicit version when it satisfies the config chain constraint", async () => {
+      const config: FileConfig = {
+        templateFile: sourceFile,
+        bicepVersion: "1.2.5",
+      };
+
+      configureReadFile(filePath => {
+        if (filePath === configPath)
+          return JSON.stringify({ bicep: { version: constraint } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      configureBicepInstallMock((tmpDir, version) => {
+        expect(version).toBe("1.2.5");
+        return Promise.resolve("/path/to/bicep");
+      });
+
+      configureCompileMock(() => ({
+        success: true,
+        diagnostics: [],
+        contents: readTestFile("files/basic/main.json"),
+      }));
+
+      const logger = new TestLogger();
+      await getTemplateAndParameters(config, logger, noopCache);
+    });
+
+    it("throws when the explicit version conflicts with the config chain constraint", async () => {
+      const config: FileConfig = {
+        templateFile: sourceFile,
+        bicepVersion: "2.0.0",
+      };
+
+      configureReadFile(filePath => {
+        if (filePath === configPath)
+          return JSON.stringify({ bicep: { version: constraint } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      const logger = new TestLogger();
+
+      await expect(
+        async () => await getTemplateAndParameters(config, logger, noopCache),
+      ).rejects.toThrow(
+        `The requested Bicep version "2.0.0" does not satisfy the "bicep.version" constraint "${constraint}" declared in ${configPath}.`,
+      );
+    });
+
+    it("logs a warning and skips validation when the explicit version is not parseable", async () => {
+      const config: FileConfig = {
+        templateFile: sourceFile,
+        bicepVersion: "latest",
+      };
+
+      configureReadFile(filePath => {
+        if (filePath === configPath)
+          return JSON.stringify({ bicep: { version: constraint } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      configureBicepInstallMock((tmpDir, version) => {
+        expect(version).toBe("latest");
+        return Promise.resolve("/path/to/bicep");
+      });
+
+      configureCompileMock(() => ({
+        success: true,
+        diagnostics: [],
+        contents: readTestFile("files/basic/main.json"),
+      }));
+
+      const logger = new TestLogger();
+      await getTemplateAndParameters(config, logger, noopCache);
+
+      const warnings = logger.getExternalMessages("repository", "warning");
+      expect(
+        warnings.some(log =>
+          log.includes(
+            `Could not verify that the requested Bicep version "latest" satisfies the "bicep.version" constraint "${constraint}" declared in ${configPath}`,
+          ),
+        ),
+      ).toBe(true);
+    });
+
+    it("throws when no published release satisfies the config chain constraint", async () => {
+      const config: FileConfig = {
+        templateFile: sourceFile,
+      };
+      const unreachableConstraint = ">=9.9.0, <10.0.0";
+
+      configureReadFile(filePath => {
+        if (filePath === configPath)
+          return JSON.stringify({ bicep: { version: unreachableConstraint } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      configureBicepListReleasesMock(["1.2.0", "1.2.5", "1.3.0"]);
+
+      const logger = new TestLogger();
+
+      await expect(
+        async () => await getTemplateAndParameters(config, logger, noopCache),
+      ).rejects.toThrow(
+        `No published Bicep CLI release satisfies the "bicep.version" constraint "${unreachableConstraint}" declared in ${configPath}.`,
+      );
+    });
+
+    it("resolves the config chain next to the .bicepparam file, not the template it references", async () => {
+      const paramFile = "/path/to/main.bicepparam";
+      const paramConfigPath = resolvedConfigPath(paramFile);
+
+      const config: FileConfig = {
+        parametersFile: paramFile,
+      };
+
+      configureReadFile(filePath => {
+        if (filePath === paramConfigPath)
+          return JSON.stringify({ bicep: { version: constraint } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      configureBicepListReleasesMock(["1.2.0", "1.2.5", "1.3.0"]);
+
+      configureBicepInstallMock((tmpDir, version) => {
+        expect(version).toBe("1.2.5");
+        return Promise.resolve("/path/to/bicep");
+      });
+
+      configureCompileParamsMock(() => ({
+        success: true,
+        diagnostics: [],
+        template: readTestFile("files/basic/main.json"),
+        parameters: readTestFile("files/basic/main.parameters.json"),
+      }));
+
+      const logger = new TestLogger();
+      await getTemplateAndParameters(config, logger, noopCache);
+
+      const configChainLogs = logger.getExternalMessages("repository", "info");
+      expect(
+        configChainLogs.some(log =>
+          log.includes(
+            `Resolved Bicep version 1.2.5 to satisfy the "bicep.version" constraint "${constraint}" declared in ${paramConfigPath}`,
+          ),
+        ),
+      ).toBe(true);
+    });
+
+    it("resolves the version from a parent config via the extends chain when the nearest config doesn't set one", async () => {
+      const config: FileConfig = {
+        templateFile: sourceFile,
+      };
+      const parentConfigPath = path.join(
+        path.dirname(configPath),
+        "..",
+        "bicepconfig.json",
+      );
+
+      configureReadFile(filePath => {
+        if (filePath === configPath)
+          return JSON.stringify({ extends: "../bicepconfig.json" });
+        if (filePath === parentConfigPath)
+          return JSON.stringify({ bicep: { version: constraint } });
+        throw `Unexpected file path: ${filePath}`;
+      });
+
+      configureBicepListReleasesMock(["1.2.0", "1.2.5", "1.3.0"]);
+
+      configureBicepInstallMock((tmpDir, version) => {
+        expect(version).toBe("1.2.5");
+        return Promise.resolve("/path/to/bicep");
+      });
+
+      configureCompileMock(() => ({
+        success: true,
+        diagnostics: [],
+        contents: readTestFile("files/basic/main.json"),
+      }));
+
+      const logger = new TestLogger();
+      await getTemplateAndParameters(config, logger, noopCache);
+
+      const configChainLogs = logger.getExternalMessages("repository", "info");
+      expect(
+        configChainLogs.some(log =>
+          log.includes(
+            `Resolved Bicep version 1.2.5 to satisfy the "bicep.version" constraint "${constraint}" declared in ${parentConfigPath}`,
+          ),
+        ),
+      ).toBe(true);
+    });
+  });
+
   it.each([
     {
       description: "parameter file",
@@ -388,6 +681,12 @@ describe("file parsing", () => {
   ])(
     "blocks unexpected $description extension",
     async ({ config, expectedError }) => {
+      configureReadFile(filePath => {
+        if (filePath === "/path/to/parameters.json")
+          return readTestFile("files/basic/main.parameters.json");
+        throw `Unexpected file path: ${filePath}`;
+      });
+
       const logger = new TestLogger();
 
       await expect(

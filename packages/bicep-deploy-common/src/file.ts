@@ -8,9 +8,14 @@ import { parse as parseJsonc } from "jsonc-parser";
 import { Bicep, CompileResponseDiagnostic } from "@azure/bicep-rpc-client";
 
 import { FileConfig } from "./config";
+import { resolveConfigChain } from "./configChain";
 import { ExternalOutputSource, Logger } from "./logging";
 import { errorMessages } from "./errorMessages";
 import { loggingMessages } from "./loggingMessages";
+import {
+  SemanticVersion,
+  selectHighestSatisfyingVersion,
+} from "./versionRange";
 
 export type ParsedFiles = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,10 +31,89 @@ export interface BicepCache {
 }
 
 async function resolveVersion(
+  logger: Logger,
   bicepVersion?: string,
+  sourceFilePath?: string,
 ): Promise<{ version: string; source: ExternalOutputSource }> {
+  const configChain = sourceFilePath
+    ? await resolveConfigChain(sourceFilePath)
+    : {};
+  const { bicepVersionRange, declaringConfigPath } = configChain;
+
   if (bicepVersion) {
+    // An explicit task/action input is honored unless it conflicts with a "bicep.version"
+    // constraint declared in the repo's own bicepconfig.json chain, in which case we fail loudly
+    // rather than silently pick one source over the other.
+    if (bicepVersionRange && declaringConfigPath) {
+      const parsedRequestedVersion = SemanticVersion.tryParse(bicepVersion);
+      if (!parsedRequestedVersion) {
+        logger.logExternalOutput(
+          loggingMessages.bicepVersionConstraintCouldNotBeChecked(
+            bicepVersion,
+            bicepVersionRange.toString(),
+            declaringConfigPath,
+          ),
+          { source: "repository", level: "warning" },
+        );
+      } else if (!bicepVersionRange.isSatisfiedBy(parsedRequestedVersion)) {
+        throw new Error(
+          errorMessages.bicepVersionConflictsWithConfigChain(
+            bicepVersion,
+            bicepVersionRange.toString(),
+            declaringConfigPath,
+          ),
+        );
+      }
+    }
+
     return { version: bicepVersion, source: "repository" };
+  }
+
+  if (bicepVersionRange && declaringConfigPath) {
+    // An exact pin (e.g. "1.2.3") already identifies a single installable version - there's no
+    // need to cross-reference it against the published release list, which only covers the most
+    // recent releases and would otherwise wrongly reject older-but-still-downloadable pins. Only
+    // a genuine range (e.g. ">=1.2.0, <1.3.0") needs the release list, since resolving it requires
+    // knowing which concrete releases actually exist.
+    if (bicepVersionRange.isExactVersion) {
+      const exactVersion = bicepVersionRange.lowerBound!.version.toString();
+
+      logger.logExternalOutput(
+        loggingMessages.bicepVersionResolvedFromConfigChain(
+          exactVersion,
+          bicepVersionRange.toString(),
+          declaringConfigPath,
+        ),
+        { source: "repository", level: "info" },
+      );
+
+      return { version: exactVersion, source: "repository" };
+    }
+
+    const availableVersions = await Bicep.listReleases();
+    const selectedVersion = selectHighestSatisfyingVersion(
+      bicepVersionRange,
+      availableVersions,
+    );
+    if (!selectedVersion) {
+      throw new Error(
+        errorMessages.noReleaseSatisfiesBicepVersionConstraint(
+          bicepVersionRange.toString(),
+          declaringConfigPath,
+        ),
+      );
+    }
+
+    logger.logExternalOutput(
+      loggingMessages.bicepVersionResolvedFromConfigChain(
+        selectedVersion,
+        bicepVersionRange.toString(),
+        declaringConfigPath,
+      ),
+      { source: "repository", level: "info" },
+    );
+
+    return { version: selectedVersion, source: "repository" };
   }
 
   // Bicep.getDownloadUrl() calls the lightweight https://downloads.bicep.azure.com/releases/latest
@@ -50,9 +134,10 @@ async function installBicep(
   cache: BicepCache,
   logger: Logger,
   bicepVersion?: string,
+  sourceFilePath?: string,
 ) {
   const { version: resolvedVersion, source: versionSource } =
-    await resolveVersion(bicepVersion);
+    await resolveVersion(logger, bicepVersion, sourceFilePath);
 
   const cached = await cache.find(resolvedVersion);
   if (cached) {
@@ -86,7 +171,12 @@ async function compileBicepParams(
   parameters?: Record<string, unknown>,
   bicepVersion?: string,
 ) {
-  const bicepPath = await installBicep(cache, logger, bicepVersion);
+  const bicepPath = await installBicep(
+    cache,
+    logger,
+    bicepVersion,
+    paramFilePath,
+  );
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compileParams({
@@ -114,7 +204,12 @@ async function compileBicep(
   cache: BicepCache,
   bicepVersion?: string,
 ) {
-  const bicepPath = await installBicep(cache, logger, bicepVersion);
+  const bicepPath = await installBicep(
+    cache,
+    logger,
+    bicepVersion,
+    templateFilePath,
+  );
 
   const result = await withBicep(bicepPath, bicep =>
     bicep.compile({

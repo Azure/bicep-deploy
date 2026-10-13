@@ -27,6 +27,34 @@ export interface ErrorMessageConfig {
   templateFileRequired: string;
   failedToResolveBicepVersion: (url: string) => string;
 
+  // Config chain errors
+  configFileNotFound: (configPath: string) => string;
+  configChainCycleDetected: (configPath: string) => string;
+  configChainTooDeep: (maxDepth: number) => string;
+  configChainAbsoluteExtendsPath: (
+    extendsValue: string,
+    configPath: string,
+  ) => string;
+  invalidConfigExtendsValue: (configPath: string) => string;
+  invalidBicepVersionConstraintType: (configPath: string) => string;
+  unparsableBicepVersionConstraint: (
+    versionValue: string,
+    configPath: string,
+  ) => string;
+  unsatisfiableBicepVersionConstraint: (
+    versionValue: string,
+    configPath: string,
+  ) => string;
+  bicepVersionConflictsWithConfigChain: (
+    requestedVersion: string,
+    constraint: string,
+    configPath: string,
+  ) => string;
+  noReleaseSatisfiesBicepVersionConstraint: (
+    constraint: string,
+    configPath: string,
+  ) => string;
+
   // WhatIf errors
   invalidChangeType: (changeType: string) => string;
   unknownPropertyChangeType: (propertyChangeType: string) => string;
@@ -68,6 +96,41 @@ const defaultErrorMessages: ErrorMessageConfig = {
   templateFileRequired: "Template file is required",
   failedToResolveBicepVersion: (url: string) =>
     `Failed to resolve Bicep version from download URL: ${url}`,
+
+  // Config chain errors
+  configFileNotFound: (configPath: string) =>
+    `Config file not found: ${configPath}`,
+  configChainCycleDetected: (configPath: string) =>
+    `Cycle detected while resolving "extends" chain at: ${configPath}`,
+  configChainTooDeep: (maxDepth: number) =>
+    `The "extends" chain exceeds the maximum supported depth of ${maxDepth}.`,
+  configChainAbsoluteExtendsPath: (extendsValue: string, configPath: string) =>
+    `The "extends" property in ${configPath} must be a relative path, but got an absolute path: ${extendsValue}`,
+  invalidConfigExtendsValue: (configPath: string) =>
+    `The "extends" property in ${configPath} must be a string.`,
+  invalidBicepVersionConstraintType: (configPath: string) =>
+    `The "bicep.version" property in ${configPath} must be a string.`,
+  unparsableBicepVersionConstraint: (
+    versionValue: string,
+    configPath: string,
+  ) =>
+    `The "bicep.version" property "${versionValue}" in ${configPath} is not a valid Bicep version or version range.`,
+  unsatisfiableBicepVersionConstraint: (
+    versionValue: string,
+    configPath: string,
+  ) =>
+    `The "bicep.version" constraint "${versionValue}" in ${configPath} can never be satisfied by any version.`,
+  bicepVersionConflictsWithConfigChain: (
+    requestedVersion: string,
+    constraint: string,
+    configPath: string,
+  ) =>
+    `The requested Bicep version "${requestedVersion}" does not satisfy the "bicep.version" constraint "${constraint}" declared in ${configPath}.`,
+  noReleaseSatisfiesBicepVersionConstraint: (
+    constraint: string,
+    configPath: string,
+  ) =>
+    `No published Bicep CLI release satisfies the "bicep.version" constraint "${constraint}" declared in ${configPath}.`,
 
   // WhatIf errors
   invalidChangeType: (changeType: string) =>
