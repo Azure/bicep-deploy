@@ -12,7 +12,7 @@ inputs:
     description: "Specifies the execution type, which can be either 'deployment' or 'deploymentStack'."
     required: true
   operation:
-    description: "Specifies the operation to perform. For deployment, choose from 'create', 'validate', 'whatIf'. For deploymentStack, choose from 'create', 'delete', 'validate'."
+    description: "Specifies the operation to perform. For deployment, choose from 'create', 'validate', 'whatIf'. For deploymentStack, choose from 'create', 'delete', 'validate', 'whatIf'."
     required: true
   scope:
     description: "Specifies the scope of the deployment or deploymentStack. For deployment, choose from 'resourceGroup', 'subscription', 'managementGroup', 'tenant'. For deploymentStack, choose from 'resourceGroup', 'subscription', 'managementGroup'."

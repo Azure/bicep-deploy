@@ -8,10 +8,18 @@ import {
   defaultName,
   getStacksClient,
   getCreateOperationOptions,
+  getDeploymentStackResourceId,
   requireLocation,
 } from "./utils";
 
-import { DeploymentStack } from "@azure/arm-resourcesdeploymentstacks";
+import {
+  DeploymentStack,
+  DeploymentStacksWhatIfResult,
+} from "@azure/arm-resourcesdeploymentstacks";
+
+// The retention interval for what-if results is required by the service.
+// Since we only need the result for the lifetime of this operation, we use the minimum allowed value.
+const whatIfRetentionInterval = "PT3H";
 
 export async function stackCreate(
   config: DeploymentStackConfig,
@@ -90,6 +98,61 @@ export async function stackValidate(
   }
 }
 
+export async function stackWhatIf(
+  config: DeploymentStackConfig,
+  files: ParsedFiles,
+  logger: Logger,
+) {
+  const stackName = config.name ?? defaultName;
+  const epochSeconds = Math.floor(Date.now() / 1000);
+  const resultsName = `${stackName}-${epochSeconds}`;
+  const scope = config.scope;
+  const client = getStacksClient(config, scope, logger);
+  const deploymentStackResourceId = getDeploymentStackResourceId(config);
+  const whatIfResult = createStackWhatIfDefinition(
+    config,
+    files,
+    deploymentStackResourceId,
+  );
+
+  switch (scope.type) {
+    case "resourceGroup":
+      await client.deploymentStacksWhatIfResultsAtResourceGroup.beginCreateOrUpdateAndWait(
+        scope.resourceGroup,
+        resultsName,
+        whatIfResult,
+      );
+      return await client.deploymentStacksWhatIfResultsAtResourceGroup.beginWhatIfAndWait(
+        scope.resourceGroup,
+        resultsName,
+      );
+    case "subscription":
+      await client.deploymentStacksWhatIfResultsAtSubscription.beginCreateOrUpdateAndWait(
+        resultsName,
+        {
+          ...whatIfResult,
+          location: requireLocation(config),
+        },
+      );
+      return await client.deploymentStacksWhatIfResultsAtSubscription.beginWhatIfAndWait(
+        resultsName,
+      );
+    case "managementGroup":
+      await client.deploymentStacksWhatIfResultsAtManagementGroup.beginCreateOrUpdateAndWait(
+        scope.managementGroup,
+        resultsName,
+        {
+          ...whatIfResult,
+          location: requireLocation(config),
+        },
+      );
+      return await client.deploymentStacksWhatIfResultsAtManagementGroup.beginWhatIfAndWait(
+        scope.managementGroup,
+        resultsName,
+      );
+  }
+}
+
 export async function stackDelete(
   config: DeploymentStackConfig,
   logger: Logger,
@@ -139,6 +202,32 @@ function createStackDefinition(
       actionOnUnmanage: config.actionOnUnManage,
       denySettings: config.denySettings,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
+    },
+    tags: config.tags,
+  };
+}
+
+function createStackWhatIfDefinition(
+  config: DeploymentStackConfig,
+  files: ParsedFiles,
+  deploymentStackResourceId: string,
+): DeploymentStacksWhatIfResult {
+  const { templateContents, templateSpecId, parametersContents } = files;
+
+  return {
+    properties: {
+      template: templateContents,
+      templateLink: templateSpecId
+        ? {
+            id: templateSpecId,
+          }
+        : undefined,
+      parameters: parametersContents["parameters"],
+      description: config.description,
+      actionOnUnmanage: config.actionOnUnManage,
+      denySettings: config.denySettings,
+      deploymentStackResourceId: deploymentStackResourceId,
+      retentionInterval: whatIfRetentionInterval,
     },
     tags: config.tags,
   };
