@@ -5,7 +5,10 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
 
-import { resolveConfigChain, MAX_EXTENDS_DEPTH } from "../src/configChain";
+import {
+  resolveConfigChain,
+  MAX_EXTENDS_DEPTH,
+} from "../src/utils/configChain";
 
 // Uses real temp directories, not fsMocks, since this walks multiple real directories and
 // fsMocks can only fake one file existing at a time.

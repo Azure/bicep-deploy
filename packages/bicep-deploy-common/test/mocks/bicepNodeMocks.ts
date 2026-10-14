@@ -63,4 +63,11 @@ export function configureBicepListReleasesMock(releases: string[]) {
   return mockBicepNode.Bicep.listReleases;
 }
 
-vi.mock("@azure/bicep-rpc-client", () => mockBicepNode);
+vi.mock("@azure/bicep-rpc-client", async importOriginal => {
+  const actual =
+    await importOriginal<typeof import("@azure/bicep-rpc-client")>();
+  return {
+    ...actual,
+    ...mockBicepNode,
+  };
+});

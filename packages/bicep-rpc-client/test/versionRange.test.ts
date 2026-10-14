@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { SemanticVersion, VersionRange } from "../src/versionRange";
+import { SemanticVersion, VersionRange } from "../src/utils/versionRange";
 
 describe("SemanticVersion", () => {
   it.each([

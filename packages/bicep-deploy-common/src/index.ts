@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 export * from "./config";
-export * from "./configChain";
 export * from "./deployments";
 export * from "./errorMessages";
 export * from "./file";
@@ -13,5 +12,4 @@ export * from "./loggingMessages";
 export * from "./output";
 export * from "./stacks";
 export * from "./utils";
-export * from "./versionRange";
 export * from "./whatif";

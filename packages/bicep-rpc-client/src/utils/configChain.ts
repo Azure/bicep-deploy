@@ -6,7 +6,6 @@ import * as path from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 
 import { VersionRange } from "./versionRange";
-import { errorMessages } from "./errorMessages";
 
 const CONFIG_FILE_NAME = "bicepconfig.json";
 
@@ -86,15 +85,19 @@ async function walkExtendsChain(configPath: string): Promise<ConfigLayer[]> {
 
   while (currentPath) {
     if (visited.has(currentPath)) {
-      throw new Error(errorMessages.configChainCycleDetected(currentPath));
+      throw new Error(
+        `Cycle detected while resolving "extends" chain at: ${currentPath}`,
+      );
     }
     if (chain.length >= MAX_EXTENDS_DEPTH) {
-      throw new Error(errorMessages.configChainTooDeep(MAX_EXTENDS_DEPTH));
+      throw new Error(
+        `The "extends" chain exceeds the maximum supported depth of ${MAX_EXTENDS_DEPTH}.`,
+      );
     }
     visited.add(currentPath);
 
     if (!fsSync.existsSync(currentPath)) {
-      throw new Error(errorMessages.configFileNotFound(currentPath));
+      throw new Error(`Config file not found: ${currentPath}`);
     }
 
     const raw = await fs.readFile(currentPath, "utf8");
@@ -106,11 +109,13 @@ async function walkExtendsChain(configPath: string): Promise<ConfigLayer[]> {
       break;
     }
     if (typeof extendsValue !== "string") {
-      throw new Error(errorMessages.invalidConfigExtendsValue(currentPath));
+      throw new Error(
+        `The "extends" property in ${currentPath} must be a string.`,
+      );
     }
     if (path.isAbsolute(extendsValue)) {
       throw new Error(
-        errorMessages.configChainAbsoluteExtendsPath(extendsValue, currentPath),
+        `The "extends" property in ${currentPath} must be a relative path, but got an absolute path: ${extendsValue}`,
       );
     }
 
@@ -132,25 +137,19 @@ function resolveBicepVersion(chain: ConfigLayer[]): ResolvedConfigChain {
     }
     if (typeof versionString !== "string") {
       throw new Error(
-        errorMessages.invalidBicepVersionConstraintType(layer.path),
+        `The "bicep.version" property in ${layer.path} must be a string.`,
       );
     }
 
     const range = VersionRange.tryParse(versionString);
     if (!range) {
       throw new Error(
-        errorMessages.unparsableBicepVersionConstraint(
-          versionString,
-          layer.path,
-        ),
+        `The "bicep.version" property "${versionString}" in ${layer.path} is not a valid Bicep version or version range.`,
       );
     }
     if (!range.isSatisfiable) {
       throw new Error(
-        errorMessages.unsatisfiableBicepVersionConstraint(
-          versionString,
-          layer.path,
-        ),
+        `The "bicep.version" constraint "${versionString}" in ${layer.path} can never be satisfied by any version.`,
       );
     }
 

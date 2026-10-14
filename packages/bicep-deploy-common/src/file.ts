@@ -5,17 +5,18 @@ import fsSync from "fs";
 import * as path from "path";
 import * as os from "os";
 import { parse as parseJsonc } from "jsonc-parser";
-import { Bicep, CompileResponseDiagnostic } from "@azure/bicep-rpc-client";
+import {
+  Bicep,
+  CompileResponseDiagnostic,
+  resolveConfigChain,
+  SemanticVersion,
+  selectHighestSatisfyingVersion,
+} from "@azure/bicep-rpc-client";
 
 import { FileConfig } from "./config";
-import { resolveConfigChain } from "./configChain";
 import { ExternalOutputSource, Logger } from "./logging";
 import { errorMessages } from "./errorMessages";
 import { loggingMessages } from "./loggingMessages";
-import {
-  SemanticVersion,
-  selectHighestSatisfyingVersion,
-} from "./versionRange";
 
 export type ParsedFiles = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
