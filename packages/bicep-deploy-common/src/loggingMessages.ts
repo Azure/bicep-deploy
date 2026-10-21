@@ -16,6 +16,16 @@ export interface LoggingMessageConfig {
   ) => string;
   usingTemplateFile: (templateFile: string) => string;
   usingParametersFile: (parametersFile: string) => string;
+  bicepVersionResolvedFromConfigChain: (
+    version: string,
+    constraint: string,
+    configPath: string,
+  ) => string;
+  bicepVersionConstraintCouldNotBeChecked: (
+    requestedVersion: string,
+    constraint: string,
+    configPath: string,
+  ) => string;
 }
 
 const defaultLoggingMessages: LoggingMessageConfig = {
@@ -40,6 +50,18 @@ const defaultLoggingMessages: LoggingMessageConfig = {
     `Using template file: ${templateFile}`,
   usingParametersFile: (parametersFile: string) =>
     `Using parameters file: ${parametersFile}`,
+  bicepVersionResolvedFromConfigChain: (
+    version: string,
+    constraint: string,
+    configPath: string,
+  ) =>
+    `Resolved Bicep version ${version} to satisfy the "bicep.version" constraint "${constraint}" declared in ${configPath}`,
+  bicepVersionConstraintCouldNotBeChecked: (
+    requestedVersion: string,
+    constraint: string,
+    configPath: string,
+  ) =>
+    `Could not verify that the requested Bicep version "${requestedVersion}" satisfies the "bicep.version" constraint "${constraint}" declared in ${configPath}, because "${requestedVersion}" is not a recognized version number.`,
 };
 
 let currentLoggingMessages: LoggingMessageConfig = {

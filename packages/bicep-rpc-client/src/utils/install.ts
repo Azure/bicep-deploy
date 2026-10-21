@@ -6,6 +6,7 @@ import fs from "fs/promises";
 
 const downloadBaseUrl = "https://downloads.bicep.azure.com";
 const latestReleaseUrl = `${downloadBaseUrl}/releases/latest`;
+const allReleasesUrl = `${downloadBaseUrl}/releases`;
 const downloadUrl = (tag: string, artifact: string) =>
   `${downloadBaseUrl}/${tag}/${artifact}`;
 
@@ -17,6 +18,27 @@ async function getLatestRelease() {
   const body = (await response.json()) as { tag_name: string };
 
   return body["tag_name"];
+}
+
+/**
+ * Returns the published Bicep CLI release versions (without the leading "v"), e.g. "0.32.4". The
+ * backing endpoint only returns the most recent releases (not the full history), in a single,
+ * non-paginated response, so this never makes more than one request.
+ */
+export async function listBicepCliReleaseVersions(): Promise<string[]> {
+  const response = await fetch(allReleasesUrl);
+  if (!response.ok) {
+    throw `Failed to list Bicep CLI releases. Status code: ${response.status}`;
+  }
+  const body = (await response.json()) as { tag_name: string }[];
+
+  return body
+    .map(release => release.tag_name)
+    .filter(
+      (tagName): tagName is string =>
+        typeof tagName === "string" && tagName.startsWith("v"),
+    )
+    .map(tagName => tagName.slice(1));
 }
 
 function getDownloadUrlForTag(osPlat: string, osArch: string, tagName: string) {

@@ -41,6 +41,7 @@ const mockBicepNode = {
       .mockResolvedValue(
         "https://downloads.bicep.azure.com/v1.2.3/bicep-linux-x64",
       ),
+    listReleases: vi.fn().mockResolvedValue([]),
   },
 };
 
@@ -56,4 +57,17 @@ export function configureBicepGetDownloadUrlMock(
   mockBicepNode.Bicep.getDownloadUrl.mockImplementation(mock);
 }
 
-vi.mock("@azure/bicep-rpc-client", () => mockBicepNode);
+export function configureBicepListReleasesMock(releases: string[]) {
+  mockBicepNode.Bicep.listReleases.mockClear();
+  mockBicepNode.Bicep.listReleases.mockResolvedValue(releases);
+  return mockBicepNode.Bicep.listReleases;
+}
+
+vi.mock("@azure/bicep-rpc-client", async importOriginal => {
+  const actual =
+    await importOriginal<typeof import("@azure/bicep-rpc-client")>();
+  return {
+    ...actual,
+    ...mockBicepNode,
+  };
+});

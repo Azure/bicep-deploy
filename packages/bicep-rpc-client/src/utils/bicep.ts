@@ -3,7 +3,11 @@
 
 import os from "os";
 import { MessageConnection } from "vscode-jsonrpc/node";
-import { getBicepCliDownloadUrl, installBicepCliWithArch } from "./install";
+import {
+  getBicepCliDownloadUrl,
+  installBicepCliWithArch,
+  listBicepCliReleaseVersions,
+} from "./install";
 import * as types from "./types";
 import * as jsonrpc from "./jsonrpc";
 
@@ -59,6 +63,16 @@ export class Bicep {
     arch ??= os.arch();
 
     return await getBicepCliDownloadUrl(platform, arch, version);
+  }
+
+  /**
+   * Lists the versions of every published Bicep CLI release (without the leading "v"), e.g.
+   * "0.32.4". Useful for picking a concrete version that satisfies a version range.
+   *
+   * @returns        The list of published release versions.
+   */
+  static async listReleases(): Promise<string[]> {
+    return await listBicepCliReleaseVersions();
   }
 
   /**
