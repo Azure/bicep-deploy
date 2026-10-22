@@ -185,7 +185,10 @@ export async function execute(
                 });
               },
               error => {
-                logger.logError(JSON.stringify(error, null, 2));
+                logger.logExternalOutput(JSON.stringify(error, null, 2), {
+                  source: "remote",
+                  level: "error",
+                });
                 outputSetter.setFailed(errorMessages.whatIfFailed);
               },
               logger,

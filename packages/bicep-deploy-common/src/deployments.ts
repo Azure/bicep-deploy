@@ -7,7 +7,7 @@ import { getDeploymentCreateClient } from "./azure";
 
 import { defaultName, getDeploymentClient, requireLocation } from "./utils";
 
-import { Deployment } from "@azure/arm-resources";
+import { Deployment } from "@azure/arm-resourcesdeployments";
 
 export async function deploymentCreate(
   config: DeploymentsConfig,
@@ -21,13 +21,13 @@ export async function deploymentCreate(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deployments.beginCreateOrUpdateAndWait(
+      return await client.deployments.createOrUpdate(
         scope.resourceGroup,
         name,
         deployment,
       );
     case "subscription":
-      return await client.deployments.beginCreateOrUpdateAtSubscriptionScopeAndWait(
+      return await client.deployments.createOrUpdateAtSubscriptionScope(
         name,
         {
           ...deployment,
@@ -35,7 +35,7 @@ export async function deploymentCreate(
         },
       );
     case "managementGroup":
-      return await client.deployments.beginCreateOrUpdateAtManagementGroupScopeAndWait(
+      return await client.deployments.createOrUpdateAtManagementGroupScope(
         scope.managementGroup,
         name,
         {
@@ -44,7 +44,7 @@ export async function deploymentCreate(
         },
       );
     case "tenant":
-      return await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(
+      return await client.deployments.createOrUpdateAtTenantScope(
         name,
         {
           ...deployment,
@@ -66,13 +66,13 @@ export async function deploymentValidate(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deployments.beginValidateAndWait(
+      return await client.deployments.validate(
         scope.resourceGroup,
         name,
         deployment,
       );
     case "subscription":
-      return await client.deployments.beginValidateAtSubscriptionScopeAndWait(
+      return await client.deployments.validateAtSubscriptionScope(
         name,
         {
           ...deployment,
@@ -80,7 +80,7 @@ export async function deploymentValidate(
         },
       );
     case "managementGroup":
-      return await client.deployments.beginValidateAtManagementGroupScopeAndWait(
+      return await client.deployments.validateAtManagementGroupScope(
         scope.managementGroup,
         name,
         {
@@ -89,7 +89,7 @@ export async function deploymentValidate(
         },
       );
     case "tenant":
-      await client.deployments.beginValidateAtTenantScopeAndWait(name, {
+      await client.deployments.validateAtTenantScope(name, {
         ...deployment,
         location: requireLocation(config),
       });
@@ -108,13 +108,13 @@ export async function deploymentWhatIf(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deployments.beginWhatIfAndWait(
+      return await client.deployments.whatIf(
         scope.resourceGroup,
         deploymentName,
         deployment,
       );
     case "subscription":
-      return await client.deployments.beginWhatIfAtSubscriptionScopeAndWait(
+      return await client.deployments.whatIfAtSubscriptionScope(
         deploymentName,
         {
           ...deployment,
@@ -122,7 +122,7 @@ export async function deploymentWhatIf(
         },
       );
     case "managementGroup":
-      return await client.deployments.beginWhatIfAtManagementGroupScopeAndWait(
+      return await client.deployments.whatIfAtManagementGroupScope(
         scope.managementGroup,
         deploymentName,
         {
@@ -131,7 +131,7 @@ export async function deploymentWhatIf(
         },
       );
     case "tenant":
-      return await client.deployments.beginWhatIfAtTenantScopeAndWait(
+      return await client.deployments.whatIfAtTenantScope(
         deploymentName,
         {
           ...deployment,

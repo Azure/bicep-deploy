@@ -29,7 +29,7 @@ import {
   DeploymentProperties,
   ErrorResponse,
   WhatIfOperationResult,
-} from "@azure/arm-resources";
+} from "@azure/arm-resourcesdeployments";
 import {
   DeploymentStack,
   DeploymentStackProperties,
@@ -130,7 +130,7 @@ describe("deployment execution", () => {
     };
 
     it("deploys", async () => {
-      mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait!.mockResolvedValue(
+      mockDeploymentsOps.createOrUpdateAtSubscriptionScope!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -144,8 +144,8 @@ describe("deployment execution", () => {
       );
       expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
-        mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait,
-      ).toHaveBeenCalledWith(config.name, expectedPayload);
+        mockDeploymentsOps.createOrUpdateAtSubscriptionScope,
+      ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -159,7 +159,7 @@ describe("deployment execution", () => {
     });
 
     it("masks secure values", async () => {
-      mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait!.mockResolvedValue(
+      mockDeploymentsOps.createOrUpdateAtSubscriptionScope!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -193,12 +193,12 @@ describe("deployment execution", () => {
       );
       expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(
-        mockDeploymentsOps.beginValidateAtSubscriptionScopeAndWait,
+        mockDeploymentsOps.validateAtSubscriptionScope,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
     });
 
     it("logs desired What-If values as remote external output", async () => {
-      mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait!.mockResolvedValue(
+      mockDeploymentsOps.whatIfAtSubscriptionScope!.mockResolvedValue(
         createWhatIfChange("Create", desiredExternalValue),
       );
 
@@ -218,7 +218,7 @@ describe("deployment execution", () => {
       );
       expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(
-        mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait,
+        mockDeploymentsOps.whatIfAtSubscriptionScope,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
       const externalMessages = logger.getExternalMessages("remote", "info");
       expect(externalMessages).toHaveLength(1);
@@ -226,7 +226,7 @@ describe("deployment execution", () => {
     });
 
     it("logs existing removed What-If values as remote external output", async () => {
-      mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait!.mockResolvedValue(
+      mockDeploymentsOps.whatIfAtSubscriptionScope!.mockResolvedValue(
         createWhatIfChange("Delete", existingExternalValue),
       );
 
@@ -320,7 +320,7 @@ describe("deployment execution", () => {
     };
 
     it("deploys", async () => {
-      mockDeploymentsOps.beginCreateOrUpdateAndWait!.mockResolvedValue(
+      mockDeploymentsOps.createOrUpdate!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -333,8 +333,13 @@ describe("deployment execution", () => {
       );
       expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
-        mockDeploymentsOps.beginCreateOrUpdateAndWait,
-      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+        mockDeploymentsOps.createOrUpdate,
+      ).toHaveBeenCalledWith(
+        scope.resourceGroup,
+        config.name,
+        expectedPayload,
+        expect.anything(),
+      );
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -343,7 +348,7 @@ describe("deployment execution", () => {
     });
 
     it("masks secure values", async () => {
-      mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait!.mockResolvedValue(
+      mockDeploymentsOps.createOrUpdateAtSubscriptionScope!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -362,7 +367,7 @@ describe("deployment execution", () => {
     });
 
     it("handles deploy errors", async () => {
-      mockDeploymentsOps.beginCreateOrUpdateAndWait!.mockRejectedValue(
+      mockDeploymentsOps.createOrUpdate!.mockRejectedValue(
         getMockRestError(mockError),
       );
 
@@ -381,8 +386,13 @@ describe("deployment execution", () => {
         logger,
       );
       expect(
-        mockDeploymentsOps.beginCreateOrUpdateAndWait,
-      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+        mockDeploymentsOps.createOrUpdate,
+      ).toHaveBeenCalledWith(
+        scope.resourceGroup,
+        config.name,
+        expectedPayload,
+        expect.anything(),
+      );
 
       expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
         2,
@@ -412,7 +422,7 @@ describe("deployment execution", () => {
         undefined,
       );
       expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
-      expect(mockDeploymentsOps.beginValidateAndWait).toHaveBeenCalledWith(
+      expect(mockDeploymentsOps.validate).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
         expectedPayload,
@@ -420,7 +430,7 @@ describe("deployment execution", () => {
     });
 
     it("handles validate errors", async () => {
-      mockDeploymentsOps.beginValidateAndWait!.mockRejectedValue(
+      mockDeploymentsOps.validate!.mockRejectedValue(
         getMockRestError(mockError),
       );
 
@@ -440,7 +450,7 @@ describe("deployment execution", () => {
         undefined,
       );
       expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
-      expect(mockDeploymentsOps.beginValidateAndWait).toHaveBeenCalledWith(
+      expect(mockDeploymentsOps.validate).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
         expectedPayload,
@@ -460,7 +470,7 @@ describe("deployment execution", () => {
     });
 
     it("what-ifs", async () => {
-      mockDeploymentsOps.beginWhatIfAndWait!.mockResolvedValue({});
+      mockDeploymentsOps.whatIf!.mockResolvedValue({});
 
       await execute(
         { ...config, operation: "whatIf" },
@@ -476,7 +486,7 @@ describe("deployment execution", () => {
         undefined,
       );
       expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
-      expect(mockDeploymentsOps.beginWhatIfAndWait).toHaveBeenCalledWith(
+      expect(mockDeploymentsOps.whatIf).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
         expectedPayload,
@@ -484,7 +494,7 @@ describe("deployment execution", () => {
     });
 
     it("handles what-if errors", async () => {
-      mockDeploymentsOps.beginWhatIfAndWait!.mockRejectedValue(
+      mockDeploymentsOps.whatIf!.mockRejectedValue(
         getMockRestError(mockError),
       );
 
@@ -504,7 +514,7 @@ describe("deployment execution", () => {
         undefined,
       );
       expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
-      expect(mockDeploymentsOps.beginWhatIfAndWait).toHaveBeenCalledWith(
+      expect(mockDeploymentsOps.whatIf).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
         expectedPayload,
@@ -577,7 +587,7 @@ describe("deployment execution", () => {
     };
 
     it("deploys and logs tenant scope correctly", async () => {
-      mockDeploymentsOps.beginCreateOrUpdateAtTenantScopeAndWait!.mockResolvedValue(
+      mockDeploymentsOps.createOrUpdateAtTenantScope!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -591,11 +601,12 @@ describe("deployment execution", () => {
       );
       expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
-        mockDeploymentsOps.beginCreateOrUpdateAtTenantScopeAndWait,
-      ).toHaveBeenCalledWith(config.name, {
-        ...expectedPayload,
-        location: config.location,
-      });
+        mockDeploymentsOps.createOrUpdateAtTenantScope,
+      ).toHaveBeenCalledWith(
+        config.name,
+        { ...expectedPayload, location: config.location },
+        expect.anything(),
+      );
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -696,7 +707,7 @@ describe("stack execution", () => {
     };
 
     it("deploys", async () => {
-      mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockResolvedValue(
+      mockStacksOps.createOrUpdateAtSubscription!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -710,8 +721,8 @@ describe("stack execution", () => {
         undefined,
       );
       expect(
-        mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait,
-      ).toHaveBeenCalledWith(config.name, expectedPayload);
+        mockStacksOps.createOrUpdateAtSubscription,
+      ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -725,7 +736,7 @@ describe("stack execution", () => {
     });
 
     it("masks secure values", async () => {
-      mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockResolvedValue(
+      mockStacksOps.createOrUpdateAtSubscription!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -758,7 +769,7 @@ describe("stack execution", () => {
         undefined,
       );
       expect(
-        mockStacksOps.beginValidateStackAtSubscriptionAndWait,
+        mockStacksOps.validateStackAtSubscription,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
     });
 
@@ -777,7 +788,7 @@ describe("stack execution", () => {
         undefined,
       );
       expect(
-        mockStacksOps.beginDeleteAtSubscriptionAndWait,
+        mockStacksOps.deleteAtSubscription,
       ).toHaveBeenCalledWith(config.name, {
         bypassStackOutOfSyncError: true,
         unmanageActionResources: "delete",
@@ -816,10 +827,10 @@ describe("stack execution", () => {
         },
       };
 
-      mockStacksWhatIfAtSubscriptionOps.beginCreateOrUpdateAndWait!.mockResolvedValue(
+      mockStacksWhatIfAtSubscriptionOps.createOrUpdate!.mockResolvedValue(
         mockWhatIfResult,
       );
-      mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait!.mockResolvedValue(
+      mockStacksWhatIfAtSubscriptionOps.whatIf!.mockResolvedValue(
         mockWhatIfResult,
       );
 
@@ -831,10 +842,10 @@ describe("stack execution", () => {
       );
 
       expect(
-        mockStacksWhatIfAtSubscriptionOps.beginCreateOrUpdateAndWait,
+        mockStacksWhatIfAtSubscriptionOps.createOrUpdate,
       ).toHaveBeenCalledWith(expect.any(String), expectedWhatIfPayload);
       expect(
-        mockStacksWhatIfAtSubscriptionOps.beginWhatIfAndWait,
+        mockStacksWhatIfAtSubscriptionOps.whatIf,
       ).toHaveBeenCalledWith(expect.any(String));
     });
 
@@ -941,7 +952,7 @@ describe("stack execution", () => {
     };
 
     it("deploys", async () => {
-      mockStacksOps.beginCreateOrUpdateAtResourceGroupAndWait!.mockResolvedValue(
+      mockStacksOps.createOrUpdateAtResourceGroup!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -954,8 +965,13 @@ describe("stack execution", () => {
         undefined,
       );
       expect(
-        mockStacksOps.beginCreateOrUpdateAtResourceGroupAndWait,
-      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
+        mockStacksOps.createOrUpdateAtResourceGroup,
+      ).toHaveBeenCalledWith(
+        scope.resourceGroup,
+        config.name,
+        expectedPayload,
+        expect.anything(),
+      );
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -964,7 +980,7 @@ describe("stack execution", () => {
     });
 
     it("handles long-running create failures", async () => {
-      mockStacksOps.beginCreateOrUpdateAtResourceGroupAndWait!.mockRejectedValueOnce(
+      mockStacksOps.createOrUpdateAtResourceGroup!.mockRejectedValueOnce(
         new Error(
           "The long-running operation has failed. DeploymentStackDeploymentFailed. One or more resources could not be deployed.",
         ),
@@ -987,7 +1003,7 @@ describe("stack execution", () => {
     });
 
     it("masks secure values", async () => {
-      mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockResolvedValue(
+      mockStacksOps.createOrUpdateAtSubscription!.mockResolvedValue(
         mockReturnPayload,
       );
 
@@ -1020,12 +1036,12 @@ describe("stack execution", () => {
         undefined,
       );
       expect(
-        mockStacksOps.beginValidateStackAtResourceGroupAndWait,
+        mockStacksOps.validateStackAtResourceGroup,
       ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
     });
 
     it("handles long-running validation failures", async () => {
-      mockStacksOps.beginValidateStackAtResourceGroupAndWait!.mockRejectedValueOnce(
+      mockStacksOps.validateStackAtResourceGroup!.mockRejectedValueOnce(
         new Error(
           "The long-running operation has failed. InvalidTemplateDeployment. The template deployment is invalid.",
         ),
@@ -1067,7 +1083,7 @@ describe("stack execution", () => {
         undefined,
       );
       expect(
-        mockStacksOps.beginDeleteAtResourceGroupAndWait,
+        mockStacksOps.deleteAtResourceGroup,
       ).toHaveBeenCalledWith(scope.resourceGroup, config.name, {
         bypassStackOutOfSyncError: true,
         unmanageActionResources: "delete",
@@ -1111,7 +1127,7 @@ describe("custom error messages", () => {
       message: "Validation failed",
     };
 
-    mockDeploymentsOps.beginValidateAndWait!.mockRejectedValue(
+    mockDeploymentsOps.validate!.mockRejectedValue(
       getMockRestError(mockError),
     );
 
@@ -1135,7 +1151,7 @@ describe("custom error messages", () => {
       message: "What-if operation failed",
     };
 
-    mockDeploymentsOps.beginWhatIfAndWait!.mockRejectedValue(
+    mockDeploymentsOps.whatIf!.mockRejectedValue(
       getMockRestError(mockError),
     );
 
@@ -1158,7 +1174,7 @@ describe("custom error messages", () => {
   it("uses custom correlation error message when provided", async () => {
     const mockError = { code: "DeploymentFailed", message: "Deploy failed" };
 
-    mockDeploymentsOps.beginCreateOrUpdateAndWait!.mockRejectedValue(
+    mockDeploymentsOps.createOrUpdate!.mockRejectedValue(
       getMockRestError(mockError),
     );
 
@@ -1209,7 +1225,7 @@ describe("custom logging messages", () => {
   it("uses custom diagnostics message when provided", async () => {
     const spyLogInfo = vi.spyOn(logger, "logInfo");
 
-    mockDeploymentsOps.beginValidateAndWait!.mockResolvedValue({
+    mockDeploymentsOps.validate!.mockResolvedValue({
       properties: {
         diagnostics: [
           {
