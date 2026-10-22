@@ -39,13 +39,10 @@ export async function stackCreate(
         stack,
       );
     case "subscription":
-      return await client.deploymentStacks.createOrUpdateAtSubscription(
-        name,
-        {
-          ...stack,
-          location: requireLocation(config),
-        },
-      );
+      return await client.deploymentStacks.createOrUpdateAtSubscription(name, {
+        ...stack,
+        location: requireLocation(config),
+      });
     case "managementGroup":
       return await client.deploymentStacks.createOrUpdateAtManagementGroup(
         scope.managementGroup,
@@ -76,13 +73,10 @@ export async function stackValidate(
         stack,
       );
     case "subscription":
-      return await client.deploymentStacks.validateStackAtSubscription(
-        name,
-        {
-          ...stack,
-          location: requireLocation(config),
-        },
-      );
+      return await client.deploymentStacks.validateStackAtSubscription(name, {
+        ...stack,
+        location: requireLocation(config),
+      });
     case "managementGroup":
       return await client.deploymentStacks.validateStackAtManagementGroup(
         scope.managementGroup,

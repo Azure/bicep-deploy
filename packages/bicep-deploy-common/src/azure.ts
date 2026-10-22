@@ -1,8 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { DeploymentsClient } from "@azure/arm-resourcesdeployments";
+import {
+  DeploymentsClient,
+  ErrorResponse,
+} from "@azure/arm-resourcesdeployments";
+import type { CloudError } from "@azure/arm-resourcesdeployments";
 import { DeploymentStacksClient } from "@azure/arm-resourcesdeploymentstacks";
 import { AdditionalPolicyConfig } from "@azure-rest/core-client";
+import { PipelineResponse } from "@azure/core-rest-pipeline";
 import {
   ChainedTokenCredential,
   EnvironmentCredential,
@@ -56,7 +61,10 @@ export function createDeploymentClient(
   if (options.delayInitialCreateStatusPoll) {
     additionalPolicies.push(createDeploymentInitialPollDelayPolicy());
   }
-  additionalPolicies.push(createDebugLoggingPolicy(logger));
+  additionalPolicies.push(
+    createDebugLoggingPolicy(logger),
+    createPollingErrorPolicy(),
+  );
 
   return new DeploymentsClient(
     options.credential ?? getCredential(tenantId),
@@ -185,10 +193,76 @@ export function createStacksClient(
       userAgentOptions: {
         userAgentPrefix: userAgentPrefix,
       },
-      additionalPolicies: [createDebugLoggingPolicy(logger)],
+      additionalPolicies: [
+        createDebugLoggingPolicy(logger),
+        createPollingErrorPolicy(),
+      ],
       endpoint: endpoints[config.environment],
     },
   );
+}
+
+export class CustomPollingError extends Error {
+  constructor(
+    public readonly details: CloudError,
+    public readonly response: PipelineResponse,
+  ) {
+    super(details.error?.message ?? "The long-running operation has failed");
+    this.name = "CustomPollingError";
+  }
+}
+
+function tryGetError(response: PipelineResponse): ErrorResponse | undefined {
+  try {
+    const body = response.bodyAsText
+      ? JSON.parse(response.bodyAsText)
+      : undefined;
+
+    if (
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      isErrorResponse(body.error)
+    ) {
+      return body.error;
+    }
+  } catch {
+    return;
+  }
+}
+
+function isErrorResponse(
+  error: unknown,
+): error is ErrorResponse & { code: string; message: string } {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    "message" in error &&
+    typeof error.message === "string"
+  );
+}
+
+export function createPollingErrorPolicy(): AdditionalPolicyConfig {
+  return {
+    position: "perCall",
+    policy: {
+      name: "pollingErrorPolicy",
+      async sendRequest(request, next) {
+        const response = await next(request);
+        // This special handling is necessary because the Azure SDK does not surface nested errors
+        // out of the box. We want to provide full error information to the end user for troubleshooting.
+        const error = tryGetError(response);
+
+        if (error) {
+          throw new CustomPollingError({ error }, response);
+        }
+
+        return response;
+      },
+    },
+  };
 }
 
 // Log Azure SDK request and response metadata when debug logging is enabled.

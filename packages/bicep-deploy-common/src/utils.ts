@@ -10,11 +10,16 @@ import {
   SubscriptionScope,
   TenantScope,
 } from "./config";
-import { createDeploymentClient, createStacksClient } from "./azure";
+import {
+  createDeploymentClient,
+  createStacksClient,
+  CustomPollingError,
+} from "./azure";
 import { errorMessages } from "./errorMessages";
 import { loggingMessages } from "./loggingMessages";
 
 import {
+  CloudError,
   DeploymentDiagnosticsDefinition,
   ErrorResponse,
 } from "@azure/arm-resourcesdeployments";
@@ -44,7 +49,10 @@ export function getScopedId(config: DeployConfig): string {
 export function getDeploymentClient(
   config: DeployConfig,
   scope:
-    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
+    | TenantScope
+    | ManagementGroupScope
+    | SubscriptionScope
+    | ResourceGroupScope,
   logger: Logger,
 ) {
   const { tenantId } = scope;
@@ -57,7 +65,10 @@ export function getDeploymentClient(
 export function getStacksClient(
   config: DeployConfig,
   scope:
-    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
+    | TenantScope
+    | ManagementGroupScope
+    | SubscriptionScope
+    | ResourceGroupScope,
   logger: Logger,
 ) {
   const { tenantId } = scope;
@@ -202,8 +213,27 @@ export async function tryWithErrorHandling<T>(
         { source: "remote", level: "error" },
       );
 
-      onError({ code: ex.code, message: ex.message });
-      return;
+      const error = (ex.details as CloudError | undefined)?.error;
+      if (error) {
+        onError(error);
+        return;
+      }
+    }
+
+    if (ex instanceof CustomPollingError) {
+      const correlationId = ex.response?.headers.get(
+        "x-ms-correlation-request-id",
+      );
+      logger.logExternalOutput(
+        loggingMessages.requestFailedCorrelation(correlationId ?? null),
+        { source: "remote", level: "error" },
+      );
+
+      const { error } = ex.details;
+      if (error) {
+        onError(error);
+        return;
+      }
     }
 
     const longRunningOperationError = getLongRunningOperationError(ex);

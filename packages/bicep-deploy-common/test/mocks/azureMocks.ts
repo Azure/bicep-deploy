@@ -71,4 +71,7 @@ export const azureMock = {
   }),
 };
 
-vi.mock("../../src/azure", () => azureMock);
+vi.mock("../../src/azure", async importOriginal => ({
+  ...(await importOriginal<typeof import("../../src/azure")>()),
+  ...azureMock,
+}));
