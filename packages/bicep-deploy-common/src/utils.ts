@@ -221,7 +221,11 @@ export async function tryWithErrorHandling<T>(
         { source: "remote", level: "error" },
       );
 
-      const { error } = ex.details as CloudError;
+      const error =
+        (ex.details as CloudError | undefined)?.error ??
+        (ex.code || ex.message
+          ? { code: ex.code, message: ex.message }
+          : undefined);
       if (error) {
         onError(error);
         return;

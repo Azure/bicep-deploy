@@ -710,6 +710,31 @@ describe("stack execution", () => {
       expect(infoLogs[0]).toContain("subscription 'mockSub'");
     });
 
+    it("handles first-request errors without details", async () => {
+      const restError = new RestError(
+        "The subscription is malformed or invalid.",
+      );
+      restError.code = "InvalidSubscriptionId";
+      mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockRejectedValue(
+        restError,
+      );
+      const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+      await execute(config, logger, outputSetter, noopCache);
+
+      expect(spySetFailed).toHaveBeenCalledWith(errorMessages.createFailed);
+      expect(logger.getExternalMessages("remote", "error")).toContain(
+        JSON.stringify(
+          {
+            code: "InvalidSubscriptionId",
+            message: "The subscription is malformed or invalid.",
+          },
+          null,
+          2,
+        ),
+      );
+    });
+
     it("masks secure values", async () => {
       mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockResolvedValue(
         mockReturnPayload,
