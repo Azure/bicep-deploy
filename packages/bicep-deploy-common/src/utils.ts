@@ -15,12 +15,10 @@ import { errorMessages } from "./errorMessages";
 import { loggingMessages } from "./loggingMessages";
 
 import {
-  CloudError,
   DeploymentDiagnosticsDefinition,
   ErrorResponse,
-} from "@azure/arm-resources";
-import { OperationOptions } from "@azure/core-client";
-import { isRestError, PipelineResponse } from "@azure/core-rest-pipeline";
+} from "@azure/arm-resourcesdeployments";
+import { isRestError } from "@azure/core-rest-pipeline";
 
 import { Logger } from "./logging";
 import { ParsedFiles } from "./file";
@@ -46,10 +44,7 @@ export function getScopedId(config: DeployConfig): string {
 export function getDeploymentClient(
   config: DeployConfig,
   scope:
-    | TenantScope
-    | ManagementGroupScope
-    | SubscriptionScope
-    | ResourceGroupScope,
+    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
   logger: Logger,
 ) {
   const { tenantId } = scope;
@@ -62,10 +57,7 @@ export function getDeploymentClient(
 export function getStacksClient(
   config: DeployConfig,
   scope:
-    | TenantScope
-    | ManagementGroupScope
-    | SubscriptionScope
-    | ResourceGroupScope,
+    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
   logger: Logger,
 ) {
   const { tenantId } = scope;
@@ -73,33 +65,6 @@ export function getStacksClient(
     "subscriptionId" in scope ? scope.subscriptionId : undefined;
 
   return createStacksClient(config, logger, subscriptionId, tenantId);
-}
-
-// workaround until we're able to pick up https://github.com/Azure/azure-sdk-for-js/pull/25500
-export function getCreateOperationOptions(): OperationOptions {
-  return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onResponse: (rawResponse, flatResponse: any) => {
-      if (
-        flatResponse &&
-        flatResponse.error &&
-        flatResponse.error.code &&
-        flatResponse.error.message
-      ) {
-        throw new CustomPollingError(flatResponse, rawResponse);
-      }
-    },
-  };
-}
-
-// workaround until we're able to pick up https://github.com/Azure/azure-sdk-for-js/pull/25500
-export class CustomPollingError {
-  response: PipelineResponse;
-  details: CloudError;
-  constructor(details: CloudError, response: PipelineResponse) {
-    this.details = details;
-    this.response = response;
-  }
 }
 
 export function requireLocation(config: DeployConfig) {
@@ -237,27 +202,8 @@ export async function tryWithErrorHandling<T>(
         { source: "remote", level: "error" },
       );
 
-      const { error } = ex.details as CloudError;
-      if (error) {
-        onError(error);
-        return;
-      }
-    }
-
-    if (ex instanceof CustomPollingError) {
-      const correlationId = ex.response?.headers.get(
-        "x-ms-correlation-request-id",
-      );
-      logger.logExternalOutput(
-        loggingMessages.requestFailedCorrelation(correlationId ?? null),
-        { source: "remote", level: "error" },
-      );
-
-      const { error } = ex.details;
-      if (error) {
-        onError(error);
-        return;
-      }
+      onError({ code: ex.code, message: ex.message });
+      return;
     }
 
     const longRunningOperationError = getLongRunningOperationError(ex);

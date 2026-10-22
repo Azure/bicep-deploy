@@ -300,7 +300,7 @@ describe("BicepCache", () => {
 
       const logger = new TestLogger();
       await expect(
-        async () => await getTemplateAndParameters(config, logger, cache),
+        getTemplateAndParameters(config, logger, cache),
       ).rejects.toThrow(
         "Failed to resolve Bicep version from download URL: https://example.com/bad-url",
       );

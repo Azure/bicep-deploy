@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { ResourceManagementClient } from "@azure/arm-resources";
+import { DeploymentsClient } from "@azure/arm-resourcesdeployments";
 import { DeploymentStacksClient } from "@azure/arm-resourcesdeploymentstacks";
+import { AdditionalPolicyConfig } from "@azure-rest/core-client";
 import {
   ChainedTokenCredential,
   EnvironmentCredential,
@@ -9,7 +10,6 @@ import {
   AzurePowerShellCredential,
   TokenCredential,
 } from "@azure/identity";
-import { AdditionalPolicyConfig } from "@azure/core-client";
 import type { HttpClient, PipelineRequest } from "@azure/core-rest-pipeline";
 
 import { Logger } from "./logging";
@@ -51,14 +51,14 @@ export function createDeploymentClient(
   subscriptionId?: string,
   tenantId?: string,
   options: DeploymentClientOptions = {},
-): ResourceManagementClient {
+): DeploymentsClient {
   const additionalPolicies: AdditionalPolicyConfig[] = [];
   if (options.delayInitialCreateStatusPoll) {
     additionalPolicies.push(createDeploymentInitialPollDelayPolicy());
   }
   additionalPolicies.push(createDebugLoggingPolicy(logger));
 
-  return new ResourceManagementClient(
+  return new DeploymentsClient(
     options.credential ?? getCredential(tenantId),
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId,
@@ -86,7 +86,7 @@ export function getDeploymentCreateClient(
     | ResourceGroupScope,
   logger: Logger,
   options: Omit<DeploymentClientOptions, "delayInitialCreateStatusPoll"> = {},
-): ResourceManagementClient {
+): DeploymentsClient {
   const { tenantId } = scope;
   const subscriptionId =
     "subscriptionId" in scope ? scope.subscriptionId : undefined;

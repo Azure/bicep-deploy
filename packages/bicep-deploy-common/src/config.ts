@@ -16,10 +16,7 @@ import {
 } from "./input";
 
 export type ScopeType =
-  | "tenant"
-  | "managementGroup"
-  | "subscription"
-  | "resourceGroup";
+  "tenant" | "managementGroup" | "subscription" | "resourceGroup";
 
 type CommonScope = {
   type: ScopeType;
@@ -67,10 +64,7 @@ type CommonConfig = {
   maskedOutputs?: string[];
   deploymentDebugLogLevel?: DeploymentDebugLogLevel;
   environment:
-    | "azureCloud"
-    | "azureChinaCloud"
-    | "azureGermanCloud"
-    | "azureUSGovernment";
+    "azureCloud" | "azureChinaCloud" | "azureGermanCloud" | "azureUSGovernment";
 } & FileConfig;
 
 type WhatIfChangeType =
@@ -86,10 +80,7 @@ export type DeploymentsConfig = CommonConfig & {
   type: "deployment";
   operation: "create" | "validate" | "whatIf";
   scope:
-    | TenantScope
-    | ManagementGroupScope
-    | SubscriptionScope
-    | ResourceGroupScope;
+    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope;
   whatIf: {
     excludeChangeTypes?: WhatIfChangeType[];
   };

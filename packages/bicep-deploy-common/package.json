@@ -29,7 +29,7 @@
     "./README.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -45,7 +45,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@azure/arm-resources": "^6.0.0",
+    "@azure/arm-resourcesdeployments": "^2.0.0",
     "@azure/arm-resourcesdeploymentstacks": "^2.0.0",
     "@azure/bicep-rpc-client": "*",
     "@azure/identity": "^4.13.1",
