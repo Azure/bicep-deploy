@@ -27,13 +27,10 @@ export async function deploymentCreate(
         deployment,
       );
     case "subscription":
-      return await client.deployments.createOrUpdateAtSubscriptionScope(
-        name,
-        {
-          ...deployment,
-          location: requireLocation(config),
-        },
-      );
+      return await client.deployments.createOrUpdateAtSubscriptionScope(name, {
+        ...deployment,
+        location: requireLocation(config),
+      });
     case "managementGroup":
       return await client.deployments.createOrUpdateAtManagementGroupScope(
         scope.managementGroup,
@@ -44,13 +41,10 @@ export async function deploymentCreate(
         },
       );
     case "tenant":
-      return await client.deployments.createOrUpdateAtTenantScope(
-        name,
-        {
-          ...deployment,
-          location: requireLocation(config),
-        },
-      );
+      return await client.deployments.createOrUpdateAtTenantScope(name, {
+        ...deployment,
+        location: requireLocation(config),
+      });
   }
 }
 
@@ -72,13 +66,10 @@ export async function deploymentValidate(
         deployment,
       );
     case "subscription":
-      return await client.deployments.validateAtSubscriptionScope(
-        name,
-        {
-          ...deployment,
-          location: requireLocation(config),
-        },
-      );
+      return await client.deployments.validateAtSubscriptionScope(name, {
+        ...deployment,
+        location: requireLocation(config),
+      });
     case "managementGroup":
       return await client.deployments.validateAtManagementGroupScope(
         scope.managementGroup,
@@ -131,13 +122,10 @@ export async function deploymentWhatIf(
         },
       );
     case "tenant":
-      return await client.deployments.whatIfAtTenantScope(
-        deploymentName,
-        {
-          ...deployment,
-          location: requireLocation(config),
-        },
-      );
+      return await client.deployments.whatIfAtTenantScope(deploymentName, {
+        ...deployment,
+        location: requireLocation(config),
+      });
   }
 }
 

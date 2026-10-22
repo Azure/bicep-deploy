@@ -19,9 +19,9 @@ import { errorMessages } from "./errorMessages";
 import { loggingMessages } from "./loggingMessages";
 
 import {
+  CloudError,
   DeploymentDiagnosticsDefinition,
   ErrorResponse,
-  CloudError,
 } from "@azure/arm-resourcesdeployments";
 import { isRestError } from "@azure/core-rest-pipeline";
 
@@ -49,7 +49,10 @@ export function getScopedId(config: DeployConfig): string {
 export function getDeploymentClient(
   config: DeployConfig,
   scope:
-    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
+    | TenantScope
+    | ManagementGroupScope
+    | SubscriptionScope
+    | ResourceGroupScope,
   logger: Logger,
 ) {
   const { tenantId } = scope;
@@ -62,7 +65,10 @@ export function getDeploymentClient(
 export function getStacksClient(
   config: DeployConfig,
   scope:
-    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
+    | TenantScope
+    | ManagementGroupScope
+    | SubscriptionScope
+    | ResourceGroupScope,
   logger: Logger,
 ) {
   const { tenantId } = scope;

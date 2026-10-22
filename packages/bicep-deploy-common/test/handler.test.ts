@@ -318,6 +318,7 @@ describe("deployment execution", () => {
         },
       ],
     };
+    const expectedError = mockError;
 
     it("deploys", async () => {
       mockDeploymentsOps.createOrUpdate!.mockResolvedValue(
@@ -1259,6 +1260,7 @@ function getMockRestError(errorResponse: ErrorResponse) {
           : undefined,
     },
   } as RestError["response"];
+  restError.details = { error: errorResponse };
 
   return restError;
 }
