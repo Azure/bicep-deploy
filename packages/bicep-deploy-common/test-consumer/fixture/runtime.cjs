@@ -9,12 +9,26 @@ let stackCreateCalls = 0;
 
 async function deploymentCreate() {
   deploymentCreateCalls++;
-  return { properties: { outputs: {} } };
+  return {
+    properties: {
+      outputs: {
+        secretOutput: { value: "secret-marker" },
+        publicOutput: { value: "public-marker" },
+      },
+    },
+  };
 }
 
 async function stackCreate() {
   stackCreateCalls++;
-  return { properties: { outputs: {} } };
+  return {
+    properties: {
+      outputs: {
+        secretOutput: { value: "secret-marker" },
+        publicOutput: { value: "public-marker" },
+      },
+    },
+  };
 }
 
 const logger = {
@@ -26,12 +40,14 @@ const logger = {
   logExternalOutput: () => {},
 };
 
+const outputCalls = [];
 const outputSetter = {
-  setOutput: () => {},
+  setOutputVariable: (name, value, options) => {
+    outputCalls.push({ name, value, options });
+  },
   setFailed: message => {
     throw message instanceof Error ? message : new Error(String(message));
   },
-  setSecret: () => {},
 };
 
 const bicepCache = {
@@ -44,6 +60,7 @@ const commonConfig = {
   name: "consumer-fixture",
   environment: "azureCloud",
   templateFile,
+  maskedOutputs: ["SeCrEtOuTpUt"],
   scope: {
     type: "resourceGroup",
     subscriptionId: "00000000-0000-0000-0000-000000000000",
@@ -106,6 +123,28 @@ async function main() {
       1,
       "execute() should call the stack mock through the public subpath",
     );
+    assert.deepEqual(outputCalls, [
+      {
+        name: "secretOutput",
+        value: "secret-marker",
+        options: { isSecret: true },
+      },
+      {
+        name: "publicOutput",
+        value: "public-marker",
+        options: { isSecret: false },
+      },
+      {
+        name: "secretOutput",
+        value: "secret-marker",
+        options: { isSecret: true },
+      },
+      {
+        name: "publicOutput",
+        value: "public-marker",
+        options: { isSecret: false },
+      },
+    ]);
   } finally {
     rewiremock.disable();
   }

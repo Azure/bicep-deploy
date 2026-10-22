@@ -21,6 +21,7 @@ export interface InputParameterNames {
   description: string;
   tags: string;
   maskedOutputs: string;
+  deploymentDebugLogLevel: string;
   environment: string;
   operation: string;
   whatIfExcludeChangeTypes: string;

@@ -146,8 +146,11 @@ describe("deployment execution", () => {
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
-      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
-      expect(outputSetter.setSecret).not.toHaveBeenCalled();
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: false },
+      );
 
       // Validate expected log sequence
       const infoLogs = logger.getExternalMessages("repository", "info");
@@ -167,7 +170,11 @@ describe("deployment execution", () => {
         noopCache,
       );
 
-      expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: true },
+      );
     });
 
     it("validates", async () => {
@@ -187,6 +194,84 @@ describe("deployment execution", () => {
       expect(
         mockDeploymentsOps.beginValidateAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
+    });
+
+    it.each([
+      ["requestContent", "requestContent"],
+      ["responseContent", "responseContent"],
+      ["all", "requestContent,responseContent"],
+    ] as const)(
+      "sends ARM debug setting %s on create and validate",
+      async (deploymentDebugLogLevel, detailLevel) => {
+        mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait!.mockResolvedValue(
+          mockReturnPayload,
+        );
+        const expectedDebugPayload = {
+          ...expectedPayload,
+          properties: { ...expectedProperties, debugSetting: { detailLevel } },
+        };
+
+        await execute(
+          { ...config, deploymentDebugLogLevel },
+          logger,
+          outputSetter,
+          noopCache,
+        );
+        await execute(
+          { ...config, operation: "validate", deploymentDebugLogLevel },
+          logger,
+          outputSetter,
+          noopCache,
+        );
+
+        expect(
+          mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait,
+        ).toHaveBeenCalledWith(
+          config.name,
+          expectedDebugPayload,
+          expect.anything(),
+        );
+        expect(
+          mockDeploymentsOps.beginValidateAtSubscriptionScopeAndWait,
+        ).toHaveBeenCalledWith(config.name, expectedDebugPayload);
+      },
+    );
+
+    it.each([undefined, "none"] as const)(
+      "omits the ARM debug setting when the level is %s",
+      async deploymentDebugLogLevel => {
+        await execute(
+          { ...config, operation: "validate", deploymentDebugLogLevel },
+          logger,
+          outputSetter,
+          noopCache,
+        );
+
+        const payload =
+          mockDeploymentsOps.beginValidateAtSubscriptionScopeAndWait!.mock
+            .calls[0][1];
+        expect(payload.properties).not.toHaveProperty(
+          "debugSetting.detailLevel",
+        );
+      },
+    );
+
+    it("does not send the ARM debug setting for what-if", async () => {
+      mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait!.mockResolvedValue(
+        {},
+      );
+
+      await execute(
+        { ...config, operation: "whatIf", deploymentDebugLogLevel: "all" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      const payload =
+        mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait!.mock
+          .calls[0][1];
+      expect(payload.properties).not.toHaveProperty("debugSetting.detailLevel");
     });
 
     it("logs desired What-If values as remote external output", async () => {
@@ -331,8 +416,11 @@ describe("deployment execution", () => {
         expectedPayload,
         expect.anything(),
       );
-      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
-      expect(outputSetter.setSecret).not.toHaveBeenCalled();
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: false },
+      );
     });
 
     it("masks secure values", async () => {
@@ -347,7 +435,11 @@ describe("deployment execution", () => {
         noopCache,
       );
 
-      expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: true },
+      );
     });
 
     it("handles deploy errors", async () => {
@@ -588,8 +680,11 @@ describe("deployment execution", () => {
         { ...expectedPayload, location: config.location },
         expect.anything(),
       );
-      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
-      expect(outputSetter.setSecret).not.toHaveBeenCalled();
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: false },
+      );
 
       // Validate expected log sequence - tenant scope has no scopedId
       const infoLogs = logger.getExternalMessages("repository", "info");
@@ -701,8 +796,11 @@ describe("stack execution", () => {
       expect(
         mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
-      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
-      expect(outputSetter.setSecret).not.toHaveBeenCalled();
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: false },
+      );
 
       // Validate expected log sequence for stacks
       const infoLogs = logger.getExternalMessages("repository", "info");
@@ -722,7 +820,11 @@ describe("stack execution", () => {
         noopCache,
       );
 
-      expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: true },
+      );
     });
 
     it("validates", async () => {
@@ -742,6 +844,43 @@ describe("stack execution", () => {
       expect(
         mockStacksOps.beginValidateStackAtSubscriptionAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
+    });
+
+    it("sends the ARM debug setting on stack create and validate", async () => {
+      mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait!.mockResolvedValue(
+        mockReturnPayload,
+      );
+      const expectedDebugPayload = {
+        ...expectedPayload,
+        properties: {
+          ...expectedProperties,
+          debugSetting: { detailLevel: "requestContent,responseContent" },
+        },
+      };
+
+      await execute(
+        { ...config, deploymentDebugLogLevel: "all" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+      await execute(
+        { ...config, operation: "validate", deploymentDebugLogLevel: "all" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      expect(
+        mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait,
+      ).toHaveBeenCalledWith(
+        config.name,
+        expectedDebugPayload,
+        expect.anything(),
+      );
+      expect(
+        mockStacksOps.beginValidateStackAtSubscriptionAndWait,
+      ).toHaveBeenCalledWith(config.name, expectedDebugPayload);
     });
 
     it("deletes", async () => {
@@ -943,8 +1082,11 @@ describe("stack execution", () => {
         expectedPayload,
         expect.anything(),
       );
-      expect(outputSetter.setOutput).toHaveBeenCalledWith("mockOutput", "foo");
-      expect(outputSetter.setSecret).not.toHaveBeenCalled();
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: false },
+      );
     });
 
     it("handles long-running create failures", async () => {
@@ -982,7 +1124,11 @@ describe("stack execution", () => {
         noopCache,
       );
 
-      expect(outputSetter.setSecret).toHaveBeenCalledWith("foo");
+      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
+        "mockOutput",
+        "foo",
+        { isSecret: true },
+      );
     });
 
     it("validates", async () => {

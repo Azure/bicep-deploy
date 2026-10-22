@@ -6,6 +6,7 @@ import {
   type DeploymentsConfig,
   type ExternalOutputOptions,
   type Logger,
+  type OutputOptions,
   type OutputSetter,
 } from "@azure/bicep-deploy-common";
 import {
@@ -61,6 +62,38 @@ const logger: Logger = {
   },
 };
 
+const outputSetter: OutputSetter = {
+  setOutputVariable: (
+    _name: string,
+    _value: unknown,
+    options: OutputOptions,
+  ) => {
+    const isSecret: boolean = options.isSecret;
+    void isSecret;
+  },
+  setFailed: (message: string | Error) => {
+    void message;
+  },
+};
+
+// Mirrors the 0.4 adapter shape so the assignment below proves it no longer compiles.
+const legacyOutputSetter = {
+  setOutput: (name: string, value: unknown) => {
+    void name;
+    void value;
+  },
+  setFailed: (message: string | Error) => {
+    void message;
+  },
+  setSecret: (secret: string) => {
+    void secret;
+  },
+};
+
+// @ts-expect-error The 0.4 adapter shape must not satisfy the 0.5 contract.
+const rejectedLegacyOutputSetter: OutputSetter = legacyOutputSetter;
+
 void publicContract;
-void ({ logger } as ConsumerContract);
+void ({ logger, outputSetter } as ConsumerContract);
+void rejectedLegacyOutputSetter;
 void ({} as RpcConsumerContract);

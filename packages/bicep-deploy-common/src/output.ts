@@ -2,11 +2,14 @@
 // Licensed under the MIT License.
 import { DeployConfig } from "./config";
 
+export interface OutputOptions {
+  isSecret: boolean;
+}
+
 export interface OutputSetter {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setOutput(name: string, value: any): void;
+  // Distinct from the 0.4 setOutput name so older adapters fail to compile instead of ignoring isSecret.
+  setOutputVariable(name: string, value: unknown, options: OutputOptions): void;
   setFailed(message: string | Error): void;
-  setSecret(secret: string): void;
 }
 
 export function setOutputs(
@@ -19,13 +22,11 @@ export function setOutputs(
   }
 
   for (const key of Object.keys(outputs)) {
-    const output = outputs[key] as { value: string };
-    outputSetter.setOutput(key, output.value);
-    if (
-      config.maskedOutputs &&
-      config.maskedOutputs.some(x => x.toLowerCase() === key.toLowerCase())
-    ) {
-      outputSetter.setSecret(output.value);
-    }
+    const output = outputs[key] as { value: unknown };
+    const isSecret =
+      config.maskedOutputs?.some(
+        outputName => outputName.toLowerCase() === key.toLowerCase(),
+      ) ?? false;
+    outputSetter.setOutputVariable(key, output.value, { isSecret });
   }
 }

@@ -6,6 +6,7 @@ import { Logger } from "./logging";
 
 import {
   defaultName,
+  getDebugSetting,
   getDeploymentClient,
   getCreateOperationOptions,
   requireLocation,
@@ -112,7 +113,7 @@ export async function deploymentWhatIf(
   const deploymentName = config.name ?? defaultName;
   const scope = config.scope;
   const client = getDeploymentClient(config, scope, logger);
-  const deployment = createDeploymentDefinition(config, files);
+  const deployment = createDeploymentDefinition(config, files, false);
 
   switch (scope.type) {
     case "resourceGroup":
@@ -152,6 +153,7 @@ export async function deploymentWhatIf(
 function createDeploymentDefinition(
   config: DeploymentsConfig,
   files: ParsedFiles,
+  includeDebugSetting = true,
 ): Deployment {
   const { templateContents, templateSpecId, parametersContents } = files;
 
@@ -170,6 +172,7 @@ function createDeploymentDefinition(
         scope: "inner",
       },
       validationLevel: config.validationLevel,
+      debugSetting: includeDebugSetting ? getDebugSetting(config) : undefined,
     },
     tags: config.tags,
   };

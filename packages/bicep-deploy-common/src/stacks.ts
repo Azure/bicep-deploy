@@ -6,6 +6,7 @@ import { Logger } from "./logging";
 
 import {
   defaultName,
+  getDebugSetting,
   getStacksClient,
   getCreateOperationOptions,
   getDeploymentStackResourceId,
@@ -202,6 +203,7 @@ function createStackDefinition(
       actionOnUnmanage: config.actionOnUnManage,
       denySettings: config.denySettings,
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
+      debugSetting: getDebugSetting(config),
     },
     tags: config.tags,
   };

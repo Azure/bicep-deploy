@@ -65,7 +65,7 @@ export function createStacksClient(
   );
 }
 
-// Log Azure SDK request and response details when debug logging is enabled.
+// Log Azure SDK request and response metadata when debug logging is enabled.
 export function createDebugLoggingPolicy(
   logger: Logger,
 ): AdditionalPolicyConfig {
@@ -79,16 +79,6 @@ export function createDebugLoggingPolicy(
             `Request: ${request.method} ${request.url}`,
             { source: "repository", level: "debug" },
           );
-          if (request.body) {
-            const parsed = JSON.parse(request.body.toString());
-            logger.logExternalOutput(
-              `Body: ${JSON.stringify(parsed, null, 2)}`,
-              {
-                source: "repository",
-                level: "debug",
-              },
-            );
-          }
         }
 
         const response = await next(request);
@@ -98,16 +88,6 @@ export function createDebugLoggingPolicy(
             source: "remote",
             level: "debug",
           });
-          if (response.bodyAsText) {
-            const parsed = JSON.parse(response.bodyAsText);
-            logger.logExternalOutput(
-              `Body: ${JSON.stringify(parsed, null, 2)}`,
-              {
-                source: "remote",
-                level: "debug",
-              },
-            );
-          }
 
           const correlationId = response.headers.get(
             "x-ms-correlation-request-id",
