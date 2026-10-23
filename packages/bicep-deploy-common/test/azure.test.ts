@@ -377,7 +377,7 @@ describe("Azure SDK polling errors", () => {
       request,
       status: 200,
       headers: createHttpHeaders({ "content-type": "application/json" }),
-      bodyAsText: JSON.stringify({ status: "Succeeded", error }),
+      bodyAsText: JSON.stringify({ status: "Succeeded" }),
     };
 
     await expect(
@@ -388,22 +388,41 @@ describe("Azure SDK polling errors", () => {
     ).resolves.toBe(response);
   });
 
-  it("leaves failed HTTP responses for the SDK to handle", async () => {
-    const request = createPipelineRequest({
-      url: "https://management.azure.com/deployment",
-    });
-    const response: PipelineResponse = {
-      request,
+  it.each([
+    {
+      description: "a successful operation containing an error",
+      status: 200,
+      body: { status: "Succeeded", error },
+    },
+    {
+      description: "a failed HTTP response",
       status: 400,
-      headers: createHttpHeaders({ "content-type": "application/json" }),
-      bodyAsText: JSON.stringify({ error }),
-    };
-
-    await expect(
-      createPollingErrorPolicy().policy.sendRequest(
+      body: { error },
+    },
+  ])(
+    "captures structured errors from $description",
+    async ({ status, body }) => {
+      const request = createPipelineRequest({
+        url: "https://management.azure.com/deployment",
+      });
+      const response: PipelineResponse = {
         request,
-        vi.fn().mockResolvedValue(response),
-      ),
-    ).resolves.toBe(response);
-  });
+        status,
+        headers: createHttpHeaders({ "content-type": "application/json" }),
+        bodyAsText: JSON.stringify(body),
+      };
+
+      await expect(
+        createPollingErrorPolicy().policy.sendRequest(
+          request,
+          vi.fn().mockResolvedValue(response),
+        ),
+      ).rejects.toMatchObject({
+        name: "CustomPollingError",
+        message: error.message,
+        details: { error },
+        response,
+      });
+    },
+  );
 });
