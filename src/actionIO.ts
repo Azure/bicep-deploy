@@ -6,6 +6,7 @@ import {
   InputReader,
   OutputSetter,
   InputParameterNames,
+  OutputOptions,
 } from "@azure/bicep-deploy-common";
 
 export class ActionInputReader implements InputReader {
@@ -13,10 +14,25 @@ export class ActionInputReader implements InputReader {
 }
 
 export class ActionOutputSetter implements OutputSetter {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setOutput = (name: string, value: any) => core.setOutput(name, value);
+  setOutputVariable = (
+    name: string,
+    value: unknown,
+    options: OutputOptions,
+  ) => {
+    if (options.isSecret) {
+      core.setSecret(toCommandValue(value));
+    }
+    core.setOutput(name, value);
+  };
   setFailed = (message: string) => core.setFailed(message);
-  setSecret = (secret: string) => core.setSecret(secret);
+}
+
+function toCommandValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return typeof value === "string" ? value : JSON.stringify(value);
 }
 
 export class ActionInputParameterNames implements InputParameterNames {
@@ -30,6 +46,7 @@ export class ActionInputParameterNames implements InputParameterNames {
   description = "description";
   tags = "tags";
   maskedOutputs = "masked-outputs";
+  deploymentDebugLogLevel = "deployment-debug-log-level";
   environment = "environment";
   operation = "operation";
   whatIfExcludeChangeTypes = "what-if-exclude-change-types";

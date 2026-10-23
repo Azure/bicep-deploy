@@ -1,0 +1,2 @@
+# Normalize text files to LF so generated dist output is identical across platforms.
+* text=auto eol=lf

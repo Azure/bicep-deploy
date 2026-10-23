@@ -4,7 +4,6 @@
 import { OutputSetter } from "../../src/output";
 
 export class mockOutputSetter implements OutputSetter {
-  setOutput = vi.fn();
+  setOutputVariable = vi.fn();
   setFailed = vi.fn();
-  setSecret = vi.fn();
 }
