@@ -3,6 +3,7 @@
 import { DeploymentsConfig } from "./config";
 import { ParsedFiles } from "./file";
 import { Logger } from "./logging";
+import { getDeploymentCreateClient } from "./azure";
 
 import {
   defaultName,
@@ -20,7 +21,7 @@ export async function deploymentCreate(
 ) {
   const name = config.name ?? defaultName;
   const scope = config.scope;
-  const client = getDeploymentClient(config, scope, logger);
+  const client = getDeploymentCreateClient(config, scope, logger);
   const deployment = createDeploymentDefinition(config, files);
 
   switch (scope.type) {
