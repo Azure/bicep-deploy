@@ -58,9 +58,14 @@ jobs:
             ls -la ./
             exit 1
           fi
-          if [ "$(git diff --ignore-space-at-eol --text dist/*.js | wc -l)" -gt "0" ]; then
+          if [ "$(git diff --ignore-space-at-eol --text -- dist/ | wc -l)" -gt "0" ]; then
             echo "Detected uncommitted changes after build. See status below:"
-            git diff --ignore-space-at-eol --text dist/*.js
+            git diff --ignore-space-at-eol --text -- dist/
+            exit 1
+          fi
+          if [ -n "$(git ls-files --others --exclude-standard -- dist/)" ]; then
+            echo "Detected untracked files after build. See status below:"
+            git status --porcelain -- dist/
             exit 1
           fi
 
