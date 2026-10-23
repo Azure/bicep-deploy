@@ -62,15 +62,12 @@ export function createDeploymentClient(
   options: DeploymentClientOptions = {},
 ): DeploymentsClient {
   const additionalPolicies: AdditionalPolicyConfig[] = [];
-  if (options.delayInitialCreateStatusPoll) {
-    additionalPolicies.push(createDeploymentInitialPollDelayPolicy());
-  }
   additionalPolicies.push(
     createDebugLoggingPolicy(logger),
     createPollingErrorPolicy(),
   );
 
-  return new DeploymentsClient(
+  const client = new DeploymentsClient(
     options.credential ?? getCredential(tenantId),
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId,
@@ -85,6 +82,19 @@ export function createDeploymentClient(
       httpClient: options.httpClient,
     },
   );
+
+  if (options.delayInitialCreateStatusPoll) {
+    client.pipeline.addPolicy(createDeploymentInitialPollDelayPolicy().policy, {
+      afterPolicies: ["setClientRequestIdPolicy"],
+      beforePolicies: [
+        "debugLoggingPolicy",
+        "bearerTokenAuthenticationPolicy",
+        "defaultRetryPolicy",
+      ],
+    });
+  }
+
+  return client;
 }
 
 // Each call must create a new client: the delay policy delays only the first
@@ -92,10 +102,7 @@ export function createDeploymentClient(
 export function getDeploymentCreateClient(
   config: DeployConfig,
   scope:
-    | TenantScope
-    | ManagementGroupScope
-    | SubscriptionScope
-    | ResourceGroupScope,
+    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
   logger: Logger,
   options: Omit<DeploymentClientOptions, "delayInitialCreateStatusPoll"> = {},
 ): DeploymentsClient {

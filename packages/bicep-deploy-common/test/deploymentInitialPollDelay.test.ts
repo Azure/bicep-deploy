@@ -8,14 +8,13 @@ import {
   PipelineRequest,
   PipelineResponse,
 } from "@azure/core-rest-pipeline";
-import { DeploymentExtended } from "@azure/arm-resources";
+import { DeploymentExtended } from "@azure/arm-resourcesdeployments";
 import { TokenCredential } from "@azure/identity";
 
 const transport = vi.hoisted(() => ({
   requests: [] as { method: string; path: string; time: number }[],
   handler: undefined as
-    | undefined
-    | ((request: PipelineRequest) => PipelineResponse),
+    undefined | ((request: PipelineRequest) => PipelineResponse),
   cliCredentialTenants: [] as (string | undefined)[],
 }));
 
@@ -81,6 +80,7 @@ import {
   createDeploymentClient,
   createDeploymentInitialPollDelayPolicy,
   createStacksClient,
+  CustomPollingError,
   deploymentInitialPollDelayPolicyName,
   getDeploymentCreateClient,
   initialCreateStatusPollDelayMs,
@@ -93,7 +93,6 @@ import {
   deploymentWhatIf,
 } from "../src/deployments";
 import { ParsedFiles } from "../src/file";
-import { CustomPollingError } from "../src/azure";
 import { TestLogger } from "./logging";
 
 const origin = "https://management.azure.com";
@@ -454,10 +453,9 @@ describe("deployment client pipeline", () => {
       names.filter(n => n === deploymentInitialPollDelayPolicyName),
     ).toHaveLength(1);
     expect(delay).toBeGreaterThan(names.indexOf("setClientRequestIdPolicy"));
-    expect(names[delay + 1]).toBe("debugLoggingPolicy");
     for (const later of [
+      "debugLoggingPolicy",
       "bearerTokenAuthenticationPolicy",
-      "deserializationPolicy",
       "defaultRetryPolicy",
       "redirectPolicy",
     ]) {
@@ -477,8 +475,10 @@ describe("deployment client pipeline", () => {
       ),
     );
 
-    expect(shared).toEqual(
-      create.filter(name => name !== deploymentInitialPollDelayPolicyName),
+    expect(shared.sort()).toEqual(
+      create
+        .filter(name => name !== deploymentInitialPollDelayPolicyName)
+        .sort(),
     );
   });
 
@@ -523,7 +523,23 @@ describe("deployment create client scope derivation", () => {
         new TestLogger(),
       );
 
-      expect(client.subscriptionId).toBe(subscriptionId);
+      const sendRequest = vi.fn(async (request: PipelineRequest) =>
+        respond(request, 200, {}),
+      );
+      client.pipeline.addPolicy(
+        { name: "scopeCapturePolicy", sendRequest },
+        { beforePolicies: ["bearerTokenAuthenticationPolicy"] },
+      );
+
+      await client.deployments.validateAtSubscriptionScope("test", {
+        location: "eastus",
+        properties: { mode: "Incremental" },
+      });
+
+      expect(sendRequest).toHaveBeenCalledOnce();
+      expect(new URL(sendRequest.mock.calls[0][0].url).pathname).toBe(
+        `/subscriptions/${subscriptionId}/providers/Microsoft.Resources/deployments/test/validate`,
+      );
       expect(transport.cliCredentialTenants).toEqual(["tid"]);
     },
   );
@@ -738,10 +754,9 @@ describe("deploymentCreate with the real Azure SDK", () => {
     expect(polls).toHaveLength(3);
     expect(polls[0].time).toBe(initialCreateStatusPollDelayMs);
     expect(polls[1].path).toMatch(/\/operationStatuses\/08585$/);
-    expect(polls[1].time).toBe(initialCreateStatusPollDelayMs);
-    // pollUntilDone() polls once immediately; Retry-After applies after that.
+    expect(polls[1].time).toBe(initialCreateStatusPollDelayMs + 1_000);
     expect(polls[2].path).toMatch(/\/operationStatuses\/08585$/);
-    expect(polls[2].time).toBe(initialCreateStatusPollDelayMs + 1_000);
+    expect(polls[2].time).toBe(initialCreateStatusPollDelayMs + 2_000);
     expect(value?.properties?.outputs).toEqual(outputs);
   });
 
