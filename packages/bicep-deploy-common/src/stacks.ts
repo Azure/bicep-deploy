@@ -8,7 +8,6 @@ import {
   defaultName,
   getDebugSetting,
   getStacksClient,
-  getCreateOperationOptions,
   getDeploymentStackResourceId,
   requireLocation,
 } from "./utils";
@@ -34,30 +33,24 @@ export async function stackCreate(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deploymentStacks.beginCreateOrUpdateAtResourceGroupAndWait(
+      return await client.deploymentStacks.createOrUpdateAtResourceGroup(
         scope.resourceGroup,
         name,
         stack,
-        getCreateOperationOptions(),
       );
     case "subscription":
-      return await client.deploymentStacks.beginCreateOrUpdateAtSubscriptionAndWait(
-        name,
-        {
-          ...stack,
-          location: requireLocation(config),
-        },
-        getCreateOperationOptions(),
-      );
+      return await client.deploymentStacks.createOrUpdateAtSubscription(name, {
+        ...stack,
+        location: requireLocation(config),
+      });
     case "managementGroup":
-      return await client.deploymentStacks.beginCreateOrUpdateAtManagementGroupAndWait(
+      return await client.deploymentStacks.createOrUpdateAtManagementGroup(
         scope.managementGroup,
         name,
         {
           ...stack,
           location: requireLocation(config),
         },
-        getCreateOperationOptions(),
       );
   }
 }
@@ -74,21 +67,18 @@ export async function stackValidate(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deploymentStacks.beginValidateStackAtResourceGroupAndWait(
+      return await client.deploymentStacks.validateStackAtResourceGroup(
         scope.resourceGroup,
         name,
         stack,
       );
     case "subscription":
-      return await client.deploymentStacks.beginValidateStackAtSubscriptionAndWait(
-        name,
-        {
-          ...stack,
-          location: requireLocation(config),
-        },
-      );
+      return await client.deploymentStacks.validateStackAtSubscription(name, {
+        ...stack,
+        location: requireLocation(config),
+      });
     case "managementGroup":
-      return await client.deploymentStacks.beginValidateStackAtManagementGroupAndWait(
+      return await client.deploymentStacks.validateStackAtManagementGroup(
         scope.managementGroup,
         name,
         {
@@ -118,28 +108,28 @@ export async function stackWhatIf(
 
   switch (scope.type) {
     case "resourceGroup":
-      await client.deploymentStacksWhatIfResultsAtResourceGroup.beginCreateOrUpdateAndWait(
+      await client.deploymentStacksWhatIfResultsAtResourceGroup.createOrUpdate(
         scope.resourceGroup,
         resultsName,
         whatIfResult,
       );
-      return await client.deploymentStacksWhatIfResultsAtResourceGroup.beginWhatIfAndWait(
+      return await client.deploymentStacksWhatIfResultsAtResourceGroup.whatIf(
         scope.resourceGroup,
         resultsName,
       );
     case "subscription":
-      await client.deploymentStacksWhatIfResultsAtSubscription.beginCreateOrUpdateAndWait(
+      await client.deploymentStacksWhatIfResultsAtSubscription.createOrUpdate(
         resultsName,
         {
           ...whatIfResult,
           location: requireLocation(config),
         },
       );
-      return await client.deploymentStacksWhatIfResultsAtSubscription.beginWhatIfAndWait(
+      return await client.deploymentStacksWhatIfResultsAtSubscription.whatIf(
         resultsName,
       );
     case "managementGroup":
-      await client.deploymentStacksWhatIfResultsAtManagementGroup.beginCreateOrUpdateAndWait(
+      await client.deploymentStacksWhatIfResultsAtManagementGroup.createOrUpdate(
         scope.managementGroup,
         resultsName,
         {
@@ -147,7 +137,7 @@ export async function stackWhatIf(
           location: requireLocation(config),
         },
       );
-      return await client.deploymentStacksWhatIfResultsAtManagementGroup.beginWhatIfAndWait(
+      return await client.deploymentStacksWhatIfResultsAtManagementGroup.whatIf(
         scope.managementGroup,
         resultsName,
       );
@@ -165,18 +155,18 @@ export async function stackDelete(
 
   switch (scope.type) {
     case "resourceGroup":
-      return await client.deploymentStacks.beginDeleteAtResourceGroupAndWait(
+      return await client.deploymentStacks.deleteAtResourceGroup(
         scope.resourceGroup,
         name,
         deletionOptions,
       );
     case "subscription":
-      return await client.deploymentStacks.beginDeleteAtSubscriptionAndWait(
+      return await client.deploymentStacks.deleteAtSubscription(
         name,
         deletionOptions,
       );
     case "managementGroup":
-      return await client.deploymentStacks.beginDeleteAtManagementGroupAndWait(
+      return await client.deploymentStacks.deleteAtManagementGroup(
         scope.managementGroup,
         name,
         deletionOptions,

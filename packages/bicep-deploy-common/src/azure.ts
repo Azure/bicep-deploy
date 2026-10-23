@@ -1,7 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { ResourceManagementClient } from "@azure/arm-resources";
+import {
+  DeploymentsClient,
+  ErrorResponse,
+} from "@azure/arm-resourcesdeployments";
+import type { CloudError } from "@azure/arm-resourcesdeployments";
 import { DeploymentStacksClient } from "@azure/arm-resourcesdeploymentstacks";
+import { AdditionalPolicyConfig } from "@azure-rest/core-client";
+import { PipelineResponse } from "@azure/core-rest-pipeline";
 import {
   ChainedTokenCredential,
   EnvironmentCredential,
@@ -9,7 +15,6 @@ import {
   AzurePowerShellCredential,
   TokenCredential,
 } from "@azure/identity";
-import { AdditionalPolicyConfig } from "@azure/core-client";
 import type { HttpClient, PipelineRequest } from "@azure/core-rest-pipeline";
 
 import { Logger } from "./logging";
@@ -51,14 +56,14 @@ export function createDeploymentClient(
   subscriptionId?: string,
   tenantId?: string,
   options: DeploymentClientOptions = {},
-): ResourceManagementClient {
+): DeploymentsClient {
   const additionalPolicies: AdditionalPolicyConfig[] = [];
-  if (options.delayInitialCreateStatusPoll) {
-    additionalPolicies.push(createDeploymentInitialPollDelayPolicy());
-  }
-  additionalPolicies.push(createDebugLoggingPolicy(logger));
+  additionalPolicies.push(
+    createDebugLoggingPolicy(logger),
+    createPollingErrorPolicy(),
+  );
 
-  return new ResourceManagementClient(
+  const client = new DeploymentsClient(
     options.credential ?? getCredential(tenantId),
     // Use a dummy subscription ID for above-subscription scope operations
     subscriptionId ?? dummySubscriptionId,
@@ -73,6 +78,19 @@ export function createDeploymentClient(
       httpClient: options.httpClient,
     },
   );
+
+  if (options.delayInitialCreateStatusPoll) {
+    client.pipeline.addPolicy(createDeploymentInitialPollDelayPolicy().policy, {
+      afterPolicies: ["setClientRequestIdPolicy"],
+      beforePolicies: [
+        "debugLoggingPolicy",
+        "bearerTokenAuthenticationPolicy",
+        "defaultRetryPolicy",
+      ],
+    });
+  }
+
+  return client;
 }
 
 // Each call must create a new client: the delay policy delays only the first
@@ -86,7 +104,7 @@ export function getDeploymentCreateClient(
     | ResourceGroupScope,
   logger: Logger,
   options: Omit<DeploymentClientOptions, "delayInitialCreateStatusPoll"> = {},
-): ResourceManagementClient {
+): DeploymentsClient {
   const { tenantId } = scope;
   const subscriptionId =
     "subscriptionId" in scope ? scope.subscriptionId : undefined;
@@ -185,10 +203,76 @@ export function createStacksClient(
       userAgentOptions: {
         userAgentPrefix: userAgentPrefix,
       },
-      additionalPolicies: [createDebugLoggingPolicy(logger)],
+      additionalPolicies: [
+        createDebugLoggingPolicy(logger),
+        createPollingErrorPolicy(),
+      ],
       endpoint: endpoints[config.environment],
     },
   );
+}
+
+export class CustomPollingError extends Error {
+  constructor(
+    public readonly details: CloudError,
+    public readonly response: PipelineResponse,
+  ) {
+    super(details.error?.message ?? "The long-running operation has failed");
+    this.name = "CustomPollingError";
+  }
+}
+
+function tryGetError(response: PipelineResponse): ErrorResponse | undefined {
+  try {
+    const body = response.bodyAsText
+      ? JSON.parse(response.bodyAsText)
+      : undefined;
+
+    if (
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      isErrorResponse(body.error)
+    ) {
+      return body.error;
+    }
+  } catch {
+    return;
+  }
+}
+
+function isErrorResponse(
+  error: unknown,
+): error is ErrorResponse & { code: string; message: string } {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    "message" in error &&
+    typeof error.message === "string"
+  );
+}
+
+export function createPollingErrorPolicy(): AdditionalPolicyConfig {
+  return {
+    position: "perCall",
+    policy: {
+      name: "pollingErrorPolicy",
+      async sendRequest(request, next) {
+        const response = await next(request);
+        // This special handling is necessary because the Azure SDK does not surface nested errors
+        // out of the box. We want to provide full error information to the end user for troubleshooting.
+        const error = tryGetError(response);
+
+        if (error) {
+          throw new CustomPollingError({ error }, response);
+        }
+
+        return response;
+      },
+    },
+  };
 }
 
 // Log Azure SDK request and response metadata when debug logging is enabled.

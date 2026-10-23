@@ -5,8 +5,13 @@ import {
   createPipelineRequest,
   PipelineResponse,
 } from "@azure/core-rest-pipeline";
+import { DeploymentsClient } from "@azure/arm-resourcesdeployments";
 
-import { createDebugLoggingPolicy } from "../src/azure";
+import {
+  createDebugLoggingPolicy,
+  createPollingErrorPolicy,
+} from "../src/azure";
+import { tryWithErrorHandling } from "../src/utils";
 import { TestLogger } from "./logging";
 
 describe("Azure SDK debug logging", () => {
@@ -23,6 +28,7 @@ describe("Azure SDK debug logging", () => {
         },
       }),
     });
+
     const response: PipelineResponse = {
       request,
       status: 200,
@@ -124,4 +130,123 @@ describe("Azure SDK debug logging", () => {
     expect(next).toHaveBeenCalledExactlyOnceWith(request);
     expect(logger.externalLogs).toEqual([]);
   });
+});
+
+describe("Azure SDK polling errors", () => {
+  const error = {
+    code: "DeploymentFailed",
+    message: "The deployment failed.",
+    details: [
+      {
+        code: "ResourceNotFound",
+        message: "The requested resource does not exist.",
+      },
+    ],
+  };
+
+  it("captures a failed polling response in CustomPollingError", async () => {
+    const sendRequest = vi.fn().mockImplementation(request => ({
+      request,
+      status: sendRequest.mock.calls.length === 1 ? 202 : 200,
+      headers: createHttpHeaders({
+        "content-type": "application/json",
+        "azure-asyncoperation": "https://management.azure.com/operations/test",
+        location: "https://management.azure.com/operations/test",
+        "retry-after": "0",
+        "x-ms-correlation-request-id": "poll-correlation",
+      }),
+      bodyAsText: JSON.stringify(
+        sendRequest.mock.calls.length === 1
+          ? { status: "Running" }
+          : { status: "Failed", error },
+      ),
+    }));
+    const client = new DeploymentsClient(
+      {
+        getToken: async () => ({
+          token: "test-token",
+          expiresOnTimestamp: Date.now() + 3600000,
+        }),
+      },
+      "00000000-0000-0000-0000-000000000000",
+      {
+        httpClient: { sendRequest },
+        additionalPolicies: [createPollingErrorPolicy()],
+      },
+    );
+    const onError = vi.fn();
+    const logger = new TestLogger();
+
+    await tryWithErrorHandling(
+      () =>
+        client.deployments.createOrUpdate("test-rg", "test-deploy", {
+          properties: { mode: "Incremental", template: {} },
+        }),
+      onError,
+      logger,
+    );
+
+    expect(sendRequest).toHaveBeenCalledTimes(2);
+    expect(onError).toHaveBeenCalledExactlyOnceWith(error);
+    expect(logger.getExternalMessages("remote", "error")).toEqual([
+      "Request failed. CorrelationId: poll-correlation",
+    ]);
+  });
+
+  it("does not treat a successful operation as a polling error", async () => {
+    const request = createPipelineRequest({
+      url: "https://management.azure.com/operations/test",
+    });
+    const response: PipelineResponse = {
+      request,
+      status: 200,
+      headers: createHttpHeaders({ "content-type": "application/json" }),
+      bodyAsText: JSON.stringify({ status: "Succeeded" }),
+    };
+
+    await expect(
+      createPollingErrorPolicy().policy.sendRequest(
+        request,
+        vi.fn().mockResolvedValue(response),
+      ),
+    ).resolves.toBe(response);
+  });
+
+  it.each([
+    {
+      description: "a successful operation containing an error",
+      status: 200,
+      body: { status: "Succeeded", error },
+    },
+    {
+      description: "a failed HTTP response",
+      status: 400,
+      body: { error },
+    },
+  ])(
+    "captures structured errors from $description",
+    async ({ status, body }) => {
+      const request = createPipelineRequest({
+        url: "https://management.azure.com/deployment",
+      });
+      const response: PipelineResponse = {
+        request,
+        status,
+        headers: createHttpHeaders({ "content-type": "application/json" }),
+        bodyAsText: JSON.stringify(body),
+      };
+
+      await expect(
+        createPollingErrorPolicy().policy.sendRequest(
+          request,
+          vi.fn().mockResolvedValue(response),
+        ),
+      ).rejects.toMatchObject({
+        name: "CustomPollingError",
+        message: error.message,
+        details: { error },
+        response,
+      });
+    },
+  );
 });

@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { Deployments } from "@azure/arm-resources";
+import { DeploymentsOperations } from "@azure/arm-resourcesdeployments";
 import {
   DeploymentStacksOperations,
   DeploymentStacksWhatIfResultsAtResourceGroupOperations,
@@ -9,46 +9,48 @@ import {
 } from "@azure/arm-resourcesdeploymentstacks";
 import type { MockedObjectDeep } from "@vitest/spy";
 
-export const mockDeploymentsOps: Partial<MockedObjectDeep<Deployments>> = {
-  beginCreateOrUpdateAtSubscriptionScopeAndWait: vi.fn(),
-  beginValidateAtSubscriptionScopeAndWait: vi.fn(),
-  beginWhatIfAtSubscriptionScopeAndWait: vi.fn(),
-  beginCreateOrUpdateAndWait: vi.fn(),
-  beginValidateAndWait: vi.fn(),
-  beginWhatIfAndWait: vi.fn(),
-  beginCreateOrUpdateAtTenantScopeAndWait: vi.fn(),
+export const mockDeploymentsOps: Partial<
+  MockedObjectDeep<DeploymentsOperations>
+> = {
+  createOrUpdateAtSubscriptionScope: vi.fn(),
+  validateAtSubscriptionScope: vi.fn(),
+  whatIfAtSubscriptionScope: vi.fn(),
+  createOrUpdate: vi.fn(),
+  validate: vi.fn(),
+  whatIf: vi.fn(),
+  createOrUpdateAtTenantScope: vi.fn(),
 };
 
 export const mockStacksOps: Partial<
   MockedObjectDeep<DeploymentStacksOperations>
 > = {
-  beginCreateOrUpdateAtSubscriptionAndWait: vi.fn(),
-  beginValidateStackAtSubscriptionAndWait: vi.fn(),
-  beginDeleteAtSubscriptionAndWait: vi.fn(),
-  beginCreateOrUpdateAtResourceGroupAndWait: vi.fn(),
-  beginValidateStackAtResourceGroupAndWait: vi.fn(),
-  beginDeleteAtResourceGroupAndWait: vi.fn(),
+  createOrUpdateAtSubscription: vi.fn(),
+  validateStackAtSubscription: vi.fn(),
+  deleteAtSubscription: vi.fn(),
+  createOrUpdateAtResourceGroup: vi.fn(),
+  validateStackAtResourceGroup: vi.fn(),
+  deleteAtResourceGroup: vi.fn(),
 };
 
 export const mockStacksWhatIfAtResourceGroupOps: Partial<
   MockedObjectDeep<DeploymentStacksWhatIfResultsAtResourceGroupOperations>
 > = {
-  beginCreateOrUpdateAndWait: vi.fn(),
-  beginWhatIfAndWait: vi.fn(),
+  createOrUpdate: vi.fn(),
+  whatIf: vi.fn(),
 };
 
 export const mockStacksWhatIfAtSubscriptionOps: Partial<
   MockedObjectDeep<DeploymentStacksWhatIfResultsAtSubscriptionOperations>
 > = {
-  beginCreateOrUpdateAndWait: vi.fn(),
-  beginWhatIfAndWait: vi.fn(),
+  createOrUpdate: vi.fn(),
+  whatIf: vi.fn(),
 };
 
 export const mockStacksWhatIfAtManagementGroupOps: Partial<
   MockedObjectDeep<DeploymentStacksWhatIfResultsAtManagementGroupOperations>
 > = {
-  beginCreateOrUpdateAndWait: vi.fn(),
-  beginWhatIfAndWait: vi.fn(),
+  createOrUpdate: vi.fn(),
+  whatIf: vi.fn(),
 };
 
 export const azureMock = {
@@ -69,4 +71,7 @@ export const azureMock = {
   }),
 };
 
-vi.mock("../../src/azure", () => azureMock);
+vi.mock("../../src/azure", async importOriginal => ({
+  ...(await importOriginal<typeof import("../../src/azure")>()),
+  ...azureMock,
+}));
