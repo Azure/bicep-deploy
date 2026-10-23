@@ -137,12 +137,12 @@ describe("deployment execution", () => {
       logger.clear();
       await execute(config, logger, outputSetter, noopCache);
 
-      expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+      expect(azureMock.getDeploymentCreateClient).toHaveBeenCalledWith(
         config,
+        config.scope,
         logger,
-        scope.subscriptionId,
-        undefined,
       );
+      expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
@@ -191,6 +191,7 @@ describe("deployment execution", () => {
         scope.subscriptionId,
         undefined,
       );
+      expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginValidateAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
@@ -293,6 +294,7 @@ describe("deployment execution", () => {
         scope.subscriptionId,
         undefined,
       );
+      expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginWhatIfAtSubscriptionScopeAndWait,
       ).toHaveBeenCalledWith(config.name, expectedPayload);
@@ -402,12 +404,12 @@ describe("deployment execution", () => {
 
       await execute(config, logger, outputSetter, noopCache);
 
-      expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+      expect(azureMock.getDeploymentCreateClient).toHaveBeenCalledWith(
         config,
+        config.scope,
         logger,
-        scope.subscriptionId,
-        undefined,
       );
+      expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAndWait,
       ).toHaveBeenCalledWith(
@@ -456,11 +458,10 @@ describe("deployment execution", () => {
         noopCache,
       );
 
-      expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+      expect(azureMock.getDeploymentCreateClient).toHaveBeenCalledWith(
         { ...config, operation: "create" },
+        config.scope,
         logger,
-        scope.subscriptionId,
-        undefined,
       );
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAndWait,
@@ -498,6 +499,7 @@ describe("deployment execution", () => {
         scope.subscriptionId,
         undefined,
       );
+      expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(mockDeploymentsOps.beginValidateAndWait).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
@@ -525,6 +527,7 @@ describe("deployment execution", () => {
         scope.subscriptionId,
         undefined,
       );
+      expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(mockDeploymentsOps.beginValidateAndWait).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
@@ -560,6 +563,7 @@ describe("deployment execution", () => {
         scope.subscriptionId,
         undefined,
       );
+      expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(mockDeploymentsOps.beginWhatIfAndWait).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
@@ -587,6 +591,7 @@ describe("deployment execution", () => {
         scope.subscriptionId,
         undefined,
       );
+      expect(azureMock.getDeploymentCreateClient).not.toHaveBeenCalled();
       expect(mockDeploymentsOps.beginWhatIfAndWait).toHaveBeenCalledWith(
         scope.resourceGroup,
         config.name,
@@ -667,12 +672,12 @@ describe("deployment execution", () => {
       logger.clear();
       await execute(config, logger, outputSetter, noopCache);
 
-      expect(azureMock.createDeploymentClient).toHaveBeenCalledWith(
+      expect(azureMock.getDeploymentCreateClient).toHaveBeenCalledWith(
         config,
+        config.scope,
         logger,
-        undefined,
-        undefined,
       );
+      expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAtTenantScopeAndWait,
       ).toHaveBeenCalledWith(

@@ -1,7 +1,8 @@
 # In TypeScript actions, `dist/` is a special directory. When you reference
-# an action with the `uses:` property, files under `dist/` are the code that
-# will be run. This workflow ensures the complete `dist/` directory contains
-# the expected transpiled code and source maps.
+# an action with the `uses:` property, `dist/index.js` is the code that will be
+# run. For this project, the `dist/index.js` file is transpiled from other
+# source files. This workflow ensures the `dist/` directory contains the
+# expected transpiled code.
 #
 # If this workflow is run from a feature branch, it will act as an additional CI
 # check and fail if the checked-in `dist/` directory does not match what is
@@ -57,10 +58,14 @@ jobs:
             ls -la ./
             exit 1
           fi
-          if [ -n "$(git status --porcelain -- dist/)" ]; then
+          if [ "$(git diff --ignore-space-at-eol --text -- dist/ | wc -l)" -gt "0" ]; then
             echo "Detected uncommitted changes after build. See status below:"
-            git status --short -- dist/
             git diff --ignore-space-at-eol --text -- dist/
+            exit 1
+          fi
+          if [ -n "$(git ls-files --others --exclude-standard -- dist/)" ]; then
+            echo "Detected untracked files after build. See status below:"
+            git status --porcelain -- dist/
             exit 1
           fi
 
