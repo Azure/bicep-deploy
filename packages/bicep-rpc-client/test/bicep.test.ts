@@ -35,6 +35,17 @@ describe("Bicep class", () => {
     );
   }, 60000);
 
+  it("can list the published Bicep CLI release versions", async () => {
+    const versions = await Bicep.listReleases();
+
+    expect(versions.length).toBeGreaterThan(0);
+    // `downloads.bicep.azure.com/releases` is a static cache of only the most recent releases, not
+    // the full history, so we only assert on format here rather than any specific version.
+    for (const version of versions) {
+      expect(version).toMatch(/^\d+\.\d+\.\d+/);
+    }
+  }, 60000);
+
   it("can install bicep", async () => {
     const basePath = await getUniqueTmpDir("installTest");
     const cliPath = await Bicep.install(basePath);
