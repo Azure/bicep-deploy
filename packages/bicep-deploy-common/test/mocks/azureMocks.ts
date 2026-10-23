@@ -55,6 +55,9 @@ export const azureMock = {
   createDeploymentClient: vi.fn().mockReturnValue({
     deployments: mockDeploymentsOps,
   }),
+  getDeploymentCreateClient: vi.fn().mockReturnValue({
+    deployments: mockDeploymentsOps,
+  }),
   createStacksClient: vi.fn().mockReturnValue({
     deploymentStacks: mockStacksOps,
     deploymentStacksWhatIfResultsAtResourceGroup:
