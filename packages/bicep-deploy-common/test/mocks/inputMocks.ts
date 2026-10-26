@@ -36,7 +36,6 @@ export class TestInputParameterNames {
   description = "description";
   tags = "tags";
   maskedOutputs = "masked-outputs";
-  deploymentDebugLogLevel = "deployment-debug-log-level";
   environment = "environment";
   operation = "operation";
   whatIfExcludeChangeTypes = "what-if-exclude-change-types";

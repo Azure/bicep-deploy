@@ -35,15 +35,6 @@ URL, status, correlation ID, and activity ID. It intentionally omits request
 and response bodies because deployment payloads can contain parameters,
 outputs, nested errors, and other sensitive values.
 
-To inspect deployment request or response content, set the
-`deploymentDebugLogLevel` configuration value (`none`, `requestContent`,
-`responseContent`, or `all`). It is sent to Azure Resource Manager as
-`debugSetting.detailLevel` for deployment and deployment stack create and
-validate operations. Azure Resource Manager records the content in deployment
-operation history, which is governed by Azure access control rather than by
-access to client-side logs. The recorded content can include secrets; remove
-the deployment history after troubleshooting.
-
 ## Validating the packed package
 
 Run `npm run test:consumer` to build and pack the package, install the tarball

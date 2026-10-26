@@ -232,24 +232,6 @@ describe("input validation", () => {
     );
   });
 
-  it("validates deployment-debug-log-level inputs", async () => {
-    configureGetInputMock(
-      {
-        type: "deployment",
-        operation: "create",
-        scope: "resourceGroup",
-        subscriptionId: "foo",
-        resourceGroupName: "mockRg",
-        "deployment-debug-log-level": "requestContent,responseContent",
-      },
-      inputReader,
-    );
-
-    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
-      "Input 'deployment-debug-log-level' must be one of the following values: 'none', 'requestContent', 'responseContent', 'all'",
-    );
-  });
-
   it("requires action-on-unmanage-resources for deploymentStack", async () => {
     configureGetInputMock(
       {
@@ -399,7 +381,6 @@ describe("input parsing", () => {
         "masked-outputs": "abc,def",
         "what-if-exclude-change-types": "noChange",
         "validation-level": "providerNoRbac",
-        "deployment-debug-log-level": "all",
         environment: "azureUSGovernment",
       },
       inputReader,
@@ -431,7 +412,6 @@ describe("input parsing", () => {
       },
       environment: "azureUSGovernment",
       validationLevel: "providerNoRbac",
-      deploymentDebugLogLevel: "all",
     });
   });
 
@@ -472,7 +452,6 @@ describe("input parsing", () => {
         "deny-settings-excluded-principals": "ghi,jkl",
         "deny-settings-apply-to-child-scopes": "true",
         "bypass-stack-out-of-sync-error": "true",
-        "deployment-debug-log-level": "responseContent",
         environment: "azureUSGovernment",
       },
       inputReader,
@@ -518,7 +497,6 @@ describe("input parsing", () => {
         applyToChildScopes: true,
       },
       bypassStackOutOfSyncError: true,
-      deploymentDebugLogLevel: "responseContent",
       environment: "azureUSGovernment",
     });
   });
