@@ -112,22 +112,6 @@ export function requireLocation(config: DeployConfig) {
   return config.location;
 }
 
-// ARM stores the selected content in deployment operation history, which is
-// governed by Azure RBAC rather than by access to client-side logs.
-export function getDebugSetting(
-  config: DeployConfig,
-): { detailLevel: string } | undefined {
-  switch (config.deploymentDebugLogLevel) {
-    case "requestContent":
-    case "responseContent":
-      return { detailLevel: config.deploymentDebugLogLevel };
-    case "all":
-      return { detailLevel: "requestContent,responseContent" };
-    default:
-      return undefined;
-  }
-}
-
 export function getDeploymentStackResourceId(
   config: DeploymentStackConfig,
 ): string {

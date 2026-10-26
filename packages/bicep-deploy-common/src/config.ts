@@ -53,19 +53,12 @@ export type FileConfig = {
   bicepVersion?: string;
 };
 
-export type DeploymentDebugLogLevel =
-  | "none"
-  | "requestContent"
-  | "responseContent"
-  | "all";
-
 type CommonConfig = {
   type: "deployment" | "deploymentStack";
   name?: string;
   location?: string;
   tags?: Record<string, string>;
   maskedOutputs?: string[];
-  deploymentDebugLogLevel?: DeploymentDebugLogLevel;
   environment:
     | "azureCloud"
     | "azureChinaCloud"
@@ -159,11 +152,6 @@ export function parseConfig(
     inputParameterNames.maskedOutputs,
     inputReader,
   );
-  const deploymentDebugLogLevel = getOptionalEnumInput(
-    inputParameterNames.deploymentDebugLogLevel,
-    ["none", "requestContent", "responseContent", "all"],
-    inputReader,
-  );
   const environment =
     getOptionalEnumInput(
       inputParameterNames.environment,
@@ -188,7 +176,6 @@ export function parseConfig(
         bicepVersion,
         tags,
         maskedOutputs,
-        deploymentDebugLogLevel,
         environment: environment,
         operation: getRequiredEnumInput(
           inputParameterNames.operation,
@@ -230,7 +217,6 @@ export function parseConfig(
         description,
         tags,
         maskedOutputs,
-        deploymentDebugLogLevel,
         environment: environment,
         operation: getRequiredEnumInput(
           inputParameterNames.operation,

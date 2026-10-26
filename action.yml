@@ -55,10 +55,6 @@ inputs:
     description: "Specifies output names to mask values for."
     required: false
 
-  deployment-debug-log-level:
-    description: "Specifies the ARM deployment debug detail to record in Azure deployment operation history for create and validate operations. Choose from 'none', 'requestContent', 'responseContent', or 'all'. Recorded content can include secrets; it is visible to principals with access to the deployment in Azure and is not written to workflow logs."
-    required: false
-
   environment:
     description: "Specifies the Azure environment to use. Choose from 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'."
     required: false
