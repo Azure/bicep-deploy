@@ -93,7 +93,7 @@ import {
   deploymentWhatIf,
 } from "../src/deployments";
 import { ParsedFiles } from "../src/file";
-import { CustomPollingError } from "../src/utils";
+import { CustomPollingError } from "../src/azure";
 import { TestLogger } from "./logging";
 
 const origin = "https://management.azure.com";

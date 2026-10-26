@@ -8,7 +8,6 @@ import { getDeploymentCreateClient } from "./azure";
 import {
   defaultName,
   getDeploymentClient,
-  getCreateOperationOptions,
   requireLocation,
 } from "./utils";
 
@@ -30,7 +29,6 @@ export async function deploymentCreate(
         scope.resourceGroup,
         name,
         deployment,
-        getCreateOperationOptions(),
       );
     case "subscription":
       return await client.deployments.beginCreateOrUpdateAtSubscriptionScopeAndWait(
@@ -39,7 +37,6 @@ export async function deploymentCreate(
           ...deployment,
           location: requireLocation(config),
         },
-        getCreateOperationOptions(),
       );
     case "managementGroup":
       return await client.deployments.beginCreateOrUpdateAtManagementGroupScopeAndWait(
@@ -49,7 +46,6 @@ export async function deploymentCreate(
           ...deployment,
           location: requireLocation(config),
         },
-        getCreateOperationOptions(),
       );
     case "tenant":
       return await client.deployments.beginCreateOrUpdateAtTenantScopeAndWait(
@@ -58,7 +54,6 @@ export async function deploymentCreate(
           ...deployment,
           location: requireLocation(config),
         },
-        getCreateOperationOptions(),
       );
   }
 }
