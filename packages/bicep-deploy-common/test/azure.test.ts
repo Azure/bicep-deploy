@@ -31,171 +31,6 @@ describe("Azure SDK debug logging", () => {
       }),
     });
 
-    describe("Azure SDK polling errors", () => {
-      const error = {
-        code: "DeploymentFailed",
-        message: "The deployment failed.",
-        details: [
-          {
-            code: "ResourceNotFound",
-            message: "The requested resource does not exist.",
-          },
-        ],
-      };
-      const credential = {
-        getToken: async () => ({
-          token: "test-token",
-          expiresOnTimestamp: Date.now() + 3600000,
-        }),
-      };
-      const subscriptionId = "00000000-0000-0000-0000-000000000000";
-
-      it.each(["deployment", "stack"] as const)(
-        "preserves nested errors from a failed %s status poll",
-        async kind => {
-          const sendRequest = vi.fn().mockImplementation(request => ({
-            request,
-            status: sendRequest.mock.calls.length === 1 ? 202 : 200,
-            headers: createHttpHeaders({
-              "content-type": "application/json",
-              "azure-asyncoperation": "https://management.azure.com/operations/test",
-              location: "https://management.azure.com/operations/test",
-              "retry-after": "0",
-              "x-ms-correlation-request-id": "poll-correlation",
-            }),
-            bodyAsText: JSON.stringify(
-              sendRequest.mock.calls.length === 1
-                ? { status: "Running" }
-                : { status: "Failed", error },
-            ),
-          }));
-          const options = {
-            httpClient: { sendRequest },
-            additionalPolicies: [createPollingErrorPolicy()],
-          };
-          const onError = vi.fn();
-          const logger = new TestLogger();
-
-          await tryWithErrorHandling(
-            async () => {
-              if (kind === "deployment") {
-                const client = new ResourceManagementClient(
-                  credential,
-                  subscriptionId,
-                  options,
-                );
-                await client.deployments.beginCreateOrUpdateAndWait(
-                  "test-rg",
-                  "test-deploy",
-                  { properties: { mode: "Incremental", template: {} } },
-                );
-              } else {
-                const client = new DeploymentStacksClient(
-                  credential,
-                  subscriptionId,
-                  options,
-                );
-                await client.deploymentStacks.beginCreateOrUpdateAtResourceGroupAndWait(
-                  "test-rg",
-                  "test-stack",
-                  {
-                    properties: {
-                      template: {},
-                      actionOnUnmanage: { resources: "detach" },
-                      denySettings: { mode: "none" },
-                    },
-                  },
-                );
-              }
-            },
-            onError,
-            logger,
-          );
-
-          expect(sendRequest).toHaveBeenCalledTimes(2);
-          expect(onError).toHaveBeenCalledExactlyOnceWith(error);
-          expect(logger.getExternalMessages("remote", "error")).toEqual([
-            "Request failed. CorrelationId: poll-correlation",
-          ]);
-        },
-      );
-
-      it.each([
-        { description: "a failed poll", status: 200, body: { status: "Failed", error } },
-        {
-          description: "an operation containing an error",
-          status: 200,
-          body: { status: "Succeeded", error },
-        },
-        { description: "an HTTP error response", status: 400, body: { error } },
-      ])("captures structured errors from $description", async ({ status, body }) => {
-        const request = createPipelineRequest({
-          url: "https://management.azure.com/operations/test",
-        });
-        const response: PipelineResponse = {
-          request,
-          status,
-          headers: createHttpHeaders(),
-          bodyAsText: JSON.stringify(body),
-        };
-        const result = createPollingErrorPolicy().policy.sendRequest(
-          request,
-          vi.fn().mockResolvedValue(response),
-        );
-
-        await expect(result).rejects.toBeInstanceOf(Error);
-        await expect(result).rejects.toBeInstanceOf(CustomPollingError);
-        await expect(result).rejects.toMatchObject({
-          name: "CustomPollingError",
-          message: error.message,
-          details: { error },
-          response,
-        });
-      });
-
-      it.each([
-        undefined,
-        "",
-        "not JSON",
-        "null",
-        "[]",
-        JSON.stringify({ status: "Succeeded" }),
-        JSON.stringify({ error: null }),
-        JSON.stringify({ error: { code: "Invalid" } }),
-        JSON.stringify({ error: { message: "Invalid" } }),
-        JSON.stringify({ error: { code: 123, message: "Invalid" } }),
-      ])("leaves unrecognized response %j to SDK handling", async bodyAsText => {
-        const request = createPipelineRequest({
-          url: "https://management.azure.com/operations/test",
-        });
-        const response: PipelineResponse = {
-          request,
-          status: 200,
-          headers: createHttpHeaders(),
-          bodyAsText,
-        };
-        const next = vi.fn().mockResolvedValue(response);
-
-        await expect(
-          createPollingErrorPolicy().policy.sendRequest(request, next),
-        ).resolves.toBe(response);
-        expect(next).toHaveBeenCalledExactlyOnceWith(request);
-      });
-
-      it("propagates transport failures unchanged", async () => {
-        const request = createPipelineRequest({
-          url: "https://management.azure.com/operations/test",
-        });
-        const failure = new Error("Connection failed");
-
-        await expect(
-          createPollingErrorPolicy().policy.sendRequest(
-            request,
-            vi.fn().mockRejectedValue(failure),
-          ),
-        ).rejects.toBe(failure);
-      });
-    });
     const response: PipelineResponse = {
       request,
       status: 200,
@@ -252,6 +87,180 @@ describe("Azure SDK debug logging", () => {
     expect(loggedOutput).not.toContain("response-output-marker");
     expect(loggedOutput).not.toContain("response-error-marker");
     expect(loggedOutput).not.toContain("Body:");
+  });
+
+  describe("Azure SDK polling errors", () => {
+    const error = {
+      code: "DeploymentFailed",
+      message: "The deployment failed.",
+      details: [
+        {
+          code: "ResourceNotFound",
+          message: "The requested resource does not exist.",
+        },
+      ],
+    };
+    const credential = {
+      getToken: async () => ({
+        token: "test-token",
+        expiresOnTimestamp: Date.now() + 3600000,
+      }),
+    };
+    const subscriptionId = "00000000-0000-0000-0000-000000000000";
+
+    it.each(["deployment", "stack"] as const)(
+      "preserves nested errors from a failed %s status poll",
+      async kind => {
+        const sendRequest = vi.fn().mockImplementation(request => ({
+          request,
+          status: sendRequest.mock.calls.length === 1 ? 202 : 200,
+          headers: createHttpHeaders({
+            "content-type": "application/json",
+            "azure-asyncoperation":
+              "https://management.azure.com/operations/test",
+            location: "https://management.azure.com/operations/test",
+            "retry-after": "0",
+            "x-ms-correlation-request-id": "poll-correlation",
+          }),
+          bodyAsText: JSON.stringify(
+            sendRequest.mock.calls.length === 1
+              ? { status: "Running" }
+              : { status: "Failed", error },
+          ),
+        }));
+        const options = {
+          httpClient: { sendRequest },
+          additionalPolicies: [createPollingErrorPolicy()],
+        };
+        const onError = vi.fn();
+        const logger = new TestLogger();
+
+        await tryWithErrorHandling(
+          async () => {
+            if (kind === "deployment") {
+              const client = new ResourceManagementClient(
+                credential,
+                subscriptionId,
+                options,
+              );
+              await client.deployments.beginCreateOrUpdateAndWait(
+                "test-rg",
+                "test-deploy",
+                { properties: { mode: "Incremental", template: {} } },
+              );
+            } else {
+              const client = new DeploymentStacksClient(
+                credential,
+                subscriptionId,
+                options,
+              );
+              await client.deploymentStacks.beginCreateOrUpdateAtResourceGroupAndWait(
+                "test-rg",
+                "test-stack",
+                {
+                  properties: {
+                    template: {},
+                    actionOnUnmanage: { resources: "detach" },
+                    denySettings: { mode: "none" },
+                  },
+                },
+              );
+            }
+          },
+          onError,
+          logger,
+        );
+
+        expect(sendRequest).toHaveBeenCalledTimes(2);
+        expect(onError).toHaveBeenCalledExactlyOnceWith(error);
+        expect(logger.getExternalMessages("remote", "error")).toEqual([
+          "Request failed. CorrelationId: poll-correlation",
+        ]);
+      },
+    );
+
+    it.each([
+      {
+        description: "a failed poll",
+        status: 200,
+        body: { status: "Failed", error },
+      },
+      {
+        description: "an operation containing an error",
+        status: 200,
+        body: { status: "Succeeded", error },
+      },
+      { description: "an HTTP error response", status: 400, body: { error } },
+    ])(
+      "captures structured errors from $description",
+      async ({ status, body }) => {
+        const request = createPipelineRequest({
+          url: "https://management.azure.com/operations/test",
+        });
+        const response: PipelineResponse = {
+          request,
+          status,
+          headers: createHttpHeaders(),
+          bodyAsText: JSON.stringify(body),
+        };
+        const result = createPollingErrorPolicy().policy.sendRequest(
+          request,
+          vi.fn().mockResolvedValue(response),
+        );
+
+        await expect(result).rejects.toBeInstanceOf(Error);
+        await expect(result).rejects.toBeInstanceOf(CustomPollingError);
+        await expect(result).rejects.toMatchObject({
+          name: "CustomPollingError",
+          message: error.message,
+          details: { error },
+          response,
+        });
+      },
+    );
+
+    it.each([
+      undefined,
+      "",
+      "not JSON",
+      "null",
+      "[]",
+      JSON.stringify({ status: "Succeeded" }),
+      JSON.stringify({ error: null }),
+      JSON.stringify({ error: { code: "Invalid" } }),
+      JSON.stringify({ error: { message: "Invalid" } }),
+      JSON.stringify({ error: { code: 123, message: "Invalid" } }),
+    ])("leaves unrecognized response %j to SDK handling", async bodyAsText => {
+      const request = createPipelineRequest({
+        url: "https://management.azure.com/operations/test",
+      });
+      const response: PipelineResponse = {
+        request,
+        status: 200,
+        headers: createHttpHeaders(),
+        bodyAsText,
+      };
+      const next = vi.fn().mockResolvedValue(response);
+
+      await expect(
+        createPollingErrorPolicy().policy.sendRequest(request, next),
+      ).resolves.toBe(response);
+      expect(next).toHaveBeenCalledExactlyOnceWith(request);
+    });
+
+    it("propagates transport failures unchanged", async () => {
+      const request = createPipelineRequest({
+        url: "https://management.azure.com/operations/test",
+      });
+      const failure = new Error("Connection failed");
+
+      await expect(
+        createPollingErrorPolicy().policy.sendRequest(
+          request,
+          vi.fn().mockRejectedValue(failure),
+        ),
+      ).rejects.toBe(failure);
+    });
   });
 
   it("does not parse arbitrary request or response bodies", async () => {

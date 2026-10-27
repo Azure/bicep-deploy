@@ -5,11 +5,7 @@ import { ParsedFiles } from "./file";
 import { Logger } from "./logging";
 import { getDeploymentCreateClient } from "./azure";
 
-import {
-  defaultName,
-  getDeploymentClient,
-  requireLocation,
-} from "./utils";
+import { defaultName, getDeploymentClient, requireLocation } from "./utils";
 
 import { Deployment } from "@azure/arm-resources";
 

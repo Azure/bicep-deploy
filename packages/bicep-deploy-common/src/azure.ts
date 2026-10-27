@@ -14,6 +14,7 @@ import {
   TokenCredential,
 } from "@azure/identity";
 import { AdditionalPolicyConfig } from "@azure/core-client";
+import { isRestError } from "@azure/core-rest-pipeline";
 import type {
   HttpClient,
   PipelineRequest,
@@ -260,7 +261,22 @@ export function createPollingErrorPolicy(): AdditionalPolicyConfig {
     policy: {
       name: "pollingErrorPolicy",
       async sendRequest(request, next) {
-        const response = await next(request);
+        let response: PipelineResponse;
+        try {
+          response = await next(request);
+        } catch (error) {
+          if (isRestError(error) && error.response) {
+            const structuredError = tryGetError(error.response);
+            if (structuredError) {
+              throw new CustomPollingError(
+                { error: structuredError },
+                error.response,
+              );
+            }
+          }
+          throw error;
+        }
+
         // Preserve nested ARM errors before the SDK reduces them to a message.
         const error = tryGetError(response);
         if (error) {
