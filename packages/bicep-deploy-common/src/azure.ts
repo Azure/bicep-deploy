@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { ResourceManagementClient } from "@azure/arm-resources";
+import {
+  CloudError,
+  ErrorResponse,
+  ResourceManagementClient,
+} from "@azure/arm-resources";
 import { DeploymentStacksClient } from "@azure/arm-resourcesdeploymentstacks";
 import {
   ChainedTokenCredential,
@@ -10,7 +14,12 @@ import {
   TokenCredential,
 } from "@azure/identity";
 import { AdditionalPolicyConfig } from "@azure/core-client";
-import type { HttpClient, PipelineRequest } from "@azure/core-rest-pipeline";
+import { isRestError } from "@azure/core-rest-pipeline";
+import type {
+  HttpClient,
+  PipelineRequest,
+  PipelineResponse,
+} from "@azure/core-rest-pipeline";
 
 import { Logger } from "./logging";
 import {
@@ -56,7 +65,10 @@ export function createDeploymentClient(
   if (options.delayInitialCreateStatusPoll) {
     additionalPolicies.push(createDeploymentInitialPollDelayPolicy());
   }
-  additionalPolicies.push(createDebugLoggingPolicy(logger));
+  additionalPolicies.push(
+    createDebugLoggingPolicy(logger),
+    createPollingErrorPolicy(),
+  );
 
   return new ResourceManagementClient(
     options.credential ?? getCredential(tenantId),
@@ -185,10 +197,95 @@ export function createStacksClient(
       userAgentOptions: {
         userAgentPrefix: userAgentPrefix,
       },
-      additionalPolicies: [createDebugLoggingPolicy(logger)],
+      additionalPolicies: [
+        createDebugLoggingPolicy(logger),
+        createPollingErrorPolicy(),
+      ],
       endpoint: endpoints[config.environment],
     },
   );
+}
+
+export class CustomPollingError extends Error {
+  constructor(
+    public readonly details: CloudError,
+    public readonly response: PipelineResponse,
+  ) {
+    super(details.error?.message ?? "The long-running operation has failed");
+    this.name = "CustomPollingError";
+  }
+}
+
+function tryGetError(response: PipelineResponse): ErrorResponse | undefined {
+  if (!response.bodyAsText) {
+    return;
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(response.bodyAsText);
+  } catch (error) {
+    // Let the SDK handle non-JSON responses using its normal error handling.
+    if (error instanceof SyntaxError) {
+      return;
+    }
+    throw error;
+  }
+
+  if (
+    body &&
+    typeof body === "object" &&
+    "error" in body &&
+    isErrorResponse(body.error)
+  ) {
+    return body.error;
+  }
+}
+
+function isErrorResponse(
+  error: unknown,
+): error is ErrorResponse & { code: string; message: string } {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    "message" in error &&
+    typeof error.message === "string"
+  );
+}
+
+export function createPollingErrorPolicy(): AdditionalPolicyConfig {
+  return {
+    position: "perCall",
+    policy: {
+      name: "pollingErrorPolicy",
+      async sendRequest(request, next) {
+        let response: PipelineResponse;
+        try {
+          response = await next(request);
+        } catch (error) {
+          if (isRestError(error) && error.response) {
+            const structuredError = tryGetError(error.response);
+            if (structuredError) {
+              throw new CustomPollingError(
+                { error: structuredError },
+                error.response,
+              );
+            }
+          }
+          throw error;
+        }
+
+        // Preserve nested ARM errors before the SDK reduces them to a message.
+        const error = tryGetError(response);
+        if (error) {
+          throw new CustomPollingError({ error }, response);
+        }
+        return response;
+      },
+    },
+  };
 }
 
 // Log Azure SDK request and response metadata when debug logging is enabled.

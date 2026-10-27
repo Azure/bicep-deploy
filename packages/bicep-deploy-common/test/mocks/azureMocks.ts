@@ -69,4 +69,8 @@ export const azureMock = {
   }),
 };
 
-vi.mock("../../src/azure", () => azureMock);
+vi.mock("../../src/azure", async importOriginal => {
+  const { CustomPollingError } =
+    await importOriginal<typeof import("../../src/azure")>();
+  return { ...azureMock, CustomPollingError };
+});

@@ -35,6 +35,14 @@ URL, status, correlation ID, and activity ID. It intentionally omits request
 and response bodies because deployment payloads can contain parameters,
 outputs, nested errors, and other sensitive values.
 
+### ARM error handling
+
+Deployment and deployment stack clients preserve structured ARM error responses,
+including nested error details and correlation IDs, through a shared pipeline
+policy. This applies to initial requests and long-running operation polling,
+without changing the SDK's retry behavior or the initial deployment poll delay.
+Responses without a structured ARM error remain subject to normal SDK handling.
+
 ## Validating the packed package
 
 Run `npm run test:consumer` to build and pack the package, install the tarball

@@ -7,7 +7,6 @@ import { Logger } from "./logging";
 import {
   defaultName,
   getStacksClient,
-  getCreateOperationOptions,
   getDeploymentStackResourceId,
   requireLocation,
 } from "./utils";
@@ -37,7 +36,6 @@ export async function stackCreate(
         scope.resourceGroup,
         name,
         stack,
-        getCreateOperationOptions(),
       );
     case "subscription":
       return await client.deploymentStacks.beginCreateOrUpdateAtSubscriptionAndWait(
@@ -46,7 +44,6 @@ export async function stackCreate(
           ...stack,
           location: requireLocation(config),
         },
-        getCreateOperationOptions(),
       );
     case "managementGroup":
       return await client.deploymentStacks.beginCreateOrUpdateAtManagementGroupAndWait(
@@ -56,7 +53,6 @@ export async function stackCreate(
           ...stack,
           location: requireLocation(config),
         },
-        getCreateOperationOptions(),
       );
   }
 }

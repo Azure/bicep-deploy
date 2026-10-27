@@ -1,10 +1,69 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 import { DeploymentDiagnosticsDefinition } from "@azure/arm-resources";
+import {
+  createHttpHeaders,
+  createPipelineRequest,
+  RestError,
+} from "@azure/core-rest-pipeline";
 
 import { ScopeType } from "../src/config";
-import { getScopedId, logDiagnostics, validateFileScope } from "../src/utils";
+import {
+  getScopedId,
+  logDiagnostics,
+  tryWithErrorHandling,
+  validateFileScope,
+} from "../src/utils";
 import { TestLogger } from "./logging";
+
+describe("tryWithErrorHandling", () => {
+  it("preserves a RestError without structured details", async () => {
+    const error = new RestError("Request failed", {
+      response: {
+        request: createPipelineRequest({
+          url: "https://management.azure.com/deployments/test",
+        }),
+        status: 500,
+        headers: createHttpHeaders({
+          "x-ms-correlation-request-id": "failure-correlation",
+        }),
+      },
+    });
+    const onError = vi.fn();
+    const logger = new TestLogger();
+
+    await expect(
+      tryWithErrorHandling(
+        async () => {
+          throw error;
+        },
+        onError,
+        logger,
+      ),
+    ).rejects.toBe(error);
+    expect(onError).not.toHaveBeenCalled();
+    expect(logger.getExternalMessages("remote", "error")).toEqual([
+      "Request failed. CorrelationId: failure-correlation",
+    ]);
+  });
+
+  it("passes structured RestError details to the error handler", async () => {
+    const details = { code: "DeploymentFailed", message: "Deployment failed." };
+    const error = new RestError(details.message);
+    error.details = { error: details };
+    const onError = vi.fn();
+
+    await tryWithErrorHandling(
+      async () => {
+        throw error;
+      },
+      onError,
+      new TestLogger(),
+    );
+
+    expect(onError).toHaveBeenCalledExactlyOnceWith(details);
+  });
+});
 
 describe("getScopedId", () => {
   it("returns resource group name for resourceGroup scope", () => {

@@ -145,7 +145,7 @@ describe("deployment execution", () => {
       expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAtSubscriptionScopeAndWait,
-      ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
+      ).toHaveBeenCalledWith(config.name, expectedPayload);
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -334,12 +334,7 @@ describe("deployment execution", () => {
       expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAndWait,
-      ).toHaveBeenCalledWith(
-        scope.resourceGroup,
-        config.name,
-        expectedPayload,
-        expect.anything(),
-      );
+      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -387,12 +382,7 @@ describe("deployment execution", () => {
       );
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAndWait,
-      ).toHaveBeenCalledWith(
-        scope.resourceGroup,
-        config.name,
-        expectedPayload,
-        expect.anything(),
-      );
+      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
 
       expect(spyLogExternalOutput).toHaveBeenNthCalledWith(
         2,
@@ -602,11 +592,10 @@ describe("deployment execution", () => {
       expect(azureMock.createDeploymentClient).not.toHaveBeenCalled();
       expect(
         mockDeploymentsOps.beginCreateOrUpdateAtTenantScopeAndWait,
-      ).toHaveBeenCalledWith(
-        config.name,
-        { ...expectedPayload, location: config.location },
-        expect.anything(),
-      );
+      ).toHaveBeenCalledWith(config.name, {
+        ...expectedPayload,
+        location: config.location,
+      });
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -722,7 +711,7 @@ describe("stack execution", () => {
       );
       expect(
         mockStacksOps.beginCreateOrUpdateAtSubscriptionAndWait,
-      ).toHaveBeenCalledWith(config.name, expectedPayload, expect.anything());
+      ).toHaveBeenCalledWith(config.name, expectedPayload);
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
@@ -966,12 +955,7 @@ describe("stack execution", () => {
       );
       expect(
         mockStacksOps.beginCreateOrUpdateAtResourceGroupAndWait,
-      ).toHaveBeenCalledWith(
-        scope.resourceGroup,
-        config.name,
-        expectedPayload,
-        expect.anything(),
-      );
+      ).toHaveBeenCalledWith(scope.resourceGroup, config.name, expectedPayload);
       expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
         "mockOutput",
         "foo",
