@@ -22,7 +22,7 @@ import {
   CloudError,
   DeploymentDiagnosticsDefinition,
   ErrorResponse,
-} from "@azure/arm-resources";
+} from "@azure/arm-resourcesdeployments";
 import { isRestError } from "@azure/core-rest-pipeline";
 
 import { Logger } from "./logging";
