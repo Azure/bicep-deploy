@@ -14,7 +14,8 @@ import { TokenCredential } from "@azure/identity";
 const transport = vi.hoisted(() => ({
   requests: [] as { method: string; path: string; time: number }[],
   handler: undefined as
-    undefined | ((request: PipelineRequest) => PipelineResponse),
+    | undefined
+    | ((request: PipelineRequest) => PipelineResponse),
   cliCredentialTenants: [] as (string | undefined)[],
 }));
 

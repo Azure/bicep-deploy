@@ -13,7 +13,8 @@ import { entries } from "./whatif";
 type UnknownValue = unknown;
 
 type StackWhatIfInput =
-  DeploymentStacksWhatIfResult | DeploymentStacksWhatIfChange;
+  | DeploymentStacksWhatIfResult
+  | DeploymentStacksWhatIfChange;
 
 type ChangeTypeInfo = {
   symbol: string;
@@ -859,7 +860,8 @@ function formatResourceClassHeader(
 
   let result = `${change.extension.name}@${change.extension.version}`;
   const config = change.extension.config as
-    Record<string, ExtensionConfigValue | undefined> | undefined;
+    | Record<string, ExtensionConfigValue | undefined>
+    | undefined;
 
   if (config) {
     const configItems = entries(config).sort(

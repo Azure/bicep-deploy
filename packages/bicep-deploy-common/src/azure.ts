@@ -102,7 +102,10 @@ export function createDeploymentClient(
 export function getDeploymentCreateClient(
   config: DeployConfig,
   scope:
-    TenantScope | ManagementGroupScope | SubscriptionScope | ResourceGroupScope,
+    | TenantScope
+    | ManagementGroupScope
+    | SubscriptionScope
+    | ResourceGroupScope,
   logger: Logger,
   options: Omit<DeploymentClientOptions, "delayInitialCreateStatusPoll"> = {},
 ): DeploymentsClient {

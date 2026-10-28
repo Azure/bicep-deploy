@@ -68,7 +68,8 @@ export function getOptionalEnumInput<TEnum extends string>(
   inputReader: InputReader,
 ): TEnum | undefined {
   return getInput(inputName, inputReader, allowedValues, false) as
-    TEnum | undefined;
+    | TEnum
+    | undefined;
 }
 
 export function getOptionalFilePath(
