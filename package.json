@@ -31,7 +31,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "clean:packages": "npm run clean --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common",
-    "build": "npm run typecheck && tsdown --config ./tsdown.config.ts",
+    "build": "npm run typecheck && tsdown --config ./tsdown.config.mts",
     "build:packages": "npm run build --workspace @azure/bicep-rpc-client --workspace @azure/bicep-deploy-common",
     "build:all": "npm run build:packages && npm run build",
     "test": "vitest --config vitest.config.unit.ts",

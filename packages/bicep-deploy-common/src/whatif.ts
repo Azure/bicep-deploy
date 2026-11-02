@@ -6,7 +6,7 @@ import {
   WhatIfChange,
   WhatIfOperationResult,
   WhatIfPropertyChange,
-} from "@azure/arm-resources";
+} from "@azure/arm-resourcesdeployments";
 import { Color, ColorMode, ColorStringBuilder } from "./logging";
 import { errorMessages } from "./errorMessages";
 

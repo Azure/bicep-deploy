@@ -232,11 +232,8 @@ describe("Bicep class", () => {
   });
 
   it("should throw for an invalid bicep exe path", async () => {
-    try {
-      await Bicep.initialize("asdasdfasdfsdff");
-      expect(false).toBeTruthy();
-    } catch (e) {
-      expect(e).toMatch(/^Failed to invoke /);
-    }
+    await expect(Bicep.initialize("asdasdfasdfsdff")).rejects.toMatch(
+      /^Failed to invoke /,
+    );
   });
 });

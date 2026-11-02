@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { DeploymentDiagnosticsDefinition } from "@azure/arm-resources";
+import { DeploymentDiagnosticsDefinition } from "@azure/arm-resourcesdeployments";
 import {
   createHttpHeaders,
   createPipelineRequest,
