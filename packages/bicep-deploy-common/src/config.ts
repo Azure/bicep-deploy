@@ -93,6 +93,7 @@ export type DeploymentStackConfig = CommonConfig & {
   type: "deploymentStack";
   operation: "create" | "delete" | "validate" | "whatIf";
   scope: ManagementGroupScope | SubscriptionScope | ResourceGroupScope;
+  validationLevel?: "provider" | "template" | "providerNoRbac";
   description?: string;
   actionOnUnManage: {
     resources: "delete" | "detach";
@@ -221,6 +222,11 @@ export function parseConfig(
         operation: getRequiredEnumInput(
           inputParameterNames.operation,
           ["create", "validate", "delete", "whatIf"],
+          inputReader,
+        ),
+        validationLevel: getOptionalEnumInput(
+          inputParameterNames.validationLevel,
+          ["provider", "template", "providerNoRbac"],
           inputReader,
         ),
         scope: parseDeploymentStackScope(inputReader, inputParameterNames),

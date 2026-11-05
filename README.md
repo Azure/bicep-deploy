@@ -88,7 +88,7 @@ The inputs for this action provide flexibility and control for managing deployme
 | `masked-outputs`                      | Specifies output names to mask values for.                                                                                                                                                                                               | Free-text                                                                                                                                        | No       |
 | `environment`                         | Specifies the Azure environment to use. Choose from 'azureCloud', 'azureChinaCloud', 'azureGermanCloud', 'azureUSGovernment'.                                                                                                            | Free-text                                                                                                                                        | No       |
 | `what-if-exclude-change-types`        | Specifies the change types to exclude from the 'What If' operation.                                                                                                                                                                      | Free-text                                                                                                                                        | No       |
-| `validation-level`                    | Specifies the validation level. Only supported for deployment what-if and validate operations. Choose from 'provider', 'template', or 'providerNoRbac'.                                                                                  | Free-text                                                                                                                                        | No       |
+| `validation-level`                    | Specifies the validation level for deployment and deploymentStack validate or what-if operations. Choose from 'provider', 'template', or 'providerNoRbac'.                                                                               | Free-text                                                                                                                                        | No       |
 | `action-on-unmanage-resources`        | Specifies the action to take on unmanaged resources. Choose from 'delete' or 'detach'.                                                                                                                                                   | `delete`, `detach`                                                                                                                               | No       |
 | `action-on-unmanage-resourcegroups`   | Specifies the action to take on unmanaged resource groups. Choose from 'delete' or 'detach'.                                                                                                                                             | `delete`, `detach`                                                                                                                               | No       |
 | `action-on-unmanage-managementgroup`  | Specifies the action to take on unmanaged management groups. Choose from 'delete' or 'detach'.                                                                                                                                           | `delete`, `detach`                                                                                                                               | No       |
@@ -103,6 +103,30 @@ The inputs for this action provide flexibility and control for managing deployme
 ## Outputs
 
 The action provides outputs from the deployment operation, which can be accessed in subsequent steps of a workflow. These outputs are useful for dynamically referencing values generated during the deployment process, such as resource IDs, endpoint URLs, or other outputs defined in Bicep templates.
+
+For `deploymentStack` `whatIf` operations, the formatted result is also available
+as the `what-if-result` output. This output contains plain text without ANSI
+color codes and can be passed to a later step, for example to post the result to
+a pull request:
+
+```yaml
+- name: What-If
+  id: stack-what-if
+  uses: azure/bicep-deploy@v2
+  with:
+    type: deploymentStack
+    operation: whatIf
+    # Other required stack inputs...
+- name: Use What-If result
+  env:
+    WHAT_IF_RESULT: ${{ steps.stack-what-if.outputs.what-if-result }}
+  run: printf '%s\n' "$WHAT_IF_RESULT"
+```
+
+When using `validation-level: providerNoRbac`, the Azure identity must still
+have `Microsoft.Resources/deploymentStacksWhatIfResults/*`. If the stack
+What-If request uses deny settings (`deny-settings-mode` other than `none`), it
+also requires `Microsoft.Resources/deploymentStacks/manageDenySetting/action`.
 
 **Accessing Outputs**
 

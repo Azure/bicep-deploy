@@ -232,6 +232,26 @@ describe("input validation", () => {
     );
   });
 
+  it("validates validation-level inputs for deploymentStack", async () => {
+    configureGetInputMock(
+      {
+        type: "deploymentStack",
+        operation: "whatIf",
+        scope: "resourceGroup",
+        subscriptionId: "foo",
+        resourceGroupName: "mockRg",
+        "action-on-unmanage-resources": "detach",
+        "deny-settings-mode": "none",
+        "validation-level": "blah",
+      },
+      inputReader,
+    );
+
+    expect(() => parseConfig(inputReader, inputParameterNames)).toThrow(
+      "Input 'validation-level' must be one of the following values: 'provider', 'template', 'providerNoRbac'",
+    );
+  });
+
   it("requires action-on-unmanage-resources for deploymentStack", async () => {
     configureGetInputMock(
       {
@@ -513,6 +533,7 @@ describe("input parsing", () => {
         "template-file": "/path/to/mockTemplateFile",
         "action-on-unmanage-resources": "delete",
         "deny-settings-mode": "none",
+        "validation-level": "providerNoRbac",
       },
       inputReader,
     );
@@ -520,6 +541,7 @@ describe("input parsing", () => {
     const config = parseConfig(inputReader, inputParameterNames);
 
     expect(config.operation).toBe("whatIf");
+    expect(config.validationLevel).toBe("providerNoRbac");
   });
 
   it("supports YAML syntax for parameters", async () => {
