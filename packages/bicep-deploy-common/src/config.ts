@@ -59,6 +59,7 @@ type CommonConfig = {
   location?: string;
   tags?: Record<string, string>;
   maskedOutputs?: string[];
+  validationLevel?: "provider" | "template" | "providerNoRbac";
   environment:
     | "azureCloud"
     | "azureChinaCloud"
@@ -86,14 +87,12 @@ export type DeploymentsConfig = CommonConfig & {
   whatIf: {
     excludeChangeTypes?: WhatIfChangeType[];
   };
-  validationLevel?: "provider" | "template" | "providerNoRbac";
 };
 
 export type DeploymentStackConfig = CommonConfig & {
   type: "deploymentStack";
   operation: "create" | "delete" | "validate" | "whatIf";
   scope: ManagementGroupScope | SubscriptionScope | ResourceGroupScope;
-  validationLevel?: "provider" | "template" | "providerNoRbac";
   description?: string;
   actionOnUnManage: {
     resources: "delete" | "detach";
