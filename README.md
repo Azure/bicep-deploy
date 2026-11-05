@@ -104,25 +104,6 @@ The inputs for this action provide flexibility and control for managing deployme
 
 The action provides outputs from the deployment operation, which can be accessed in subsequent steps of a workflow. These outputs are useful for dynamically referencing values generated during the deployment process, such as resource IDs, endpoint URLs, or other outputs defined in Bicep templates.
 
-For `deploymentStack` `whatIf` operations, the formatted result is also available
-as the `what-if-result` output. This output contains plain text without ANSI
-color codes and can be passed to a later step, for example to post the result to
-a pull request:
-
-```yaml
-- name: What-If
-  id: stack-what-if
-  uses: azure/bicep-deploy@v2
-  with:
-    type: deploymentStack
-    operation: whatIf
-    # Other required stack inputs...
-- name: Use What-If result
-  env:
-    WHAT_IF_RESULT: ${{ steps.stack-what-if.outputs.what-if-result }}
-  run: printf '%s\n' "$WHAT_IF_RESULT"
-```
-
 When using `validation-level: providerNoRbac`, the Azure identity must still
 have `Microsoft.Resources/deploymentStacksWhatIfResults/*`. If the stack
 What-If request uses deny settings (`deny-settings-mode` other than `none`), it

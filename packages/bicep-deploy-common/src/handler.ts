@@ -183,11 +183,6 @@ export async function execute(
                   source: "remote",
                   level: "info",
                 });
-                outputSetter.setOutputVariable(
-                  "what-if-result",
-                  formatDeploymentStacksWhatIfChange(result, "off"),
-                  { isSecret: false },
-                );
               },
               error => {
                 logger.logExternalOutput(JSON.stringify(error, null, 2), {

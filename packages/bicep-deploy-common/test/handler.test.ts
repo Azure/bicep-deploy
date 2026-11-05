@@ -850,15 +850,6 @@ describe("stack execution", () => {
       expect(mockStacksWhatIfAtSubscriptionOps.whatIf).toHaveBeenCalledWith(
         expect.any(String),
       );
-      expect(outputSetter.setOutputVariable).toHaveBeenCalledWith(
-        "what-if-result",
-        expect.stringContaining("Changes to Stack"),
-        { isSecret: false },
-      );
-      const whatIfOutput = vi
-        .mocked(outputSetter.setOutputVariable)
-        .mock.calls.find(([name]) => name === "what-if-result")?.[1] as string;
-      expect(whatIfOutput).not.toContain("\u001b[");
     });
 
     it.each([
