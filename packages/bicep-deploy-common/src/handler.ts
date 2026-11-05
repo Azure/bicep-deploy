@@ -113,6 +113,17 @@ export async function execute(
             await tryWithErrorHandling(
               async () => {
                 const result = await deploymentWhatIf(config, files, logger);
+                if (result.error) {
+                  logger.logExternalOutput(
+                    JSON.stringify(result.error, null, 2),
+                    {
+                      source: "remote",
+                      level: "error",
+                    },
+                  );
+                  outputSetter.setFailed(errorMessages.whatIfFailed);
+                  return;
+                }
                 const formatted = formatWhatIfOperationResult(result, "ansii");
                 logger.logExternalOutput(formatted, {
                   source: "remote",
