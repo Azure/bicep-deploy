@@ -486,6 +486,26 @@ describe("deployment execution", () => {
       );
     });
 
+    it("fails when what-if returns an error", async () => {
+      mockDeploymentsOps.whatIf!.mockResolvedValue({
+        error: {
+          code: "DeploymentFailed",
+          message: "What-if operation failed",
+        },
+      });
+
+      const spySetFailed = vi.spyOn(outputSetter, "setFailed");
+
+      await execute(
+        { ...config, operation: "whatIf" },
+        logger,
+        outputSetter,
+        noopCache,
+      );
+
+      expect(spySetFailed).toHaveBeenCalledWith(errorMessages.whatIfFailed);
+    });
+
     it("handles what-if errors", async () => {
       mockDeploymentsOps.whatIf!.mockRejectedValue(getMockRestError(mockError));
 
