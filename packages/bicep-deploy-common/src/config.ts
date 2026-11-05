@@ -59,6 +59,7 @@ type CommonConfig = {
   location?: string;
   tags?: Record<string, string>;
   maskedOutputs?: string[];
+  validationLevel?: "provider" | "template" | "providerNoRbac";
   environment:
     | "azureCloud"
     | "azureChinaCloud"
@@ -86,7 +87,6 @@ export type DeploymentsConfig = CommonConfig & {
   whatIf: {
     excludeChangeTypes?: WhatIfChangeType[];
   };
-  validationLevel?: "provider" | "template" | "providerNoRbac";
 };
 
 export type DeploymentStackConfig = CommonConfig & {
@@ -221,6 +221,11 @@ export function parseConfig(
         operation: getRequiredEnumInput(
           inputParameterNames.operation,
           ["create", "validate", "delete", "whatIf"],
+          inputReader,
+        ),
+        validationLevel: getOptionalEnumInput(
+          inputParameterNames.validationLevel,
+          ["provider", "template", "providerNoRbac"],
           inputReader,
         ),
         scope: parseDeploymentStackScope(inputReader, inputParameterNames),

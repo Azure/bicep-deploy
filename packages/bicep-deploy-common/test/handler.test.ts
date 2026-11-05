@@ -628,6 +628,7 @@ describe("stack execution", () => {
       scope: scope,
       name: "mockName",
       operation: "create",
+      validationLevel: "providerNoRbac",
       tags: { foo: "bar" },
       denySettings: {
         mode: "denyDelete",
@@ -662,6 +663,7 @@ describe("stack execution", () => {
       template: files.templateContents,
       templateLink: undefined,
       parameters: files.parametersContents["parameters"],
+      validationLevel: config.validationLevel,
       deploymentStackResourceId: `/subscriptions/${scope.subscriptionId}/providers/Microsoft.Resources/deploymentStacks/${config.name}`,
       retentionInterval: "PT3H",
     };
@@ -686,6 +688,14 @@ describe("stack execution", () => {
       location: config.location,
       properties: expectedProperties,
       tags: config.tags,
+    };
+
+    const expectedValidationPayload: DeploymentStack = {
+      ...expectedPayload,
+      properties: {
+        ...expectedProperties,
+        validationLevel: config.validationLevel,
+      },
     };
 
     const mockReturnPayload: DeploymentStack = {
@@ -761,7 +771,7 @@ describe("stack execution", () => {
       );
       expect(mockStacksOps.validateStackAtSubscription).toHaveBeenCalledWith(
         config.name,
-        expectedPayload,
+        expectedValidationPayload,
       );
     });
 

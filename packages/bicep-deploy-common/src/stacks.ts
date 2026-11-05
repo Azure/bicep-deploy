@@ -62,7 +62,7 @@ export async function stackValidate(
   const name = config.name ?? defaultName;
   const scope = config.scope;
   const client = getStacksClient(config, scope, logger);
-  const stack = createStackDefinition(config, files);
+  const stack = createStackDefinition(config, files, config.validationLevel);
 
   switch (scope.type) {
     case "resourceGroup":
@@ -176,6 +176,7 @@ export async function stackDelete(
 function createStackDefinition(
   config: DeploymentStackConfig,
   files: ParsedFiles,
+  validationLevel?: DeploymentStackConfig["validationLevel"],
 ): DeploymentStack {
   const { templateContents, templateSpecId, parametersContents } = files;
 
@@ -191,6 +192,7 @@ function createStackDefinition(
       description: config.description,
       actionOnUnmanage: config.actionOnUnManage,
       denySettings: config.denySettings,
+      ...(validationLevel ? { validationLevel } : {}),
       bypassStackOutOfSyncError: config.bypassStackOutOfSyncError,
     },
     tags: config.tags,
@@ -218,6 +220,7 @@ function createStackWhatIfDefinition(
       denySettings: config.denySettings,
       deploymentStackResourceId: deploymentStackResourceId,
       retentionInterval: whatIfRetentionInterval,
+      validationLevel: config.validationLevel,
     },
     tags: config.tags,
   };
